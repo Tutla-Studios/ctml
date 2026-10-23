@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "id": "craftytml",
+  "version": "${version}",
+
+  "name": "CraftyTML",
+  "description": "everything is stone",
+  "authors": [],
+  "contact": {},
+
+  "license": "All-Rights-Reserved",
+  "icon": "assets/craftytml/icon.png",
+
+  "environment": "client",
+  "entrypoints": {
+    "fabric-datagen": ["net.tutla.craftytml.client.CraftytmlDataGenerator"],
+    "client": ["net.tutla.craftytml.client.CraftytmlClient"],
+    "main": ["net.tutla.craftytml.Craftytml"]
+  },
+
+  "mixins": [
+    "craftytml.mixins.json"
+    ,{
+      "config": "craftytml.client.mixins.json",
+      "environment": "client"
+    }
+  ],
+
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "fabric-api": "*",
+    "minecraft": "${minecraft_version}"
+  }
+}

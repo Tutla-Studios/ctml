@@ -1,12 +1,20 @@
 package net.tutla.craftytml.client.ctml;
 
+import net.tutla.craftytml.client.tusan.CTMLTokenType;
 import net.tutla.tums.tusan.TusanContext;
 
 public class ElementProperty {
-    public static final String name = "";
-    public static final ElementPropertyType type = ElementPropertyType.STRING;
+    public final String name;
+    public final ElementPropertyType type;
+    public final CTMLTokenType tokenType;
 
     private Object value;
+
+    public ElementProperty(String name, ElementPropertyType type, CTMLTokenType tokenType){
+        this.name = name;
+        this.type = type;
+        this.tokenType = tokenType;
+    }
 
     public void setValue(Object val, TusanContext ctx){
         if (type == ElementPropertyType.INTEGER && !(val instanceof Integer)){

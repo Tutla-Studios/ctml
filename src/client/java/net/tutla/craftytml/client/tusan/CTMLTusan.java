@@ -1,24 +1,28 @@
 package net.tutla.craftytml.client.tusan;
 
 import net.tutla.craftytml.client.tusan.lexer.ElementRegistry;
+import net.tutla.craftytml.client.tusan.lexer.PropertyRegistry;
 import net.tutla.tums.tusan.lang.Tusan;
 import net.tutla.tums.tusan.lexer.LexerRule;
 import net.tutla.tums.tusan.lexer.util.WordedPattern;
 import net.tutla.tums.tusan.lexer.util.prebuilt.PrebuiltTusanTokenType;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class CTMLTusan extends Tusan {
-    private static final List<LexerRule> LEXER_RULES = List.of(
+    private static final List<LexerRule> LEXER_RULES = new ArrayList<>(List.of(
             //new LexerRule(CTMLTokenType.OPENING, "(<[a-zA-Z][a-zA-Z0-9-]*)\\b[^>]*(>)"),
+
             new LexerRule(PrebuiltTusanTokenType.STRING, "\"(?:[^\"\\\\]|\\\\.)*\"|'(?:[^'\\\\]|\\\\.)*'"),
+            new LexerRule(PrebuiltTusanTokenType.STRING, "[^<>\\s](?:[^<>]*[^<>\\s])?(?=[^<>]*<)"),
             new LexerRule(PrebuiltTusanTokenType.NUMBER, "\\d+(\\.\\d+)?"),
             new LexerRule(PrebuiltTusanTokenType.BOOL, WordedPattern.makeWordedPattern(List.of("true", "false")) ),
             new LexerRule(PrebuiltTusanTokenType.NOTHING, WordedPattern.makeOneWordPattern("nothing")),
 
             new LexerRule(PrebuiltTusanTokenType.OPERATOR, "[+\\-*/%]"),
             new LexerRule(PrebuiltTusanTokenType.LOGIC, "(?:\\b(?:and|or|not|contains|in)\\b|\\|\\||&&)"),
-            new LexerRule(PrebuiltTusanTokenType.COMPARISON, ">=|<=|==|!=|>|<|\\bis\\b"),
+            //new LexerRule(PrebuiltTusanTokenType.COMPARISON, ">=|<=|==|!=|>|<|\\bis\\b"),
             new LexerRule(PrebuiltTusanTokenType.EQUAL, "="),
 
             new LexerRule(PrebuiltTusanTokenType.LEFT_CURLY, WordedPattern.makeSpecialCharacterPattern('{')),
@@ -30,17 +34,29 @@ public class CTMLTusan extends Tusan {
             new LexerRule(PrebuiltTusanTokenType.SEMICOLON, ";"),
             new LexerRule(PrebuiltTusanTokenType.COLON, ":"),
             new LexerRule(PrebuiltTusanTokenType.COMMA, ",")
-    );
+    ));
+
+    private static boolean initialized = false;
 
     public static void init(){
+        if (initialized) return;
+        initialized = true;
+
         ElementRegistry.init();
+        PropertyRegistry.init();
 
         ElementRegistry.getRegister().forEach((element -> {
-            new LexerRule(element., "(<[a-zA-Z][a-zA-Z0-9-]*)\\b[^>]*(>)")
+            LEXER_RULES.add(new LexerRule(element.tokenType, "(<"+element.name+")\\b[^>]*(>)"));
+            LEXER_RULES.add(new LexerRule(element.closingTokenType, "</"+element.name+"\\s*>"));
         }));
-    }
+
+        PropertyRegistry.getRegister().forEach((property -> {
+            LEXER_RULES.add(new LexerRule(property.tokenType, "\\b"+property.name+"\\b(?=(?:\"[^\"]*\"|'[^']*'|[^<>])*>)"));
+        }));
+    } // man i wish she liked me back
 
     public static CTMLTusan tusan(){
+        init();
         CTMLTusan tsn = new CTMLTusan();
         LEXER_RULES.forEach(tsn::registerLexerRule);
         return tsn;

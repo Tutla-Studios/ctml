@@ -4,5 +4,8 @@ import net.tutla.tums.tusan.lexer.TokenType;
 
 public enum CTMLTokenType implements TokenType {
     DIV,
+    DIV_CLOSING,
+
+    CLASS,
 
 }

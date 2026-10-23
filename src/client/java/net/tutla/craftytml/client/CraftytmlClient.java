@@ -55,6 +55,6 @@ public class CraftytmlClient implements ClientModInitializer {
             e.printStackTrace();
         }
 
-        Tums.getRegister().add(interpreter.data); // why are we doing this?
+        Tums.getRegister().add(interpreter.data);
     }
 }

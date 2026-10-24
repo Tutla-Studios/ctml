@@ -1,4 +1,4 @@
-package net.tutla.craftytml.client.tusan.lexer;
+package net.tutla.craftytml.client.tusan.register;
 
 import net.tutla.craftytml.client.ctml.ElementProperty;
 import net.tutla.craftytml.client.ctml.property.ClassName;

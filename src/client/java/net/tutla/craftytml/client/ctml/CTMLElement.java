@@ -4,10 +4,11 @@ import net.tutla.craftytml.client.tusan.CTMLTokenType;
 
 import java.util.List;
 
-public class CTMLElement {
+public abstract class CTMLElement {
     public final String name;
     public final List<ElementProperty> propertyList; //wierd naming convention cuz properties would eb for an instance not like the shi itself iywim
     public final Boolean hasChildren;
+
     public final CTMLTokenType tokenType;
     public final CTMLTokenType closingTokenType;
 
@@ -21,7 +22,6 @@ public class CTMLElement {
         this.closingTokenType = closingTokenType;
     }
 
-    public void draw(){ // Draw Function
+    public abstract void draw(); // Draw Function
 
-    };
 }

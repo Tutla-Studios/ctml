@@ -8,4 +8,8 @@ public class ClassName extends ElementProperty {
     public ClassName(){
         super("class", ElementPropertyType.STRING, CTMLTokenType.CLASS);
     }
+
+    public String getStringValue(){
+        return (String) getValue();
+    }
 }

@@ -50,11 +50,11 @@ public class CTMLTusan extends Tusan {
 
         ElementRegistry.getRegister().forEach((element -> {
             LEXER_RULES.add(new LexerRule(element.tokenType, "(<"+element.name+")\\b[^>]*(>)").setGroup(CTMLTokenGroup.ELEMENT));
-            LEXER_RULES.add(new LexerRule(element.closingTokenType, "</"+element.name+"\\s*>"));
+            LEXER_RULES.add(new LexerRule(element.closingTokenType, "</"+element.name+"\\s*>").setGroup(CTMLTokenGroup.ELEMENT_CLOSE));
         }));
 
         PropertyRegistry.getRegister().forEach((property -> {
-            LEXER_RULES.add(new LexerRule(property.tokenType, "\\b"+property.name+"\\b(?=(?:\"[^\"]*\"|'[^']*'|[^<>])*>)"));
+            LEXER_RULES.add(new LexerRule(property.tokenType, "\\b"+property.name+"\\b(?=(?:\"[^\"]*\"|'[^']*'|[^<>])*>)").setGroup(CTMLTokenGroup.PROPERTY));
         }));
 
 

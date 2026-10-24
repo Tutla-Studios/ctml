@@ -65,7 +65,7 @@ public class CTMLTusan extends Tusan {
         CTMLTusan tsn = new CTMLTusan();
 
         LEXER_RULES.forEach(tsn::registerLexerRule);
-        tsn.linkNodeToStatement(CTMLTokenGroup.ELEMENT, ElementNode.class);
+        tsn.setStatementNode(ElementNode.class);
         return tsn;
     }
 }

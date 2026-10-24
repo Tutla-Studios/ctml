@@ -5,5 +5,6 @@ import net.tutla.tums.tusan.lexer.TokenGroup;
 public enum CTMLTokenGroup implements TokenGroup {
     ELEMENT,
     PROPERTY,
-    SYMBOL
+    SYMBOL,
+    ELEMENT_CLOSE
 }

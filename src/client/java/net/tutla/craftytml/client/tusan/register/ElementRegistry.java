@@ -3,13 +3,14 @@ package net.tutla.craftytml.client.tusan.register;
 import net.tutla.craftytml.client.ctml.CTMLElement;
 import net.tutla.craftytml.client.ctml.element.Division;
 import net.tutla.craftytml.client.tusan.CTMLTokenType;
+import net.tutla.tums.tusan.lexer.TokenType;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 
 public class ElementRegistry {
     private static final ArrayList<CTMLElement> elements = new ArrayList<>();
-    private static final HashMap<CTMLTokenType, CTMLElement> Token2ElementMap = new HashMap<>();
+    private static final HashMap<TokenType, CTMLElement> Token2ElementMap = new HashMap<>();
 
     public static void init(){
         register(new Division());
@@ -24,7 +25,7 @@ public class ElementRegistry {
         return elements;
     }
 
-    public static CTMLElement getElementFromTokenType(CTMLTokenType tokenType){
+    public static CTMLElement getElementFromTokenType(TokenType tokenType){
         return Token2ElementMap.get(tokenType);
     }
 }

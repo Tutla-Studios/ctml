@@ -49,7 +49,7 @@ public class CTMLTusan extends Tusan {
         NodeRegistry.init();
 
         ElementRegistry.getRegister().forEach((element -> {
-            LEXER_RULES.add(new LexerRule(element.tokenType, "(<"+element.name+")\\b[^>]*(>)").setGroup(CTMLTokenGroup.ELEMENT));
+            LEXER_RULES.add(new LexerRule(element.tokenType, "<"+element.name+"\\b").setGroup(CTMLTokenGroup.ELEMENT));
             LEXER_RULES.add(new LexerRule(element.closingTokenType, "</"+element.name+"\\s*>").setGroup(CTMLTokenGroup.ELEMENT_CLOSE));
         }));
 

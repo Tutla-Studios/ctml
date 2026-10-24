@@ -28,23 +28,26 @@ public class ElementNode extends Node {
             return false;
         }
 
-        NodeRegistry.getRegister().forEach(node -> {
-            if (NodeRegistry.getElementFromNode(node).tokenType == ctx.getCurrentToken().type){
-                //Node.instantiateNode(node, ctx).create();
-
+        if (ctx.getCurrentToken().group != CTMLTokenGroup.ELEMENT && ctx.getCurrentToken().type != PrebuiltTusanTokenType.STRING){ // avoid receiving non-elements or raw text
+            ctx.nextToken();
+            return false;
+        }
+        ElementRegistry.getRegister().forEach(_element -> {
+            if (_element.tokenType == ctx.getCurrentToken().type){
                 try {
-                    CTMLElement element = ElementRegistry.getElementFromTokenType(ctx.getCurrentToken().type).getClass().getDeclaredConstructor().newInstance();
-                    while (ctx.getCurrentToken().group == CTMLTokenGroup.PROPERTY){
+                    CTMLElement element = _element.getClass().getDeclaredConstructor().newInstance();
+                    while (ctx.getNextToken().group == CTMLTokenGroup.PROPERTY){
+                        ctx.nextToken();
                         ElementProperty property = PropertyRegistry.getPropertyFromToken(ctx.getCurrentToken().type);
                         Object value;
                         if (property.type != ElementPropertyType.BOOLEAN){
                             ctx.tokenContext.expectTokenType(PrebuiltTusanTokenType.EQUAL);
-                            value = new Expression(ctx).create(); // TODO: Make property validate for types
+                            ctx.nextToken();
+                            value = new Expression(ctx).create().value; // TODO: Make property validate for types
                         } else {
                             value = true;
                         }
                         element.propertyList.updateProperty(property.name, value, ctx);
-                        ctx.nextToken();
                     }
 
                     //since it has children

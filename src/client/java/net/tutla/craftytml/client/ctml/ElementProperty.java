@@ -36,4 +36,8 @@ public class ElementProperty {
     public Object getValue(){
         return value;
     }
+
+    public boolean hasValue(){
+        return value != null;
+    }
 }

@@ -4,10 +4,12 @@ import net.tutla.craftytml.client.tusan.register.PropertyRegistry;
 import net.tutla.tums.tusan.TusanContext;
 
 import java.lang.reflect.InvocationTargetException;
-import java.util.HashMap;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 public class CTMLElementProperties {
-    private final HashMap<String, ElementProperty> mapping = new HashMap<>();
+    private final Map<String, ElementProperty> mapping = new LinkedHashMap<>();
 
     public void updateProperty(String name, Object value, TusanContext ctx){
         ElementProperty e = propertyFromName(name);
@@ -21,6 +23,18 @@ public class CTMLElementProperties {
 
     public ElementProperty propertyFromName(String name){
         return mapping.get(name);
+    }
+
+    public Map<String, ElementProperty> getProperties(){
+        return Collections.unmodifiableMap(mapping);
+    }
+
+    public Map<String, ElementProperty> getAssignedProperties(){
+        Map<String, ElementProperty> assigned = new LinkedHashMap<>();
+        mapping.forEach((name, property) -> {
+            if (property.hasValue()) assigned.put(name, property);
+        });
+        return assigned;
     }
 
     public static CTMLElementProperties newElementProperties(){

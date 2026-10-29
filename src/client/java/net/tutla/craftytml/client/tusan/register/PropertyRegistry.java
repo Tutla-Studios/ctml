@@ -2,7 +2,7 @@ package net.tutla.craftytml.client.tusan.register;
 
 import net.tutla.craftytml.client.ctml.ElementProperty;
 import net.tutla.craftytml.client.ctml.property.ClassName;
-import net.tutla.craftytml.client.tusan.CTMLTokenType;
+import net.tutla.craftytml.client.ctml.property.Text;
 import net.tutla.tums.tusan.lexer.TokenType;
 
 import java.util.ArrayList;
@@ -13,12 +13,13 @@ public class PropertyRegistry {
     private static final HashMap<TokenType, ElementProperty> propertyMapping = new HashMap<>();
 
     public static void init(){
-        register(new ClassName(), CTMLTokenType.CLASS);
+        register(new ClassName());
+        register(new Text());
     }
 
-    public static void register(ElementProperty property, CTMLTokenType tokenType){
+    public static void register(ElementProperty property){
         properties.add(property);
-        propertyMapping.put(tokenType, property);
+        propertyMapping.put(property.tokenType, property);
     }
 
     public static ArrayList<ElementProperty> getRegister(){

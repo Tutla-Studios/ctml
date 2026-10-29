@@ -23,7 +23,7 @@ public class DOMTreeElement extends DOMTreeNode {
     public String getTag() { return element.name; }
 
     public DOMTreeElement property(String name, Object value, TusanContext ctx) {
-        element.propertyList.updateProperty(name, value, ctx);
+        element.updateProperty(name, value, ctx);
         return this;
     }
 
@@ -54,11 +54,11 @@ public class DOMTreeElement extends DOMTreeNode {
         return element.getStyle().get(key);
     }
 
-    /** This element's own styles, with anything it leaves unset filled in from up the tree. */
+    /** This element's own styles, with the inherited ones filled in from up the tree. */
     public ElementStyle getResolvedStyle() {
         ElementStyle resolved = element.getStyle();
         for (DOMTreeElement ancestor = parent; ancestor != null; ancestor = ancestor.parent) {
-            resolved = resolved.inherit(ancestor.getStyle());
+            resolved = resolved.inheritFrom(ancestor.getStyle());
         }
         return resolved;
     }

@@ -1,5 +1,7 @@
 package net.tutla.craftytml.client.ctml;
 
+import net.tutla.craftytml.client.ctml.style.Length;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -21,32 +23,32 @@ public final class ElementStyle {
     // layout
     public static final Key<Display> DISPLAY = key("display", Display.class);
     public static final Key<Position> POSITION = key("position", Position.class);
-    public static final Key<Integer> TOP = key("top", Integer.class);
-    public static final Key<Integer> RIGHT = key("right", Integer.class);
-    public static final Key<Integer> BOTTOM = key("bottom", Integer.class);
-    public static final Key<Integer> LEFT = key("left", Integer.class);
+    public static final Key<Length> TOP = key("top", Length.class);
+    public static final Key<Length> RIGHT = key("right", Length.class);
+    public static final Key<Length> BOTTOM = key("bottom", Length.class);
+    public static final Key<Length> LEFT = key("left", Length.class);
     public static final Key<Integer> Z_INDEX = key("z-index", Integer.class);
 
     // box size
-    public static final Key<Integer> WIDTH = key("width", Integer.class);
-    public static final Key<Integer> HEIGHT = key("height", Integer.class);
-    public static final Key<Integer> MIN_WIDTH = key("min-width", Integer.class);
-    public static final Key<Integer> MIN_HEIGHT = key("min-height", Integer.class);
-    public static final Key<Integer> MAX_WIDTH = key("max-width", Integer.class);
-    public static final Key<Integer> MAX_HEIGHT = key("max-height", Integer.class);
+    public static final Key<Length> WIDTH = key("width", Length.class);
+    public static final Key<Length> HEIGHT = key("height", Length.class);
+    public static final Key<Length> MIN_WIDTH = key("min-width", Length.class);
+    public static final Key<Length> MIN_HEIGHT = key("min-height", Length.class);
+    public static final Key<Length> MAX_WIDTH = key("max-width", Length.class);
+    public static final Key<Length> MAX_HEIGHT = key("max-height", Length.class);
     public static final Key<BoxSizing> BOX_SIZING = key("box-sizing", BoxSizing.class);
 
     // box margin
-    public static final Key<Integer> MARGIN_TOP = key("margin-top", Integer.class);
-    public static final Key<Integer> MARGIN_RIGHT = key("margin-right", Integer.class);
-    public static final Key<Integer> MARGIN_BOTTOM = key("margin-bottom", Integer.class);
-    public static final Key<Integer> MARGIN_LEFT = key("margin-left", Integer.class);
+    public static final Key<Length> MARGIN_TOP = key("margin-top", Length.class);
+    public static final Key<Length> MARGIN_RIGHT = key("margin-right", Length.class);
+    public static final Key<Length> MARGIN_BOTTOM = key("margin-bottom", Length.class);
+    public static final Key<Length> MARGIN_LEFT = key("margin-left", Length.class);
 
     // box padding
-    public static final Key<Integer> PADDING_TOP = key("padding-top", Integer.class);
-    public static final Key<Integer> PADDING_RIGHT = key("padding-right", Integer.class);
-    public static final Key<Integer> PADDING_BOTTOM = key("padding-bottom", Integer.class);
-    public static final Key<Integer> PADDING_LEFT = key("padding-left", Integer.class);
+    public static final Key<Length> PADDING_TOP = key("padding-top", Length.class);
+    public static final Key<Length> PADDING_RIGHT = key("padding-right", Length.class);
+    public static final Key<Length> PADDING_BOTTOM = key("padding-bottom", Length.class);
+    public static final Key<Length> PADDING_LEFT = key("padding-left", Length.class);
 
     // box border
     public static final Key<Integer> BORDER_TOP_WIDTH = key("border-top-width", Integer.class);
@@ -78,7 +80,7 @@ public final class ElementStyle {
     public static final Key<FlexWrap> FLEX_WRAP = key("flex-wrap", FlexWrap.class);
     public static final Key<JustifyContent> JUSTIFY_CONTENT = key("justify-content", JustifyContent.class);
     public static final Key<AlignItems> ALIGN_ITEMS = key("align-items", AlignItems.class);
-    public static final Key<Integer> GAP = key("gap", Integer.class);
+    public static final Key<Length> GAP = key("gap", Length.class);
     public static final Key<Integer> FLEX_GROW = key("flex-grow", Integer.class);
     public static final Key<Integer> FLEX_SHRINK = key("flex-shrink", Integer.class);
 
@@ -92,6 +94,12 @@ public final class ElementStyle {
     public static final Key<?>[] PADDING = { PADDING_TOP, PADDING_RIGHT, PADDING_BOTTOM, PADDING_LEFT };
     public static final Key<?>[] BORDER_WIDTH = { BORDER_TOP_WIDTH, BORDER_RIGHT_WIDTH, BORDER_BOTTOM_WIDTH, BORDER_LEFT_WIDTH };
     public static final Key<?>[] INSET = { TOP, RIGHT, BOTTOM, LEFT };
+
+    /** The ones that pass down the tree on their own, like css does it. */
+    public static final Key<?>[] INHERITED = {
+            COLOR, FONT_SIZE, BOLD, ITALIC, UNDERLINE, STRIKETHROUGH, TEXT_SHADOW,
+            TEXT_ALIGN, LINE_HEIGHT, LETTER_SPACING, WHITE_SPACE, VISIBILITY
+    };
 
     /** Nothing set at all; what an element starts out with before any style lands on it. */
     public static final ElementStyle UNSET = new ElementStyle(new Object[KEYS.size()]);
@@ -175,14 +183,27 @@ public final class ElementStyle {
         return total;
     }
 
-    public int horizontalSpacing(){ return sum(MARGIN_LEFT, MARGIN_RIGHT, PADDING_LEFT, PADDING_RIGHT, BORDER_LEFT_WIDTH, BORDER_RIGHT_WIDTH); }
-    public int verticalSpacing(){ return sum(MARGIN_TOP, MARGIN_BOTTOM, PADDING_TOP, PADDING_BOTTOM, BORDER_TOP_WIDTH, BORDER_BOTTOM_WIDTH); }
+    public int horizontalBorder(){ return sum(BORDER_LEFT_WIDTH, BORDER_RIGHT_WIDTH); }
+    public int verticalBorder(){ return sum(BORDER_TOP_WIDTH, BORDER_BOTTOM_WIDTH); }
+
+    /** Pixels for a length key, measured against the basis layout hands in. */
+    public int resolve(Key<Length> key, int basis, int viewWidth, int viewHeight, int fallback){
+        return Length.resolve(get(key), basis, viewWidth, viewHeight, fallback);
+    }
 
     /** Falls back to whatever the other style holds for anything this one leaves unset, like cascading does. */
     public ElementStyle inherit(ElementStyle parent){
         if (parent == null) return this;
         Object[] merged = values.clone();
         for (int i = 0; i < merged.length; i++) if (merged[i] == null) merged[i] = parent.values[i];
+        return new ElementStyle(merged);
+    }
+
+    /** What this element ends up with under a parent: only the inherited keys come down. */
+    public ElementStyle inheritFrom(ElementStyle parent){
+        if (parent == null) return this;
+        Object[] merged = values.clone();
+        for (Key<?> key : INHERITED) if (merged[key.index] == null) merged[key.index] = parent.values[key.index];
         return new ElementStyle(merged);
     }
 

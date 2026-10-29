@@ -1,9 +1,13 @@
 package net.tutla.craftytml.client.ctml;
 
+import net.tutla.craftytml.client.ctml.property.ClassName;
+import net.tutla.craftytml.client.ctml.style.TailwindParser;
 import net.tutla.craftytml.client.dom.DOMTreeElement;
 import net.tutla.craftytml.client.tusan.CTMLTokenType;
+import net.tutla.tums.tusan.TusanContext;
 
 import java.lang.reflect.InvocationTargetException;
+import java.util.List;
 
 public abstract class CTMLElement {
     public final String name;
@@ -31,6 +35,21 @@ public abstract class CTMLElement {
         return isFirstNode;
     }
      */
+
+    public void updateProperty(String name, Object value, TusanContext ctx){
+        propertyList.updateProperty(name, value, ctx);
+
+        if (propertyList.propertyFromName(name) instanceof ClassName classes && classes.hasValue()){
+            applyClassStyles(classes.getStringValue());
+        }
+    }
+
+    public void applyClassStyles(String classList){
+        ElementStyle.Builder parsed = ElementStyle.builder();
+        List<String> unknown = TailwindParser.parseInto(parsed, classList);
+        if (!unknown.isEmpty()) System.out.println("[CTML] <" + name + "> has classes nothing knows how to style: " + unknown);
+        style = style.inherit(parsed.build());
+    }
 
     public ElementStyle getStyle(){
         return style;

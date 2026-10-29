@@ -5,7 +5,6 @@ import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.tutla.craftytml.client.dom.DOMTreeElement;
-import net.tutla.craftytml.client.dom.DOMTreeNode;
 import net.tutla.craftytml.client.render.CTMLScreen;
 import net.tutla.craftytml.client.render.UIRegistry;
 import net.tutla.craftytml.client.tusan.CTMLTusan;

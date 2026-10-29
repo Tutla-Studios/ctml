@@ -1,0 +1,90 @@
+CraftyTML - left undone
+=======================
+Everything knowingly skipped or faked in the session that built ElementStyle, the
+tailwind parser, the layout engine and the renderer. Nothing here is a mystery bug;
+it is all stuff that was cut on purpose, with where it lives.
+
+
+NEVER RUN IN THE GAME
+---------------------
+- No gradle wrapper in the repo (no ./gradlew), so the build was never run. Everything
+  was compiled with javac against the 26.3 deobf jars and the fabric api jars, and the
+  layout engine was exercised through throwaway harnesses, not minecraft.
+  -> run the client once and look at a real screen before trusting any of this.
+- Nothing draws until a .ctml script in run/ctml/ui actually returns a tree. The paint
+  path (fills, scissor, pose scaling, font drawing) has never executed.
+- No tests in the repo. The layout checks lived in the scratchpad and are gone.
+
+
+RENDERER / PAINT  (render/CTMLRenderer.java)
+--------------------------------------------
+- border-radius is faked: corners get cut off with three fills, there is no rounded
+  rect primitive. Looks like a chamfer, not a radius.
+- background-image is parsed into the style and never drawn. Needs an Identifier plus
+  blit, and a decision about sizing (cover / contain / repeat).
+- Only one border-color for all four sides. No per-side colors, no border styles.
+- opacity multiplies the alpha of each thing drawn instead of compositing the subtree,
+  so overlapping children inside a faded box darken each other.
+- letter-spacing is stored and ignored; honouring it means drawing glyph by glyph.
+- Fractional font scales (text-xs is 0.75) go through the matrix, so small text is
+  blurry. Consider snapping scales or keeping a real font size ladder.
+- No text-overflow / ellipsis, no vertical centering of text inside its box.
+- z-index only orders in-flow siblings. Out of flow boxes are appended last so they
+  always paint on top, and there are no stacking contexts.
+- overflow-scroll clips like overflow-hidden: no scroll offset, no scrollbar, no input.
+
+
+LAYOUT  (render/CTMLLayout.java)
+--------------------------------
+- flex-grow and flex-shrink are parsed but never applied, so flex-1 does nothing and
+  free space is only distributed by justify-content.
+- flex-wrap is ignored: flex lines never wrap.
+- align-self, order, flex-basis, align-content do not exist.
+- min-content / max-content measuring is rough: it ignores wrapping inside children and
+  resolves percentage padding against a zero basis.
+- Text sits above every child and never between them, because text is a property on the
+  element and not a node. Interleaving needs a real text node in the DOM.
+- Layout runs on every frame inside extractRenderState. It should be cached per screen
+  and invalidated on style or property change and on resize.
+- No baseline alignment (align-items: baseline falls back to start).
+- Inline flow is one pass, left to right, wrapping on the border box; no line boxes, no
+  vertical-align, no whitespace collapsing between inline siblings.
+- Margins never collapse (css does collapse adjacent vertical margins).
+- position: sticky does not exist. fixed is measured against the viewport, which is the
+  screen, so it is the same thing as absolute at the root.
+
+
+STYLE SYSTEM  (ctml/ElementStyle.java, ctml/style/*)
+----------------------------------------------------
+- No variants at all: hover:, focus:, active:, dark:, md: and friends come back from the
+  parser as unknown. Needs element state and breakpoints first.
+- Unknown classes only get printed to stdout by applyClassStyles. Route them through the
+  interpreter's error/warn path so they show up with a line number.
+- A class whose value makes no sense for its key (auto on a gap, a percent on a radius)
+  is also silently ignored.
+- Arbitrary properties like [color:red] are not supported, only arbitrary values.
+- Css color keywords (cornflowerblue, rebeccapurple) are not supported; only the tailwind
+  palette, where a bare family name (text-green) falls back to that family's 500 shade
+  and [#hex].
+- gap-x and gap-y both write the single GAP key. No row-gap / column-gap split.
+- No box-shadow, outline, cursor, font-family, transform, transition or animation.
+- text-shadow is a ctml invention (minecraft draws text with a shadow by default) and
+  defaults to true, which is not what css would do.
+- No stylesheets and no selectors: ClassName only ever means tailwind. There is nowhere
+  to put a rule that matches a class name.
+- ElementStyle.inherit (full merge) and inheritFrom (the inherited keys only) are easy
+  to mix up. inherit is for layering tailwind under hand set styles, nothing else.
+
+
+SCREEN AND REGISTRY  (render/CTMLScreen.java, render/UIRegistry.java, CraftytmlClient.java)
+-------------------------------------------------------------------------------------------
+- The UI that opens on the main menu is just the first script registered, which means
+  whatever order Files.list returned. There is no way to say which script is the menu.
+- No hot reload: editing a .ctml file needs a game restart.
+- CTMLScreen has no input at all. No hit testing, no mouse or keyboard routing to
+  elements, no focus, no click handlers, no narration for accessibility.
+- No widget elements: only ctml, div and span exist. No button, input, img, list.
+- DOMTreeNode.draw() is a leftover no-op from the first prototype and should go once the
+  renderer owns drawing.
+- openedFirstUI is a static flag, so the menu UI opens once per game launch. Reopening
+  it needs a command or a key bind.

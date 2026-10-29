@@ -46,7 +46,7 @@ public class ElementNode extends Node {
         }
 
         if (ctx.getCurrentToken().type == PrebuiltTusanTokenType.STRING){
-            DOMTreeParentElementNode.getElement().propertyList.updateProperty("text", ctx.getCurrentToken().value, ctx);
+            DOMTreeParentElementNode.getElement().updateProperty("text", ctx.getCurrentToken().value, ctx);
         } else {
             ElementRegistry.getRegister().forEach(_element -> {
                 if (_element.tokenType == ctx.getCurrentToken().type){
@@ -105,7 +105,7 @@ public class ElementNode extends Node {
             } else {
                 value = true;
             }
-            element.propertyList.updateProperty(property.name, value, ctx);
+            element.updateProperty(property.name, value, ctx);
         }
     }
 }

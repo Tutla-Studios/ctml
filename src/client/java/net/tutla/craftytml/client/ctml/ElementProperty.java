@@ -21,11 +21,23 @@ public class ElementProperty {
             ctx.getInterpreter().error("UnexpectedValue", "Expected integer value for property: "+name+"; got"+val.getClass(), null);
         } else if (type == ElementPropertyType.STRING && !(val instanceof String)){
             ctx.getInterpreter().error("UnexpectedValue", "Expected string value for property: "+name+"; got"+val.getClass(), null);
+        } else if (type == ElementPropertyType.STRING){
+            value = unquote((String) val);
         } else if (type == ElementPropertyType.BOOLEAN && !(val instanceof Boolean)){
             ctx.getInterpreter().error("UnexpectedValue", "Expected boolean value for property: "+name+"; got"+val.getClass(), null);
         } else {
             value = val;
         }
+    }
+
+    /** String tokens come out of the lexer with the quotes still on them, those aren't part of the value. */
+    private static String unquote(String raw){
+        if (raw.length() < 2) return raw;
+        char first = raw.charAt(0);
+        if ((first == '"' || first == '\'') && raw.charAt(raw.length() - 1) == first) {
+            return raw.substring(1, raw.length() - 1);
+        }
+        return raw;
     }
 
     public ElementProperty withValue(Object val, TusanContext ctx){

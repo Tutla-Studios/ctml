@@ -1,5 +1,6 @@
 package net.tutla.craftytml.client.ctml;
 
+import net.tutla.craftytml.client.ctml.style.Gradient;
 import net.tutla.craftytml.client.ctml.style.Length;
 
 import java.util.ArrayList;
@@ -61,9 +62,11 @@ public final class ElementStyle {
     // background
     public static final Key<Integer> BACKGROUND_COLOR = key("background-color", Integer.class);
     public static final Key<String> BACKGROUND_IMAGE = key("background-image", String.class);
+    public static final Key<Gradient> BACKGROUND_GRADIENT = key("background-gradient", Gradient.class);
 
     // text
     public static final Key<Integer> COLOR = key("color", Integer.class);
+    public static final Key<Gradient> TEXT_GRADIENT = key("text-gradient", Gradient.class);
     public static final Key<Integer> FONT_SIZE = key("font-size", Integer.class);
     public static final Key<Boolean> BOLD = key("bold", Boolean.class);
     public static final Key<Boolean> ITALIC = key("italic", Boolean.class);
@@ -97,7 +100,7 @@ public final class ElementStyle {
 
     /** The ones that pass down the tree on their own, like css does it. */
     public static final Key<?>[] INHERITED = {
-            COLOR, FONT_SIZE, BOLD, ITALIC, UNDERLINE, STRIKETHROUGH, TEXT_SHADOW,
+            COLOR, TEXT_GRADIENT, FONT_SIZE, BOLD, ITALIC, UNDERLINE, STRIKETHROUGH, TEXT_SHADOW,
             TEXT_ALIGN, LINE_HEIGHT, LETTER_SPACING, WHITE_SPACE, VISIBILITY
     };
 
@@ -247,6 +250,17 @@ public final class ElementStyle {
         private final Object[] values;
 
         private Builder(Object[] values){ this.values = values; }
+
+        /** What the builder holds so far, for the classes that build a value up over several of them. */
+        @SuppressWarnings("unchecked")
+        public <T> T get(Key<T> key){
+            return (T) values[key.index];
+        }
+
+        public <T> T get(Key<T> key, T fallback){
+            T value = get(key);
+            return value == null ? fallback : value;
+        }
 
         public <T> Builder set(Key<T> key, T value){
             values[key.index] = value;

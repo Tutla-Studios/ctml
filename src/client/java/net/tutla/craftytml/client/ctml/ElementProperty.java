@@ -30,7 +30,6 @@ public class ElementProperty {
         }
     }
 
-    /** String tokens come out of the lexer with the quotes still on them, those aren't part of the value. */
     private static String unquote(String raw){
         if (raw.length() < 2) return raw;
         char first = raw.charAt(0);

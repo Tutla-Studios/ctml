@@ -50,6 +50,18 @@ public class DOMTreeElement extends DOMTreeNode {
         return element.getStyle();
     }
 
+    public boolean isDraggable() {
+        return element.isDraggable();
+    }
+
+    public int getDragX() { return element.getDragX(); }
+
+    public int getDragY() { return element.getDragY(); }
+
+    public void setDragOffset(int dragX, int dragY) {
+        element.setDragOffset(dragX, dragY);
+    }
+
     public <T> T getStyleValue(ElementStyle.Key<T> key) {
         return element.getStyle().get(key);
     }

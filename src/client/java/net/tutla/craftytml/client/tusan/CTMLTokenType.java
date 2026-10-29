@@ -12,4 +12,5 @@ public enum CTMLTokenType implements TokenType {
 
     CLASS,
     TEXT,
+    DRAGGABLE,
 }

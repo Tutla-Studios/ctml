@@ -11,7 +11,6 @@ import net.tutla.craftytml.client.ctml.style.Length;
 import net.tutla.craftytml.client.dom.DOMTreeElement;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -39,7 +38,11 @@ public final class CTMLLayout {
     }
 
     /** One drawn line of text, already placed and already scaled for its font size. */
-    public record TextLine(FormattedCharSequence text, int x, int y, float scale) {}
+    /**
+     * One drawn line of text, already placed and already scaled for its font size.
+     * content is the same line as a plain string, for the drawing that has to go glyph by glyph.
+     */
+    public record TextLine(FormattedCharSequence text, String content, int x, int y, float scale) {}
 
     /** Everything layout needs to ask about text, so the measuring can be swapped out. */
     public interface TextMetrics {
@@ -134,18 +137,20 @@ public final class CTMLLayout {
         int boxX = x + leftMargin;
         int boxY = y + margin.top;
 
+        // however far the user has dragged it, which moves the box and nothing else
+        int offsetX = element.getDragX();
+        int offsetY = element.getDragY();
+
         // relative nudges the box without the flow around it noticing
         if (style.get(ElementStyle.POSITION) == ElementStyle.Position.RELATIVE) {
-            int offsetX = style.resolve(ElementStyle.LEFT, cbWidth, viewWidth, viewHeight, 0)
+            offsetX += style.resolve(ElementStyle.LEFT, cbWidth, viewWidth, viewHeight, 0)
                     - style.resolve(ElementStyle.RIGHT, cbWidth, viewWidth, viewHeight, 0);
-            int offsetY = style.resolve(ElementStyle.TOP, cbHeight, viewWidth, viewHeight, 0)
+            offsetY += style.resolve(ElementStyle.TOP, cbHeight, viewWidth, viewHeight, 0)
                     - style.resolve(ElementStyle.BOTTOM, cbHeight, viewWidth, viewHeight, 0);
-            if (offsetX != 0 || offsetY != 0) return shift(
-                    new Box(element, style, boxX, boxY, width, height, contentX, contentY, contentWidth, contentHeight, lines, children),
-                    offsetX, offsetY);
         }
 
-        return new Box(element, style, boxX, boxY, width, height, contentX, contentY, contentWidth, contentHeight, lines, children);
+        Box box = new Box(element, style, boxX, boxY, width, height, contentX, contentY, contentWidth, contentHeight, lines, children);
+        return shift(box, offsetX, offsetY);
     }
 
     // ---- width and height ----
@@ -391,10 +396,20 @@ public final class CTMLLayout {
                 case RIGHT -> Math.max(0, contentWidth - lineWidth);
                 case LEFT -> 0;
             };
-            lines.add(new TextLine(line, offsetX, i * lineHeight, scale));
+            lines.add(new TextLine(line, plain(line), offsetX, i * lineHeight, scale));
         }
 
         return lines;
+    }
+
+    /** The characters of a laid out line, in the order they get drawn. */
+    private static String plain(FormattedCharSequence line){
+        StringBuilder text = new StringBuilder();
+        line.accept((index, style, codePoint) -> {
+            text.appendCodePoint(codePoint);
+            return true;
+        });
+        return text.toString();
     }
 
     private int textHeight(ElementStyle style, List<TextLine> lines){
@@ -437,8 +452,7 @@ public final class CTMLLayout {
             if (position == ElementStyle.Position.ABSOLUTE || position == ElementStyle.Position.FIXED) continue;
             children.add(child);
         }
-        children.sort(Comparator.comparingInt(child -> child.getStyle().get(ElementStyle.Z_INDEX, 0)));
-        return children;
+        return children; // document order: z-index decides what paints on top, not where a box sits
     }
 
     /** Tailwind puts everything in border-box, so that is what an unset box-sizing means here. */

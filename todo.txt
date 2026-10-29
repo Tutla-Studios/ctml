@@ -14,8 +14,20 @@ RENDERER / PAINT  (render/CTMLRenderer.java)
 - Fractional font scales (text-xs is 0.75) go through the matrix, so small text is
   blurry. Consider snapping scales or keeping a real font size ladder.
 - No text-overflow / ellipsis, no vertical centering of text inside its box.
-- z-index only orders in-flow siblings. Out of flow boxes are appended last so they
-  always paint on top, and there are no stacking contexts.
+- z-index sorts siblings at paint time only, so it cannot lift a box above its parent's
+  siblings: there are no stacking contexts, opacity and overflow start none, and a child
+  with a high z-index still paints under an uncle box drawn later.
+- Gradients ignore border-radius, so a rounded box with a gradient gets square corners,
+  and background-color is skipped entirely when a gradient is set instead of drawn under it.
+- Diagonal gradient directions (bg-gradient-to-tr and the rest) are drawn as the plain
+  horizontal ramp. A real diagonal needs per pixel work or a shader.
+- Horizontal gradients are one fill per pixel column, so a screen wide one is ~850 draws
+  a frame. Vertical ones go through fillGradient and cost one draw per segment.
+- Gradient text is drawn glyph by glyph with graphics.text, which drops the per glyph
+  bold / italic styles the line carries and measures advances off the plain character.
+  Each glyph is its own draw call, and the shadow is drawn in the ramp colour too.
+- text-gradient takes over from color entirely; there is no bg-clip-text, so a gradient
+  cannot be clipped to text while the box keeps its own background.
 - overflow-scroll clips like overflow-hidden: no scroll offset, no scrollbar, no input.
 
 
@@ -36,6 +48,12 @@ LAYOUT  (render/CTMLLayout.java)
 - Layout runs on every frame inside extractRenderState. It should be cached per screen
   and invalidated on style or property change and on resize.
 - No baseline alignment (align-items: baseline falls back to start).
+- A dragged element is shifted after layout, so nothing reflows around it and its own
+  children move with it. It cannot be dragged out of its parent, which is the point, but
+  it can be dragged over a sibling with no way to say what is on top bar z-index.
+- Drag offsets live on the element in gui pixels and are not rescaled when the gui scale
+  or the window size changes, so a dragged box can end up clamped oddly after a resize.
+- The drag offset is lost on reload and there is nowhere to persist it.
 - Inline flow is one pass, left to right, wrapping on the border box; no line boxes, no
   vertical-align, no whitespace collapsing between inline siblings.
 - Margins never collapse (css does collapse adjacent vertical margins).
@@ -61,6 +79,19 @@ STYLE SYSTEM  (ctml/ElementStyle.java, ctml/style/*)
   defaults to true, which is not what css would do.
 - No stylesheets and no selectors: ClassName only ever means tailwind. There is nowhere
   to put a rule that matches a class name.
+- Element defaults (CTMLElement.DEFAULTS, overridden by CTML and Span) only hold the non
+  inherited keys, since a default on every element would block the parent's value from
+  ever reaching a child. That means the text initial values only exist on <ctml>, so an
+  element laid out without a ctml root above it has no colour or font size to fall back on
+  bar the renderer's own constants.
+- There is no way to set defaults from a script, and no per element reset: a new element
+  has to override defaultStyle() in java.
+- bg-gradient-* / text-gradient-* are tailwind v3 spelling. v4's bg-linear-to-r,
+  bg-radial and bg-conic are not recognised, and neither are gradient colour stop
+  positions (from-10%) or interpolation modifiers (/oklch).
+- from- / via- / to- always write the background gradient and text-from- / text-via- /
+  text-to- the text one, so a stop class on its own (no direction class) silently assumes
+  to-r. A stop with an unknown colour is dropped and leaves the gradient half built.
 - ElementStyle.inherit (full merge) and inheritFrom (the inherited keys only) are easy
   to mix up. inherit is for layering tailwind under hand set styles, nothing else.
 
@@ -73,5 +104,12 @@ SCREEN AND REGISTRY  (render/CTMLScreen.java, render/UIRegistry.java, CraftytmlC
 - CTMLScreen has no input at all. No hit testing, no mouse or keyboard routing to
   elements, no focus, no click handlers, no narration for accessibility.
 - No widget elements: only ctml, div and span exist. No button, input, img, list.
+- draggable is the only input there is, and it only answers the left button. There is
+  still no hover, no click handlers, no focus and no keyboard anything.
+- draggable is a boolean property, so the parser takes the bare name and ignores any
+  value: draggable="false" still drags. Property types never get validated.
+- Hit testing walks the laid out boxes every click and takes the deepest draggable box
+  under the cursor, so a transparent or clipped away box still catches the drag. Scissor
+  rects and opacity are not accounted for.
 - DOMTreeNode.draw() is a leftover no-op from the first prototype and should go once the
   renderer owns drawing.

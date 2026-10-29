@@ -22,6 +22,8 @@ public final class TailwindParser {
 
     private interface Valued { void apply(ElementStyle.Builder style, String value); }
 
+    private enum Stop { FROM, VIA, TO }
+
     private static final Map<String, Consumer<ElementStyle.Builder>> KEYWORDS = new HashMap<>();
     private static final Map<String, Valued> VALUED = new LinkedHashMap<>();
     private static final List<String> PREFIXES;
@@ -153,6 +155,20 @@ public final class TailwindParser {
         valued("grow", (s, v) -> set(s, ElementStyle.FLEX_GROW, number(v)));
         valued("shrink", (s, v) -> set(s, ElementStyle.FLEX_SHRINK, number(v)));
 
+        // gradients: the direction class picks the axis, the stop classes fill in the colours
+        for (Gradient.Direction direction : Gradient.Direction.values()) {
+            String suffix = direction.name().toLowerCase().replace('_', '-');
+            keyword("bg-gradient-" + suffix, s -> direction(s, ElementStyle.BACKGROUND_GRADIENT, direction));
+            keyword("text-gradient-" + suffix, s -> direction(s, ElementStyle.TEXT_GRADIENT, direction));
+        }
+
+        valued("from", stop(ElementStyle.BACKGROUND_GRADIENT, Stop.FROM));
+        valued("via", stop(ElementStyle.BACKGROUND_GRADIENT, Stop.VIA));
+        valued("to", stop(ElementStyle.BACKGROUND_GRADIENT, Stop.TO));
+        valued("text-from", stop(ElementStyle.TEXT_GRADIENT, Stop.FROM));
+        valued("text-via", stop(ElementStyle.TEXT_GRADIENT, Stop.VIA));
+        valued("text-to", stop(ElementStyle.TEXT_GRADIENT, Stop.TO));
+
         // longest first, so "min-w-4" doesn't get read as the "m" prefix
         PREFIXES = new ArrayList<>(VALUED.keySet());
         PREFIXES.sort(Comparator.comparingInt(String::length).reversed());
@@ -245,6 +261,26 @@ public final class TailwindParser {
     /** Along the x axis "screen" means the viewport's width rather than its height. */
     private static Valued horizontal(Valued setter){
         return (style, value) -> setter.apply(style, value.equals("screen") ? "svw" : value);
+    }
+
+    /** A direction class on its own, which keeps whatever stops are already there. */
+    private static void direction(ElementStyle.Builder style, ElementStyle.Key<Gradient> key, Gradient.Direction direction){
+        style.set(key, style.get(key, Gradient.of(direction)).withDirection(direction));
+    }
+
+    /** from- / via- / to-, each one merged into the gradient the other classes are building. */
+    private static Valued stop(ElementStyle.Key<Gradient> key, Stop stop){
+        return (style, value) -> {
+            Integer color = TailwindColors.parse(value);
+            if (color == null) return;
+
+            Gradient gradient = style.get(key, Gradient.of(Gradient.Direction.TO_R));
+            style.set(key, switch (stop) {
+                case FROM -> gradient.withFrom(color);
+                case VIA -> gradient.withVia(color);
+                case TO -> gradient.withTo(color);
+            });
+        };
     }
 
     private static void text(ElementStyle.Builder style, String value){

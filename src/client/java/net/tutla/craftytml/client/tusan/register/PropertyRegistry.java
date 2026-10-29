@@ -2,6 +2,7 @@ package net.tutla.craftytml.client.tusan.register;
 
 import net.tutla.craftytml.client.ctml.ElementProperty;
 import net.tutla.craftytml.client.ctml.property.ClassName;
+import net.tutla.craftytml.client.ctml.property.Draggable;
 import net.tutla.craftytml.client.ctml.property.Text;
 import net.tutla.tums.tusan.lexer.TokenType;
 
@@ -15,6 +16,7 @@ public class PropertyRegistry {
     public static void init(){
         register(new ClassName());
         register(new Text());
+        register(new Draggable());
     }
 
     public static void register(ElementProperty property){

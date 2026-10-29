@@ -42,13 +42,13 @@ public class CTMLRenderer {
         if (clipped) graphics.enableScissor(box.contentX(), box.contentY(), box.contentRight(), box.contentBottom());
 
         if (!hidden) text(box, graphics, font, alpha);
-        for (CTMLLayout.Box child : inPaintOrder(box.children())) paint(child, graphics, font, alpha);
+        for (CTMLLayout.Box child : paintOrder(box.children())) paint(child, graphics, font, alpha);
 
         if (clipped) graphics.disableScissor();
     }
 
     /** z-index decides what covers what; everything else keeps the order layout handed over. */
-    private static List<CTMLLayout.Box> inPaintOrder(List<CTMLLayout.Box> children){
+    static List<CTMLLayout.Box> paintOrder(List<CTMLLayout.Box> children){
         if (children.size() < 2) return children;
 
         boolean layered = false;

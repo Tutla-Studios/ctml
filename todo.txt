@@ -51,6 +51,10 @@ LAYOUT  (render/CTMLLayout.java)
 - A dragged element is shifted after layout, so nothing reflows around it and its own
   children move with it. It cannot be dragged out of its parent, which is the point, but
   it can be dragged over a sibling with no way to say what is on top bar z-index.
+- Box.offsetX / offsetY is how the flow finds a moved box's original spot again. Anything
+  new that places boxes (flex lines, grid, baseline alignment) has to place them by
+  flowX / flowY the way layoutFlex does, or it will quietly wipe out drags and the
+  position relative nudges along with them.
 - Drag offsets live on the element in gui pixels and are not rescaled when the gui scale
   or the window size changes, so a dragged box can end up clamped oddly after a resize.
 - The drag offset is lost on reload and there is nowhere to persist it.
@@ -69,7 +73,6 @@ STYLE SYSTEM  (ctml/ElementStyle.java, ctml/style/*)
   interpreter's error/warn path so they show up with a line number.
 - A class whose value makes no sense for its key (auto on a gap, a percent on a radius)
   is also silently ignored.
-- Arbitrary properties like [color:red] are not supported, only arbitrary values.
 - Css color keywords (cornflowerblue, rebeccapurple) are not supported; only the tailwind
   palette, where a bare family name (text-green) falls back to that family's 500 shade
   and [#hex].
@@ -106,10 +109,19 @@ SCREEN AND REGISTRY  (render/CTMLScreen.java, render/UIRegistry.java, CraftytmlC
 - No widget elements: only ctml, div and span exist. No button, input, img, list.
 - draggable is the only input there is, and it only answers the left button. There is
   still no hover, no click handlers, no focus and no keyboard anything.
+- Dragging goes through mouseClicked / mouseDragged / mouseReleased, and the button numbers
+  there are sdl's: left is 1, middle 2, right 3, not glfw's 0 / 1 / 2. MouseHandler's
+  isLeftPressed / isRightPressed are no use on a screen at all, since minecraft only keeps
+  them up to date while no screen is open.
+- A drag ends on mouseReleased. If that never arrives (released outside the window, or the
+  screen changes mid drag) the element keeps following the cursor, and there is no way to
+  read the live button state back: this build is on sdl, so there is no glfwGetMouseButton
+  to ask.
 - draggable is a boolean property, so the parser takes the bare name and ignores any
   value: draggable="false" still drags. Property types never get validated.
-- Hit testing walks the laid out boxes every click and takes the deepest draggable box
-  under the cursor, so a transparent or clipped away box still catches the drag. Scissor
-  rects and opacity are not accounted for.
+- Hit testing walks the previous frame's boxes on every grab, deepest and topmost first,
+  skipping visibility hidden subtrees, fully transparent ones and anything clipped away by
+  an overflow box. It still ignores border-radius (the corners of a rounded box are live)
+  and a box faded by an ancestor's opacity rather than its own.
 - DOMTreeNode.draw() is a leftover no-op from the first prototype and should go once the
   renderer owns drawing.

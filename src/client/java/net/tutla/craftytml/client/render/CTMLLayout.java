@@ -22,12 +22,18 @@ public final class CTMLLayout {
     /** What minecraft's font counts as, so font-size can be read as a scale against it. */
     public static final int BASE_FONT_SIZE = 16;
 
-    /** A laid out element: the border box, the content box inside it, and what goes in there. */
+    /**
+     * A laid out element: the border box, the content box inside it, and what goes in there.
+     * offsetX / offsetY is how far the box was moved out of the spot the flow gave it, by a drag or by
+     * position relative. The flow has to be able to find that spot again, since a box that moved must
+     * not drag the layout around it along with it.
+     */
     public record Box(
             DOMTreeElement element,
             ElementStyle style,
             int x, int y, int width, int height,
             int contentX, int contentY, int contentWidth, int contentHeight,
+            int offsetX, int offsetY,
             List<TextLine> lines,
             List<Box> children
     ) {
@@ -35,6 +41,11 @@ public final class CTMLLayout {
         public int bottom(){ return y + height; }
         public int contentRight(){ return contentX + contentWidth; }
         public int contentBottom(){ return contentY + contentHeight; }
+
+        /** Where the flow put the box, with any offset taken back off again. */
+        public int flowX(){ return x - offsetX; }
+        public int flowY(){ return y - offsetY; }
+        public int flowRight(){ return right() - offsetX; }
     }
 
     /** One drawn line of text, already placed and already scaled for its font size. */
@@ -149,7 +160,8 @@ public final class CTMLLayout {
                     - style.resolve(ElementStyle.BOTTOM, cbHeight, viewWidth, viewHeight, 0);
         }
 
-        Box box = new Box(element, style, boxX, boxY, width, height, contentX, contentY, contentWidth, contentHeight, lines, children);
+        Box box = new Box(element, style, boxX, boxY, width, height,
+                contentX, contentY, contentWidth, contentHeight, offsetX, offsetY, lines, children);
         return shift(box, offsetX, offsetY);
     }
 
@@ -254,7 +266,7 @@ public final class CTMLLayout {
             int outerHeight = box.height + marginEdges(childStyle, width).vertical();
 
             if (inline) {
-                lineX = box.right() + marginEdges(childStyle, width).right;
+                lineX = box.flowRight() + marginEdges(childStyle, width).right;
                 lineHeight = Math.max(lineHeight, outerHeight);
             } else {
                 cursorY += outerHeight;
@@ -330,7 +342,9 @@ public final class CTMLLayout {
                 default -> 0;
             };
 
-            boxes.add(shift(box, row ? main - box.x : cross - box.x, row ? cross - box.y : main - box.y));
+            boxes.add(shift(box,
+                    row ? main - box.flowX() : cross - box.flowX(),
+                    row ? cross - box.flowY() : main - box.flowY()));
             main += itemMain + spacing;
         }
 
@@ -499,7 +513,7 @@ public final class CTMLLayout {
         return new Box(box.element, box.style,
                 box.x + dx, box.y + dy, box.width, box.height,
                 box.contentX + dx, box.contentY + dy, box.contentWidth, box.contentHeight,
-                box.lines, children);
+                box.offsetX, box.offsetY, box.lines, children);
     }
 
     private static int clamp(int value, int min, int max){

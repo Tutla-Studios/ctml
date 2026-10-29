@@ -48,21 +48,18 @@ public class ElementNode extends Node {
         if (ctx.getCurrentToken().type == PrebuiltTusanTokenType.STRING){
             DOMTreeParentElementNode.getElement().updateProperty("text", ctx.getCurrentToken().value, ctx);
         } else {
-            ElementRegistry.getRegister().forEach(_element -> {
-                if (_element.tokenType == ctx.getCurrentToken().type){
-                        CTMLElement element = createElementFromClass(_element);
-                        registerAllProperties(element);
-                        DOMTreeElement domTreeElementNodeCreated = createElementAndAppendToTree(element);
+            CTMLElement registered = ElementRegistry.getElementFromTokenType(ctx.getCurrentToken().type);
+            if (registered != null){
+                CTMLElement element = createElementFromClass(registered);
+                registerAllProperties(element);
+                DOMTreeElement domTreeElementNodeCreated = createElementAndAppendToTree(element);
 
-                        //since it has children
-                        if (ctx.getNextToken().group != CTMLTokenGroup.ELEMENT_CLOSE){
-                            ctx.nextToken();
-                            new ElementNode(ctx).createWrapper(domTreeElementNodeCreated);
-                        }
-                        ctx.tokenContext.expectTokenType(element.closingTokenType);
-
+                while (ctx.getNextToken() != null && ctx.getNextToken().group != CTMLTokenGroup.ELEMENT_CLOSE){
+                    ctx.nextToken();
+                    new ElementNode(ctx).createWrapper(domTreeElementNodeCreated);
                 }
-            });
+                ctx.tokenContext.expectTokenType(element.closingTokenType);
+            }
         }
 
 
@@ -78,6 +75,7 @@ public class ElementNode extends Node {
         // checking if its the head node
         if (element instanceof CTML && DOMTreeParentElementNode.getElement() instanceof CTML){
             DOMTreeParentElementNode = domTreeElementNodeCreated; // replace the template head with ts.
+            return domTreeElementNodeCreated; // appending it to itself would make the tree its own parent
         }
         DOMTreeParentElementNode.append(domTreeElementNodeCreated);
 

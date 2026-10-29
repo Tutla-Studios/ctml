@@ -32,5 +32,8 @@ public enum CTMLTokenType implements TokenType {
     DRAGGABLE,
     CALLBACK,
     COLSPAN,
-    ROWSPAN
+    ROWSPAN,
+    SCROLLX,
+    SCROLLY,
+    SCROLLINTO
 }

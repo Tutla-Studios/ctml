@@ -83,6 +83,49 @@ public class DOMTreeElement extends DOMTreeNode {
         element.setScrollOffset(scrollX, scrollY);
     }
 
+    /** The same, but slid to over the next few frames rather than landed on at once. */
+    public void slideScrollTo(int scrollX, int scrollY) {
+        element.slideScrollTo(scrollX, scrollY);
+    }
+
+    public int getScrollTargetX() { return element.getScrollTargetX(); }
+
+    public int getScrollTargetY() { return element.getScrollTargetY(); }
+
+    public boolean isSliding() { return element.isSliding(); }
+
+    public boolean advanceScroll(float seconds, float tau) {
+        return element.advanceScroll(seconds, tau);
+    }
+
+    /** What layout should scroll by, given the room there turns out to be in the viewport it is in. */
+    public int scrollFor(boolean vertical, int max, long view) {
+        return element.scrollFor(vertical, max, view);
+    }
+
+    public void settleScroll(int scrollX, int scrollY, int maxX, int maxY, long view) {
+        element.settleScroll(scrollX, scrollY, maxX, maxY, view);
+    }
+
+    public float getScrollShareX() { return element.getScrollShareX(); }
+
+    public float getScrollShareY() { return element.getScrollShareY(); }
+
+    public void setScrollShare(float shareX, float shareY) {
+        element.setScrollShare(shareX, shareY);
+    }
+
+    public DOMTreeElement getScrollAnchor() { return element.getScrollAnchor(); }
+
+    public int getScrollAnchorOffset() { return element.getScrollAnchorOffset(); }
+
+    public void setScrollAnchor(DOMTreeElement anchor, int offset) {
+        element.setScrollAnchor(anchor, offset);
+    }
+
+    /** An id a script asked to be brought into view, taken off the element as it is read. */
+    public String takeScrollInto() { return element.takeScrollInto(); }
+
     public <T> T getStyleValue(ElementStyle.Key<T> key) {
         return element.getStyle().get(key);
     }

@@ -65,6 +65,8 @@ public final class ElementStyle {
     public static final Key<Integer> BACKGROUND_COLOR = key("background-color", Integer.class);
     public static final Key<String> BACKGROUND_IMAGE = key("background-image", String.class);
     public static final Key<Gradient> BACKGROUND_GRADIENT = key("background-gradient", Gradient.class);
+    /** How far the background reaches, and TEXT for a background clipped to the glyphs of the text. */
+    public static final Key<BackgroundClip> BACKGROUND_CLIP = key("background-clip", BackgroundClip.class);
 
     // text
     public static final Key<Integer> COLOR = key("color", Integer.class);
@@ -131,8 +133,17 @@ public final class ElementStyle {
     public static final Key<Integer> SCROLLBAR_THUMB_COLOR = key("scrollbar-thumb-color", Integer.class);
     public static final Key<Integer> SCROLLBAR_TRACK_COLOR = key("scrollbar-track-color", Integer.class);
     public static final Key<Integer> SCROLLBAR_RADIUS = key("scrollbar-radius", Integer.class);
-    /** True keeps room for the bars inside the box, false lets them float over the content. */
-    public static final Key<Boolean> SCROLLBAR_GUTTER = key("scrollbar-gutter", Boolean.class);
+    /** Whether room is kept for the bars inside the box, on the far edge or on both of them. */
+    public static final Key<ScrollbarGutter> SCROLLBAR_GUTTER = key("scrollbar-gutter", ScrollbarGutter.class);
+
+    // scrolling
+    /** Whether a wheel this box cannot use is handed on to the box around it. */
+    public static final Key<Overscroll> OVERSCROLL_BEHAVIOR_X = key("overscroll-behavior-x", Overscroll.class);
+    public static final Key<Overscroll> OVERSCROLL_BEHAVIOR_Y = key("overscroll-behavior-y", Overscroll.class);
+    /** Whether a scroll lands at once or slides there. */
+    public static final Key<ScrollBehavior> SCROLL_BEHAVIOR = key("scroll-behavior", ScrollBehavior.class);
+    /** Whether the content on show is held still when something above it changes size. */
+    public static final Key<OverflowAnchor> OVERFLOW_ANCHOR = key("overflow-anchor", OverflowAnchor.class);
 
     // misc
     public static final Key<Visibility> VISIBILITY = key("visibility", Visibility.class);
@@ -145,6 +156,7 @@ public final class ElementStyle {
     public static final Key<?>[] INSET = { TOP, RIGHT, BOTTOM, LEFT };
     public static final Key<?>[] OVERFLOW = { OVERFLOW_X, OVERFLOW_Y };
     public static final Key<?>[] GAP = { ROW_GAP, COLUMN_GAP };
+    public static final Key<?>[] OVERSCROLL_BEHAVIOR = { OVERSCROLL_BEHAVIOR_X, OVERSCROLL_BEHAVIOR_Y };
 
     /** The ones that pass down the tree on their own, like css does it. */
     public static final Key<?>[] INHERITED = {
@@ -206,6 +218,19 @@ public final class ElementStyle {
      * from code, SCROLL always offers a bar and AUTO only offers one once there is something to scroll.
      */
     public enum Overflow { VISIBLE, HIDDEN, CLIP, SCROLL, AUTO }
+    /**
+     * AUTO only keeps room for a bar while one is there, STABLE keeps it whenever the axis could scroll
+     * so nothing jumps sideways when the bar turns up, and BOTH_EDGES keeps the same room on the near
+     * edge as well so the content stays centred.
+     */
+    public enum ScrollbarGutter { AUTO, STABLE, BOTH_EDGES }
+    /** AUTO hands a wheel it cannot use outwards; CONTAIN and NONE keep it, so the page behind stays put. */
+    public enum Overscroll { AUTO, CONTAIN, NONE }
+    public enum ScrollBehavior { AUTO, SMOOTH }
+    /** AUTO holds the content on show still when something above it resizes; NONE lets it slide. */
+    public enum OverflowAnchor { AUTO, NONE }
+    /** Where a background stops. TEXT is css's background-clip: text, which clips it to the glyphs. */
+    public enum BackgroundClip { BORDER_BOX, PADDING_BOX, CONTENT_BOX, TEXT }
     public enum Visibility { VISIBLE, HIDDEN }
 
     private final Object[] values;

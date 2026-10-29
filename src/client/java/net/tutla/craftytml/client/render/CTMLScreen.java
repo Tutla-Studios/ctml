@@ -1,7 +1,9 @@
 package net.tutla.craftytml.client.render;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.tutla.craftytml.client.dom.DOMTreeElement;
@@ -28,6 +30,15 @@ public class CTMLScreen extends Screen {
     /** A scrollbar thumb the user has hold of, which takes the press before any draggable box does. */
     private CTMLScroll.Grip bar;
 
+    /**
+     * The scroll container the keyboard talks to: whatever the user last pressed on or last turned the
+     * wheel over. There is no focus ring in ctml yet, so this is all the focus there is.
+     */
+    private DOMTreeElement scrollFocus;
+
+    /** When the last frame was drawn, so a smooth scroll moves by time rather than by frames. */
+    private long drawnAt;
+
     public CTMLScreen(String name, DOMTreeElement domTreeHeadElement, Screen parent, DOMContext domCtx){
         super(Component.literal(name));
         this.domTreeHeadElement = domTreeHeadElement;
@@ -52,9 +63,25 @@ public class CTMLScreen extends Screen {
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float partialTick) {
         super.extractRenderState(graphics, mouseX, mouseY, partialTick);
 
+        // anything part way through a smooth scroll moves on by however long the last frame took,
+        // which marks the tree as changed and so brings it back through the layout below
+        long now = System.nanoTime();
+        float elapsed = drawnAt == 0 ? 0 : Math.min(0.25f, (now - drawnAt) / 1_000_000_000.0f);
+        drawnAt = now;
+        CTMLScroll.animate(layout, elapsed);
+
         long current = DOMTreeNode.revision();
         if (layout == null || current != revision || width != laidOutWidth || height != laidOutHeight) {
             layout = CTMLRenderer.layout(domTreeHeadElement, width, height);
+
+            // what a script asked to be brought into view, and holding still whatever a resize above it
+            // would otherwise have pushed out from under the user's eye. Both move a scroll offset, so
+            // the tree is laid out once more and this frame draws where things end up rather than the
+            // frame after it
+            if (CTMLScroll.intoViewPending(layout) | CTMLScroll.anchor(layout)) {
+                layout = CTMLRenderer.layout(domTreeHeadElement, width, height);
+            }
+
             laidOutWidth = width;
             laidOutHeight = height;
             // laying out clamps the scroll and drag offsets it finds, which bumps the revision itself
@@ -68,8 +95,15 @@ public class CTMLScreen extends Screen {
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
         if (event.button() == LEFT_BUTTON) {
+            // a press hands the keyboard to whatever scroll container it landed in
+            DOMTreeElement pressed = CTMLScroll.focusAt(layout, event.x(), event.y());
+            if (pressed != null) scrollFocus = pressed;
+
             bar = CTMLScroll.grab(layout, event.x(), event.y()); // the bars are drawn over everything in their box
-            if (bar != null) return true;
+            if (bar != null) {
+                scrollFocus = bar.element();
+                return true;
+            }
             grip = CTMLDrag.grab(layout, event.x(), event.y());
             if (grip != null) return true;
         }
@@ -105,8 +139,37 @@ public class CTMLScreen extends Screen {
     /** The wheel goes to the innermost scrollable box under the cursor, and outwards from there. */
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        DOMTreeElement under = CTMLScroll.focusAt(layout, mouseX, mouseY);
+        if (under != null) scrollFocus = under; // and leaves the keyboard pointing at the same box
         if (CTMLScroll.wheel(layout, mouseX, mouseY, scrollX, scrollY)) return true;
         return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
+    }
+
+    /**
+     * The arrows, page up and down and home and end scroll whatever the user last pressed on or
+     * turned the wheel over, falling out to the box around it once that one has nothing left to give.
+     * With nothing pressed yet the outermost scroll container takes them, which is the nearest thing
+     * ctml has to a browser scrolling the page.
+     */
+    @Override
+    public boolean keyPressed(KeyEvent event) {
+        CTMLScroll.Nudge nudge = nudgeFor(event);
+        if (nudge != null && CTMLScroll.key(layout, scrollFocus, nudge)) return true;
+        return super.keyPressed(event);
+    }
+
+    private static CTMLScroll.Nudge nudgeFor(KeyEvent event) {
+        if (event.isUp()) return CTMLScroll.Nudge.LINE_UP;
+        if (event.isDown()) return CTMLScroll.Nudge.LINE_DOWN;
+        if (event.isLeft()) return CTMLScroll.Nudge.LINE_LEFT;
+        if (event.isRight()) return CTMLScroll.Nudge.LINE_RIGHT;
+        return switch (event.input()) {
+            case InputConstants.KEY_PAGEUP -> CTMLScroll.Nudge.PAGE_UP;
+            case InputConstants.KEY_PAGEDOWN -> CTMLScroll.Nudge.PAGE_DOWN;
+            case InputConstants.KEY_HOME -> CTMLScroll.Nudge.TO_START;
+            case InputConstants.KEY_END -> CTMLScroll.Nudge.TO_END;
+            default -> null;
+        };
     }
 
     /** Puts back whatever the user last did to this screen's elements, by their ids. */

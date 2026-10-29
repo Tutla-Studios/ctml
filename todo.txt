@@ -1,80 +1,106 @@
 CraftyTML - left undone
 =======================
 
+Every line is a bug or a caveat that is still true of the code, labelled by how much it matters:
+
+  CRITICAL    silently wrong or leaves the ui stuck, and nothing says so
+  WARN        a real limit worth knowing before building on it
+  SUGGESTION  a rough edge or a cost, fine as it stands
+
+
 RENDERER / PAINT  (render/CTMLRenderer.java)
 --------------------------------------------
-- border-radius is faked: corners get cut off with three fills, there is no rounded
-  rect primitive. Looks like a chamfer, not a radius.
-- background-image is parsed into the style and never drawn.
-- Only one border-color for all four sides. No per-side colors, no border styles.
-- opacity multiplies the alpha of each thing drawn instead of compositing the subtree,
+- WARN: the four borders are each one straight fill, so a rounded box still has square border corners.
+  The background inside them is rounded, the frame around them is not.
+- WARN: background-image is parsed into the style and never drawn.
+- WARN: only one border-color for all four sides. No per-side colors, no border styles.
+- WARN: opacity multiplies the alpha of each thing drawn instead of compositing the subtree,
   so overlapping children inside a faded box darken each other.
-- letter-spacing is stored and ignored.
-- Fractional font scales (text-xs is 0.75) go through the matrix, so small text is blurry.
-- No vertical centering of text inside its box.
-- z-index sorts siblings at paint time only, so it cannot lift a box above its parent's
+- WARN: letter-spacing is parsed by tracking-* and then ignored by both layout and paint.
+- WARN: z-index sorts siblings at paint time only, so it cannot lift a box above its parent's
   siblings: there are no stacking contexts, opacity and overflow start none, and a child
   with a high z-index still paints under an uncle box drawn later.
-- Gradients ignore border-radius, so a rounded box with a gradient gets square corners,
-  and background-color is skipped entirely when a gradient is set instead of drawn under it.
-- Diagonal gradient directions (bg-gradient-to-tr and the rest) are drawn as the plain
-  horizontal ramp.
-- Horizontal gradients are one fill per pixel column, so a screen wide one is ~850 draws
-  a frame. Vertical ones go through fillGradient and cost one draw per segment.
-- Gradient text is drawn glyph by glyph with graphics.text, which drops the per glyph
-  bold / italic styles the line carries and measures advances off the plain character.
-  Each glyph is its own draw call, and the shadow is drawn in the ramp colour too.
-- text-gradient takes over from color entirely; there is no bg-clip-text, so a gradient
-  cannot be clipped to text while the box keeps its own background.
-- The only way to scroll is the wheel and the bars. No keyboard (there is no focus to hang it
-  on), no scroll-into-view, no scroll anchoring and no animation: a scroll lands at once.
-- No overscroll-behavior, so a box at its end always hands the turn of the wheel outwards.
-- A scroll offset is kept in gui pixels on the element, and like a drag offset it is not
-  rescaled when the gui scale or the window changes and is lost on reload. Nothing exposes it
-  to a script either, so there is no way to scroll a box from code.
-- scrollbar-gutter is all or nothing: css's stable / both-edges is not there, and the gutter
-  takes its room out of the content rather than growing the box.
+- SUGGESTION: no vertical centering of text inside its box.
+- SUGGESTION: a radial gradient is drawn as a dozen flat discs and a conic one as 64 flat wedges,
+  since there is nothing to draw a ramp with but a two colour fill. Both cost a couple of hundred fills,
+  translucent stops blend where the pieces overlap, and the innermost pixels of a conic one take
+  their colour from whichever wedge was drawn last. A straight ramp is one fill per pair of stops
+  at any angle, so it has none of this.
+- SUGGESTION: a gradient over a rounded box is clipped row by row, which is a draw per row of the
+  corners. Fine for the radii tailwind names, dear for a pill a hundred pixels tall.
+- SUGGESTION: gradient text is still one draw call per glyph, since each one takes its own colour
+  off the ramp. The styles and the advances are the line's own, so only the colour is ours.
 
 
 LAYOUT  (render/CTMLLayout.java)
 --------------------------------
-- A multi column block never splits a child down the middle, so its columns are only as even as
-  whole children allow and a child taller than its share makes its column taller.
-- A float is placed where it was written in the flow rather than on the line it appears on, so one
+- WARN: a table collapses its borders by sliding the cells onto one another by the width of the first
+  border it finds, so a table whose cells carry different border widths has them overlap by the
+  wrong amount. There is no border-spacing, no col or colgroup, and no visible-row collapsing.
+- WARN: a float is placed where it was written in the flow rather than on the line it appears on, so one
   written between two words sits above that line instead of inside it. There is no shape-outside.
-- A box that keeps a scrollbar gutter lays its children out twice, since the room the bar takes can
-  change what overflows. An arrangement that will not settle keeps the bar rather than flickering.
+- WARN: grid has one track list per axis: no named lines, no areas, no subgrid, no dense packing and no
+  minmax(). An fr track only has room to share where its axis has a definite size, and an auto
+  track is sized from the items sitting in one track alone, not from the ones spanning several.
+- SUGGESTION: a multi column block never splits a child down the middle, so its columns are only as even
+  as whole children allow and a child taller than its share makes its column taller.
+
+
+OVERFLOW AND SCROLLING  (render/CTMLScroll.java)
+------------------------------------------------
+- WARN: the keyboard reaches scroll containers and nothing else. There is no focus to speak of: the
+  keys go to whatever was last pressed on or wheeled over, nothing draws a focus ring, and tab
+  moves through nothing.
+- SUGGESTION: scroll anchoring holds the first child showing through the scrollport, and only on the
+  y axis. Something resizing inside that child still moves what is under the eye, and a container
+  whose children are all one box has nothing to hold on to.
+- SUGGESTION: scrollIntoView brings a box in from the nearest edge in one pass, so a box inside two
+  scroll containers at once is brought the rest of the way on the frame after.
+- SUGGESTION: overscroll-contain and overscroll-none do the same thing, there being no bounce at the
+  end of a scroll to stop.
+- SUGGESTION: scroll-smooth slides the wheel and the keys as well as the scrolls a script asks for.
+  Css only promises the last of those.
 
 
 STYLE SYSTEM  (ctml/ElementStyle.java, ctml/style/*)
 ----------------------------------------------------
-- No variants at all: hover:, focus:, active:, dark:, md: and friends come back from the
+- CRITICAL: unknown classes are only printed to stdout by applyClassStyles, with no line number and
+  nothing the interpreter can report. A class whose value makes no sense for its key (auto on a gap,
+  a percent on a radius, bg-linear-[sideways]) is not even printed: it is taken as known and dropped.
+- WARN: no variants at all: hover:, focus:, active:, dark:, md: and friends come back from the
   parser as unknown.
-- Unknown classes are only printed to stdout by applyClassStyles, with no line number and
-  nothing the interpreter can report.
-- A class whose value makes no sense for its key (auto on a gap, a percent on a radius)
-  is also silently ignored.
-- No box-shadow, outline, cursor, font-family, transform, transition or animation.
-- The text initial values only exist on <ctml>, since a default on every element would block
+- WARN: the text initial values only exist on <ctml>, since a default on every element would block
   the parent's value from ever reaching a child, so an element laid out with no ctml root above
   it has no colour or font size to fall back on bar the renderer's own constants.
-- There is no way to set defaults from a script, and no per element reset: a new element
+- SUGGESTION: css color keywords (cornflowerblue, rebeccapurple) are not supported; only the tailwind
+  palette, where a bare family name (text-green) falls back to that family's 500 shade
+  and [#hex]. A stop whose colour nothing knows is left out, so the gradient comes up one stop
+  short and is not drawn at all.
+- SUGGESTION: no box-shadow, outline, cursor, font-family, transform, transition or animation.
+- SUGGESTION: text-shadow is a ctml invention (minecraft draws text with a shadow by default) and
+  defaults to true, which is not what css would do.
+- SUGGESTION: there is no way to set defaults from a script, and no per element reset: a new element
   has to override defaultStyle() in java.
-- bg-gradient-* / text-gradient-* are tailwind v3 spelling. v4's bg-linear-to-r,
-  bg-radial and bg-conic are not recognised, and neither are gradient colour stop
-  positions (from-10%) or interpolation modifiers (/oklch).
-- from- / via- / to- always write the background gradient and text-from- / text-via- /
-  text-to- the text one, so a stop class on its own (no direction class) silently assumes
-  to-r. A stop with an unknown colour is dropped and leaves the gradient half built.
+- SUGGESTION: gradient colour interpolation modifiers (bg-linear-to-r/oklch, /srgb-linear) are not
+  read, and every ramp is mixed channel by channel in plain srgb.
+- SUGGESTION: a from- / via- / to- class with no shape class before it assumes bg-linear-to-r, and
+  writes the background gradient; the text one is written by text-from- / text-via- / text-to-.
 
 
 SCREEN AND REGISTRY  (render/CTMLScreen.java, render/UIRegistry.java, CraftytmlClient.java)
 -------------------------------------------------------------------------------------------
-- No hot reload: editing a .ctml file needs a game restart.
-- CTMLScreen routes nothing but dragging and scrolling, and the press side of both only answers
-  the left button. No click handlers, no focus, no keyboard, no hover, no narration.
-- No widget elements: only ctml, div and span exist. No button, input, img, list.
-- Dragging goes through mouseClicked / mouseDragged / mouseReleased, and the button numbers
-  there are sdl's: left is 1, middle 2, right 3, not glfw's 0 / 1 / 2. MouseHandler's
-  isLeftPressed / isRightPressed are no use on a screen at all, since minecraft only keeps
-  them up to date while no screen is open.
+- CRITICAL: a drag of a box or of a scrollbar thumb ends on mouseReleased. If that never arrives (released
+  outside the window, or the screen changes mid drag) it keeps following the cursor, and there is
+  no way to read the live button state back: this build is on sdl, so there is no
+  glfwGetMouseButton to ask.
+- WARN: no hot reload: editing a .ctml file needs a game restart.
+- WARN: CTMLScreen routes dragging, scrolling and the scrolling keys, and the press side of the first
+  two only answers the left button. No click handlers (the callback property is registered and never
+  called), no hover, no narration.
+- WARN: no widget elements: ctml, div, span and the table tags are all there is. No button, input,
+  img, list.
+- SUGGESTION: the button numbers in mouseClicked / mouseDragged / mouseReleased are sdl's: left is 1,
+  middle 2, right 3, not glfw's 0 / 1 / 2. MouseHandler's isLeftPressed / isRightPressed are no use
+  on a screen at all, since minecraft only keeps them up to date while no screen is open.
+- SUGGESTION: hit testing ignores border-radius (the corners of a rounded box are live) and a box faded
+  by an ancestor's opacity rather than its own.

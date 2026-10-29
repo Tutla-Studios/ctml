@@ -30,9 +30,13 @@ public final class CTMLState {
         float dragY = -1;
         int scrollX;
         int scrollY;
+        //and how far along the content that was, which is what survives a window of another size
+        float scrollShareX = -1;
+        float scrollShareY = -1;
 
         boolean isEmpty(){
-            return dragX < 0 && dragY < 0 && scrollX == 0 && scrollY == 0;
+            return dragX < 0 && dragY < 0 && scrollX == 0 && scrollY == 0
+                    && scrollShareX < 0 && scrollShareY < 0;
         }
     }
 
@@ -53,6 +57,9 @@ public final class CTMLState {
             if (entry == null) return;
             if (entry.dragX >= 0 || entry.dragY >= 0) element.setDragShare(entry.dragX, entry.dragY);
             element.setScrollOffset(entry.scrollX, entry.scrollY);
+            // the share goes on last, since the pixels above forget it, and it is the one that is
+            // believed: the window this is being put back into may be nothing like the one it left
+            element.setScrollShare(entry.scrollShareX, entry.scrollShareY);
         });
     }
 
@@ -71,6 +78,8 @@ public final class CTMLState {
             entry.dragY = element.getDragShareY();
             entry.scrollX = element.getScrollX();
             entry.scrollY = element.getScrollY();
+            entry.scrollShareX = element.getScrollShareX();
+            entry.scrollShareY = element.getScrollShareY();
             if (!entry.isEmpty()) saved.put(id, entry);
         });
 

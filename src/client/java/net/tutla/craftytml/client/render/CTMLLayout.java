@@ -91,15 +91,22 @@ public final class CTMLLayout {
             int x, int y, int width, int height,
             int scrollWidth, int scrollHeight,
             int scrollX, int scrollY,
-            int gutterRight, int gutterBottom
+            int gutterRight, int gutterBottom,
+            int gutterLeft, int gutterTop
     ) {
+        /** A box with nothing to scroll and no room kept for a bar, which is most of them. */
+        static Port still(int x, int y, int width, int height){
+            return new Port(x, y, width, height, width, height, 0, 0, 0, 0, 0, 0);
+        }
+
         public int right(){ return x + width; }
         public int bottom(){ return y + height; }
         public int maxScrollX(){ return Math.max(0, scrollWidth - width); }
         public int maxScrollY(){ return Math.max(0, scrollHeight - height); }
 
         Port shifted(int dx, int dy){
-            return new Port(x + dx, y + dy, width, height, scrollWidth, scrollHeight, scrollX, scrollY, gutterRight, gutterBottom);
+            return new Port(x + dx, y + dy, width, height, scrollWidth, scrollHeight,
+                    scrollX, scrollY, gutterRight, gutterBottom, gutterLeft, gutterTop);
         }
     }
 
@@ -129,6 +136,15 @@ public final class CTMLLayout {
     private final TextMetrics metrics;
     private final int viewWidth;
     private final int viewHeight;
+
+    /**
+     * The viewport everything is being measured against, as one number an element can keep hold of,
+     * so a window resize or a gui scale change can be noticed next time it is laid out. Never zero,
+     * which is what an element says when it has not been measured at all.
+     */
+    private long viewKey(){
+        return ((long) (viewWidth + 1) << 32) | (viewHeight + 1);
+    }
 
     /**
      * Intrinsic widths worked out for an element, kept for as long as nothing in its subtree changes.
@@ -321,92 +337,71 @@ public final class CTMLLayout {
             leftMargin = marginRight != null && marginRight.isAuto() ? free / 2 : free;
         }
 
-        int contentX = x + leftMargin + frame.left;
-        int contentY = y + margin.top + frame.top;
-
         ElementStyle.Overflow overflowX = CTMLScroll.overflowX(style);
         ElementStyle.Overflow overflowY = CTMLScroll.overflowY(style);
         boolean scrollsX = CTMLScroll.scrolls(overflowX);
         boolean scrollsY = CTMLScroll.scrolls(overflowY);
-        int barThickness = CTMLScroll.thickness(style);
-        boolean keepsGutter = CTMLScroll.gutter(style) && (scrollsX || scrollsY);
 
-        // With a gutter the bars take their room out of the content, which can change what overflows,
-        // so the children are laid out again until the room kept for the bars stops moving.
-        int gutterRight = 0;
-        int gutterBottom = 0;
-        List<TextLine> lines;
-        List<Box> children;
-        int contentHeight;
-        int innerWidth;
-        int innerHeight;
-        int reachX;
-        int reachY;
-        int roomX;
-        int roomY;
-        int baseline;
+        // the room kept for the bars comes out of the content, and it is kept for as long as the axis
+        // could show one rather than only while one is actually there, so nothing has to be laid out
+        // twice and nothing jumps sideways the moment the content grows past the box.
+        int gutterRight = CTMLScroll.gutterFor(style, overflowY);
+        int gutterBottom = CTMLScroll.gutterFor(style, overflowX);
+        int gutterLeft = CTMLScroll.bothEdges(style) ? gutterRight : 0;
+        int gutterTop = CTMLScroll.bothEdges(style) ? gutterBottom : 0;
 
-        for (int attempt = 0; ; attempt++) {
-            innerWidth = Math.max(0, contentWidth - gutterRight);
-            lines = new ArrayList<>();
-            children = new ArrayList<>();
+        int contentX = x + leftMargin + frame.left + gutterLeft;
+        int contentY = y + margin.top + frame.top + gutterTop;
 
-            // whatever the children measure their own percentages against: this box when it has a definite
-            // height of its own, otherwise nothing, since its height is still waiting on them
-            int definiteHeight = forcedHeight != UNFORCED
-                    ? Math.max(0, forcedHeight - frame.vertical())
-                    : contentHeight(style, cbWidth, cbHeight, Length.UNRESOLVED);
-            int childBasis = definiteHeight == Length.UNRESOLVED ? -1 : Math.max(0, definiteHeight - gutterBottom);
+        int innerWidth = Math.max(0, contentWidth - gutterLeft - gutterRight);
+        List<TextLine> lines = new ArrayList<>();
+        List<Box> children = new ArrayList<>();
 
-            Flow flow = switch (style.get(ElementStyle.DISPLAY, ElementStyle.Display.BLOCK)) {
-                case FLEX -> layoutFlex(element, style, contentX, contentY, innerWidth, childBasis, lines, children);
-                case GRID -> layoutGrid(element, style, contentX, contentY, innerWidth, childBasis, lines, children);
-                case TABLE -> layoutTable(element, style, contentX, contentY, innerWidth, childBasis, lines, children);
-                default -> style.isSet(ElementStyle.COLUMN_COUNT) || style.isSet(ElementStyle.COLUMN_WIDTH)
-                        ? layoutColumns(element, style, contentX, contentY, innerWidth, childBasis, lines, children)
-                        : layoutFlow(element, style, contentX, contentY, innerWidth, childBasis, lines, children,
-                                topMarginTaken, bands);
-            };
-            baseline = flow.baseline();
+        // whatever the children measure their own percentages against: this box when it has a definite
+        // height of its own, otherwise nothing, since its height is still waiting on them
+        int definiteHeight = forcedHeight != UNFORCED
+                ? Math.max(0, forcedHeight - frame.vertical())
+                : contentHeight(style, cbWidth, cbHeight, Length.UNRESOLVED);
+        int childBasis = definiteHeight == Length.UNRESOLVED
+                ? -1
+                : Math.max(0, definiteHeight - gutterTop - gutterBottom);
 
-            contentHeight = forcedHeight != UNFORCED
-                    ? Math.max(0, forcedHeight - frame.vertical())
-                    : contentHeight(style, cbWidth, cbHeight, flow.height() + gutterBottom);
-            innerHeight = Math.max(0, contentHeight - gutterBottom);
+        Flow flow = switch (style.get(ElementStyle.DISPLAY, ElementStyle.Display.BLOCK)) {
+            case FLEX -> layoutFlex(element, style, contentX, contentY, innerWidth, childBasis, lines, children);
+            case GRID -> layoutGrid(element, style, contentX, contentY, innerWidth, childBasis, lines, children);
+            case TABLE -> layoutTable(element, style, contentX, contentY, innerWidth, childBasis, lines, children);
+            default -> style.isSet(ElementStyle.COLUMN_COUNT) || style.isSet(ElementStyle.COLUMN_WIDTH)
+                    ? layoutColumns(element, style, contentX, contentY, innerWidth, childBasis, lines, children)
+                    : layoutFlow(element, style, contentX, contentY, innerWidth, childBasis, lines, children,
+                            topMarginTaken, bands);
+        };
+        int baseline = flow.baseline();
 
-            // anything taken out of the flow gets placed against this box once it has a size
-            layoutOutOfFlow(element, style, contentX, contentY, innerWidth, innerHeight, children);
+        int contentHeight = forcedHeight != UNFORCED
+                ? Math.max(0, forcedHeight - frame.vertical())
+                : contentHeight(style, cbWidth, cbHeight, flow.height() + gutterTop + gutterBottom);
+        int innerHeight = Math.max(0, contentHeight - gutterTop - gutterBottom);
 
-            // how far the content reaches, which is what there is to scroll through. roomX / roomY is the
-            // same thing with the dragged boxes left out, so dragging one cannot keep pushing its own limit
-            reachX = contentX;
-            reachY = contentY;
-            roomX = contentX + innerWidth;
-            roomY = contentY + innerHeight;
-            for (TextLine line : lines) reachX = Math.max(reachX, contentX + line.x() + line.width());
-            roomX = Math.max(roomX, reachX);
-            for (Box child : children) {
-                int right = reachRight(child);
-                int bottom = reachBottom(child);
-                reachX = Math.max(reachX, right);
-                reachY = Math.max(reachY, bottom);
-                if (child.offsetX() == 0 && child.offsetY() == 0) {
-                    roomX = Math.max(roomX, right);
-                    roomY = Math.max(roomY, bottom);
-                }
+        // anything taken out of the flow gets placed against this box once it has a size
+        layoutOutOfFlow(element, style, contentX, contentY, innerWidth, innerHeight, children);
+
+        // how far the content reaches, which is what there is to scroll through. roomX / roomY is the
+        // same thing with the dragged boxes left out, so dragging one cannot keep pushing its own limit
+        int reachX = contentX;
+        int reachY = contentY;
+        int roomX = contentX + innerWidth;
+        int roomY = contentY + innerHeight;
+        for (TextLine line : lines) reachX = Math.max(reachX, contentX + line.x() + line.width());
+        roomX = Math.max(roomX, reachX);
+        for (Box child : children) {
+            int right = reachRight(child);
+            int bottom = reachBottom(child);
+            reachX = Math.max(reachX, right);
+            reachY = Math.max(reachY, bottom);
+            if (child.offsetX() == 0 && child.offsetY() == 0) {
+                roomX = Math.max(roomX, right);
+                roomY = Math.max(roomY, bottom);
             }
-
-            if (!keepsGutter) break;
-
-            int wantRight = CTMLScroll.showsBar(style, overflowY, reachY - contentY > innerHeight) ? barThickness : 0;
-            int wantBottom = CTMLScroll.showsBar(style, overflowX, reachX - contentX > innerWidth) ? barThickness : 0;
-            if (wantRight == gutterRight && wantBottom == gutterBottom) break;
-
-            // an arrangement that will not settle (a bar that appears only to make itself unnecessary)
-            // keeps the bar, so what comes out is the same every frame either way
-            gutterRight = attempt >= 1 ? Math.max(gutterRight, wantRight) : wantRight;
-            gutterBottom = attempt >= 1 ? Math.max(gutterBottom, wantBottom) : wantBottom;
-            if (attempt >= 1) break;
         }
 
         int width = contentWidth + frame.horizontal();
@@ -419,8 +414,8 @@ public final class CTMLLayout {
         children = clampDrags(children, contentX, contentY, roomX - contentX, roomY - contentY);
 
         // the scrollport is the padding box with the gutters taken off it, which is what gets clipped to
-        int portX = boxX + border.left;
-        int portY = boxY + border.top;
+        int portX = boxX + border.left + gutterLeft;
+        int portY = boxY + border.top + gutterTop;
         int portWidth = Math.max(0, innerWidth + padding.horizontal());
         int portHeight = Math.max(0, innerHeight + padding.vertical());
 
@@ -428,9 +423,15 @@ public final class CTMLLayout {
         int scrollWidth = Math.max(portWidth, reachX + padding.right - portX);
         int scrollHeight = Math.max(portHeight, reachY + padding.bottom - portY);
 
-        int scrollX = scrollsX ? clamp(element.getScrollX(), 0, Math.max(0, scrollWidth - portWidth)) : 0;
-        int scrollY = scrollsY ? clamp(element.getScrollY(), 0, Math.max(0, scrollHeight - portHeight)) : 0;
-        if (scrollsX || scrollsY) element.setScrollOffset(scrollX, scrollY); // the content may have shrunk under it
+        // how far the content can go, and where the element says it has been left. A viewport that has
+        // changed since goes back to the share of the way along it was, so a resize or a gui scale change
+        // leaves the content looking at the same place rather than at the same pixel.
+        int maxScrollX = Math.max(0, scrollWidth - portWidth);
+        int maxScrollY = Math.max(0, scrollHeight - portHeight);
+        long view = viewKey();
+        int scrollX = scrollsX ? element.scrollFor(false, maxScrollX, view) : 0;
+        int scrollY = scrollsY ? element.scrollFor(true, maxScrollY, view) : 0;
+        if (scrollsX || scrollsY) element.settleScroll(scrollX, scrollY, maxScrollX, maxScrollY, view);
 
         // scrolling moves everything inside the box and nothing else, so the children are moved here and
         // the text is drawn against the same offset
@@ -441,7 +442,7 @@ public final class CTMLLayout {
         }
 
         Port port = new Port(portX, portY, portWidth, portHeight,
-                scrollWidth, scrollHeight, scrollX, scrollY, gutterRight, gutterBottom);
+                scrollWidth, scrollHeight, scrollX, scrollY, gutterRight, gutterBottom, gutterLeft, gutterTop);
 
         // a sticky box holds itself against the nearest scrollport, so this is where they get nudged
         if (root || scrollsX || scrollsY) {
@@ -1365,8 +1366,7 @@ public final class CTMLLayout {
         Edges border = borderEdges(style);
         int portWidth = Math.max(0, width - border.horizontal());
         int portHeight = Math.max(0, height - border.vertical());
-        Port port = new Port(x + border.left, y + border.top, portWidth, portHeight,
-                portWidth, portHeight, 0, 0, 0, 0);
+        Port port = Port.still(x + border.left, y + border.top, portWidth, portHeight);
 
         Box box = new Box(fragment.element(), style, x, y, width, height,
                 boxContentX, boxContentY, Math.max(0, width - frame.horizontal()), contentHeight,
@@ -2906,9 +2906,8 @@ public final class CTMLLayout {
     private Box rowBox(DOMTreeElement element, ElementStyle style, int x, int y, int width, int height,
                        List<Box> cells){
         Edges border = borderEdges(style);
-        Port port = new Port(x + border.left, y + border.top,
-                Math.max(0, width - border.horizontal()), Math.max(0, height - border.vertical()),
-                Math.max(0, width - border.horizontal()), Math.max(0, height - border.vertical()), 0, 0, 0, 0);
+        Port port = Port.still(x + border.left, y + border.top,
+                Math.max(0, width - border.horizontal()), Math.max(0, height - border.vertical()));
         int baseline = NO_BASELINE;
         for (Box cell : cells) {
             if (cell.baseline() != NO_BASELINE) { baseline = cell.flowY() + cell.baseline() - y; break; }

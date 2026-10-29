@@ -4,6 +4,8 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.TextColor;
+import net.minecraft.util.FormattedCharSequence;
 import net.tutla.craftytml.client.ctml.ElementStyle;
 import net.tutla.craftytml.client.ctml.style.Gradient;
 import net.tutla.craftytml.client.dom.DOMTreeElement;
@@ -109,61 +111,191 @@ public class CTMLRenderer {
         return box.element().getDragX() != 0 || box.element().getDragY() != 0;
     }
 
+    /**
+     * The background of a box: its colour, with the gradient drawn over the top of it rather than
+     * instead of it, both cut to wherever background-clip says the background stops.
+     * A background clipped to the text is not drawn here at all; the text draws it.
+     */
     private static void background(CTMLLayout.Box box, GuiGraphicsExtractor graphics, float alpha){
-        Gradient gradient = box.style().get(ElementStyle.BACKGROUND_GRADIENT);
+        ElementStyle style = box.style();
+        ElementStyle.BackgroundClip clip = style.get(ElementStyle.BACKGROUND_CLIP, ElementStyle.BackgroundClip.BORDER_BOX);
+        if (clip == ElementStyle.BackgroundClip.TEXT) return;
+
+        int x = box.x();
+        int y = box.y();
+        int width = box.width();
+        int height = box.height();
+        int radius = style.get(ElementStyle.BORDER_RADIUS, 0);
+
+        if (clip == ElementStyle.BackgroundClip.PADDING_BOX) {
+            int left = style.get(ElementStyle.BORDER_LEFT_WIDTH, 0);
+            int top = style.get(ElementStyle.BORDER_TOP_WIDTH, 0);
+            x += left;
+            y += top;
+            width = Math.max(0, width - left - style.get(ElementStyle.BORDER_RIGHT_WIDTH, 0));
+            height = Math.max(0, height - top - style.get(ElementStyle.BORDER_BOTTOM_WIDTH, 0));
+            radius = Math.max(0, radius - Math.max(left, top));
+        } else if (clip == ElementStyle.BackgroundClip.CONTENT_BOX) {
+            radius = Math.max(0, radius - (box.contentX() - box.x()));
+            x = box.contentX();
+            y = box.contentY();
+            width = box.contentWidth();
+            height = box.contentHeight();
+        }
+
+        Integer color = style.get(ElementStyle.BACKGROUND_COLOR);
+        if (color != null) rounded(graphics, x, y, width, height, radius, fade(color, alpha));
+
+        Gradient gradient = style.get(ElementStyle.BACKGROUND_GRADIENT);
         if (gradient != null && gradient.isDrawable()) {
-            gradient(graphics, gradient, box.x(), box.y(), box.width(), box.height(), alpha);
-            return;
+            gradient(graphics, gradient, x, y, width, height, radius, alpha);
         }
-
-        Integer color = box.style().get(ElementStyle.BACKGROUND_COLOR);
-        if (color == null) return;
-
-        rounded(graphics, box.x(), box.y(), box.width(), box.height(),
-                box.style().get(ElementStyle.BORDER_RADIUS, 0), fade(color, alpha));
-    }
-
-    /** A fill with its corners cut off, since there is no rounded rect to draw with. */
-    private static void rounded(GuiGraphicsExtractor graphics, int x, int y, int width, int height, int radius, int color){
-        if (width <= 0 || height <= 0 || (color >>> 24) == 0) return;
-
-        radius = Math.min(radius, Math.min(width, height) / 2);
-        if (radius <= 0) {
-            graphics.fill(x, y, x + width, y + height, color);
-            return;
-        }
-
-        graphics.fill(x, y + radius, x + width, y + height - radius, color);
-        graphics.fill(x + radius, y, x + width - radius, y + radius, color);
-        graphics.fill(x + radius, y + height - radius, x + width - radius, y + height, color);
     }
 
     /**
-     * A linear gradient, drawn as one strip per pixel along the axis it runs down.
-     * Straight vertical ones go through minecraft's own two colour fill, which is the same thing
-     * in a single draw; the diagonals are drawn as horizontal, since a real one needs per pixel work.
+     * The rows a rounded rectangle is made of: the straight middle, and the rows of each corner,
+     * every one as wide as the circle is at that height. A radius of nothing is one rectangle.
+     * Rows are grouped where the radius is big, so the number of fills stays in the teens.
      */
-    private static void gradient(GuiGraphicsExtractor graphics, Gradient gradient, int x, int y, int width, int height, float alpha){
+    private static List<int[]> bands(int x, int y, int width, int height, int radius){
+        List<int[]> bands = new ArrayList<>();
+        if (width <= 0 || height <= 0) return bands;
+
+        radius = Math.clamp(radius, 0, Math.min(width, height) / 2);
+        if (radius <= 0) {
+            bands.add(new int[]{ x, y, x + width, y + height });
+            return bands;
+        }
+
+        bands.add(new int[]{ x, y + radius, x + width, y + height - radius });
+
+        int step = Math.max(1, radius / 8);
+        for (int offset = 0; offset < radius; offset += step) {
+            int rows = Math.min(step, radius - offset);
+            // measured at the row's outer edge, so the shape never pokes outside the circle
+            int far = radius - offset - rows;
+            int inset = radius - (int) Math.round(Math.sqrt((double) radius * radius - (double) far * far));
+            bands.add(new int[]{ x + inset, y + offset, x + width - inset, y + offset + rows });
+            bands.add(new int[]{ x + inset, y + height - offset - rows, x + width - inset, y + height - offset });
+        }
+        return bands;
+    }
+
+    /** A fill with its corners rounded off, one fill per row of the corners. */
+    private static void rounded(GuiGraphicsExtractor graphics, int x, int y, int width, int height, int radius, int color){
+        if ((color >>> 24) == 0) return;
+        for (int[] band : bands(x, y, width, height, radius)) {
+            graphics.fill(band[0], band[1], band[2], band[3], color);
+        }
+    }
+
+    /**
+     * A gradient over a box, cut to the box's rounded shape by clipping to each of its rows in turn.
+     * Everything is drawn against the box itself, so the rows of one shape all agree on where the
+     * gradient starts and ends.
+     */
+    private static void gradient(GuiGraphicsExtractor graphics, Gradient gradient,
+                                 int x, int y, int width, int height, int radius, float alpha){
         if (width <= 0 || height <= 0) return;
 
-        if (gradient.direction().isVertical()) {
-            List<Integer> stops = gradient.stops();
-            int segments = stops.size() - 1;
-            for (int segment = 0; segment < segments; segment++) {
-                int top = y + height * segment / segments;
-                int bottom = y + height * (segment + 1) / segments;
-                float from = segment / (float) segments;
-                float to = (segment + 1) / (float) segments;
-                graphics.fillGradient(x, top, x + width, bottom,
-                        fade(gradient.colorAt(from), alpha), fade(gradient.colorAt(to), alpha));
+        for (int[] band : bands(x, y, width, height, radius)) {
+            graphics.enableScissor(band[0], band[1], band[2], band[3]);
+            switch (gradient.kind()) {
+                case LINEAR -> linear(graphics, gradient, x, y, width, height, alpha);
+                case RADIAL -> radial(graphics, gradient, x, y, width, height, alpha);
+                case CONIC -> conic(graphics, gradient, x, y, width, height, alpha);
             }
-            return;
+            graphics.disableScissor();
+        }
+    }
+
+    /**
+     * A straight ramp at any angle, drawn in the frame the gradient runs down: the pose is turned so
+     * the gradient points straight down, and then each pair of stops is one of minecraft's own two
+     * colour fills. One draw per pair however the ramp is angled, rather than one per pixel column.
+     */
+    private static void linear(GuiGraphicsExtractor graphics, Gradient gradient,
+                               int x, int y, int width, int height, float alpha){
+        List<Gradient.Stop> stops = gradient.stops();
+        double radians = Math.toRadians(gradient.angle());
+
+        // the box's own size, measured along the gradient and across it
+        int length = Math.max(1, Math.round(gradient.axisLength(width, height)));
+        int across = Math.round((float) (Math.abs(width * Math.cos(radians)) + Math.abs(height * Math.sin(radians))));
+        int half = across / 2 + 2;
+        int start = -length / 2;
+        int end = start + length;
+
+        graphics.pose().pushMatrix();
+        graphics.pose().translate(x + width / 2.0f, y + height / 2.0f);
+        // the local y axis is turned to point the way the angle names, which is where the ramp ends
+        graphics.pose().rotate((float) (radians + Math.PI));
+
+        int first = Math.round(start + stops.getFirst().at() * length);
+        if (first > start) graphics.fill(-half, start - 1, half, first, fade(stops.getFirst().color(), alpha));
+
+        for (int i = 0; i < stops.size() - 1; i++) {
+            Gradient.Stop from = stops.get(i);
+            Gradient.Stop to = stops.get(i + 1);
+            int top = Math.round(start + from.at() * length);
+            int bottom = Math.round(start + to.at() * length);
+            if (bottom <= top) continue;
+            graphics.fillGradient(-half, top, half, bottom, fade(from.color(), alpha), fade(to.color(), alpha));
         }
 
-        for (int offset = 0; offset < width; offset++) {
-            int color = fade(gradient.colorAt((offset + 0.5f) / width), alpha);
-            graphics.fill(x + offset, y, x + offset + 1, y + height, color);
+        int last = Math.round(start + stops.getLast().at() * length);
+        if (last < end) graphics.fill(-half, last, half, end + 1, fade(stops.getLast().color(), alpha));
+
+        graphics.pose().popMatrix();
+    }
+
+    /**
+     * A gradient running out from the middle, drawn as discs of one colour each, biggest first, so
+     * every one covers the ring inside it. A few dozen fills, which is why the steps are counted out
+     * from the size: translucent stops blend where the discs overlap, unlike a straight ramp.
+     */
+    private static void radial(GuiGraphicsExtractor graphics, Gradient gradient,
+                               int x, int y, int width, int height, float alpha){
+        int reach = Math.max(1, Math.round(gradient.radius(width, height)));
+        int rings = Math.clamp(reach / 4, 2, 12);
+        int centerX = x + width / 2;
+        int centerY = y + height / 2;
+
+        for (int ring = rings; ring >= 1; ring--) {
+            int radius = Math.max(1, reach * ring / rings);
+            int color = fade(gradient.colorAt((ring - 0.5f) / rings), alpha);
+            rounded(graphics, centerX - radius, centerY - radius, radius * 2, radius * 2, radius, color);
         }
+    }
+
+    /** How many wedges a gradient running round the middle is drawn in. */
+    private static final int CONIC_WEDGES = 64;
+
+    /**
+     * A gradient running round the middle, drawn as wedges of one colour each: a rectangle reaching
+     * out from the centre, turned to the angle it covers. The wedges overlap close to the middle,
+     * so the innermost pixels take their colour from whichever wedge was drawn last.
+     */
+    private static void conic(GuiGraphicsExtractor graphics, Gradient gradient,
+                              int x, int y, int width, int height, float alpha){
+        float reach = gradient.radius(width, height) + 2;
+        int length = Math.max(1, Math.round(reach));
+        int half = Math.max(1, Math.round(reach * (float) Math.tan(Math.PI / CONIC_WEDGES)) + 1);
+
+        graphics.pose().pushMatrix();
+        graphics.pose().translate(x + width / 2.0f, y + height / 2.0f);
+
+        for (int wedge = 0; wedge < CONIC_WEDGES; wedge++) {
+            float middle = (wedge + 0.5f) / CONIC_WEDGES;
+            int color = fade(gradient.colorAt(middle), alpha);
+            graphics.pose().pushMatrix();
+            // zero is straight up and it goes round clockwise, the same way the angles do
+            graphics.pose().rotate((float) Math.toRadians(gradient.angle() + middle * 360));
+            graphics.fill(-half, -length, half, 1, color);
+            graphics.pose().popMatrix();
+        }
+
+        graphics.pose().popMatrix();
     }
 
     private static void borders(CTMLLayout.Box box, GuiGraphicsExtractor graphics, float alpha){
@@ -187,7 +319,14 @@ public class CTMLRenderer {
         ElementStyle style = box.style();
         int color = fade(style.get(ElementStyle.COLOR, DEFAULT_TEXT_COLOR), alpha);
         boolean shadow = style.get(ElementStyle.TEXT_SHADOW, true); // what minecraft does with text by default
+
+        // a text gradient paints the glyphs, and so does a background clipped to them: css's bg-clip-text,
+        // which leaves the box's own background colour where it is and only takes the gradient off it
         Gradient gradient = style.get(ElementStyle.TEXT_GRADIENT);
+        if (gradient == null
+                && style.get(ElementStyle.BACKGROUND_CLIP) == ElementStyle.BackgroundClip.TEXT) {
+            gradient = style.get(ElementStyle.BACKGROUND_GRADIENT);
+        }
         boolean ramp = gradient != null && gradient.isDrawable();
 
         for (CTMLLayout.TextLine line : box.lines()) {
@@ -211,30 +350,33 @@ public class CTMLRenderer {
     }
 
     /**
-     * Gradient text, drawn a character at a time so each one can take its own colour off the ramp.
+     * Gradient text, drawn a glyph at a time so each one can take its own colour off the ramp.
+     * Every glyph keeps the style the line gave it, bold and italic included, so it is measured and
+     * drawn the width it really is; only its colour is taken away, since the ramp provides that.
      * The ramp is measured across the whole content box, not the line, so every line of a block agrees.
      * Drawing is already inside the scale matrix, so the advances here are unscaled.
      */
     private static void gradientText(GuiGraphicsExtractor graphics, Font font, CTMLLayout.TextLine line, Gradient gradient,
                                      CTMLLayout.Box box, int x, int y, float scale, float alpha, boolean shadow){
-        String content = line.content();
-        if (content.isEmpty()) return;
+        List<FormattedCharSequence> glyphs = new ArrayList<>();
+        line.text().accept((index, style, codePoint) -> {
+            glyphs.add(FormattedCharSequence.codepoint(codePoint, style.withColor((TextColor) null)));
+            return true;
+        });
+        if (glyphs.isEmpty()) return;
 
-        boolean vertical = gradient.direction().isVertical();
-        int span = Math.max(1, vertical ? box.contentHeight() : box.contentWidth());
+        int width = Math.max(1, box.contentWidth());
+        int height = Math.max(1, box.contentHeight());
         int advance = 0;
 
-        for (int i = 0; i < content.length(); ) {
-            int codePoint = content.codePointAt(i);
-            String glyph = new String(Character.toChars(codePoint));
-            i += Character.charCount(codePoint);
+        for (FormattedCharSequence glyph : glyphs) {
+            int glyphWidth = font.width(glyph);
+            float middleX = line.x() + (advance + glyphWidth / 2.0f) * scale;
+            float middleY = line.y() + font.lineHeight * scale / 2.0f;
+            int color = fade(gradient.colorAt(gradient.positionOf(middleX, middleY, width, height)), alpha);
 
-            int width = font.width(glyph);
-            int center = Math.round((line.x() + (advance + width / 2.0f) * scale));
-            float t = vertical ? (line.y() + font.lineHeight * scale / 2.0f) / span : center / (float) span;
-
-            graphics.text(font, glyph, x + advance, y, fade(gradient.colorAt(t), alpha), shadow);
-            advance += width;
+            graphics.text(font, glyph, x + advance, y, color, shadow);
+            advance += glyphWidth;
         }
     }
 

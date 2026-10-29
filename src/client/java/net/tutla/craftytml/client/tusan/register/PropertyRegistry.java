@@ -19,6 +19,9 @@ public class PropertyRegistry {
         register(new Callback());
         register(new ColSpan());
         register(new RowSpan());
+        register(new ScrollX());
+        register(new ScrollY());
+        register(new ScrollInto());
     }
 
     public static void register(ElementProperty property){

@@ -194,9 +194,31 @@ public final class TailwindParser {
         keyword("scrollbar-auto", s -> s.set(ElementStyle.SCROLLBAR_HIDDEN, false));
         keyword("scrollbar-thin", s -> s.set(ElementStyle.SCROLLBAR_WIDTH, 2));
         keyword("scrollbar-thick", s -> s.set(ElementStyle.SCROLLBAR_WIDTH, 6));
-        keyword("scrollbar-gutter", s -> s.set(ElementStyle.SCROLLBAR_GUTTER, true)); // room kept for the bar
-        keyword("scrollbar-stable", s -> s.set(ElementStyle.SCROLLBAR_GUTTER, true));
-        keyword("scrollbar-overlay", s -> s.set(ElementStyle.SCROLLBAR_GUTTER, false)); // bar floats over the content
+        // room kept for the bar, the way css spells scrollbar-gutter
+        keyword("scrollbar-gutter", s -> s.set(ElementStyle.SCROLLBAR_GUTTER, ElementStyle.ScrollbarGutter.STABLE));
+        keyword("scrollbar-gutter-auto", s -> s.set(ElementStyle.SCROLLBAR_GUTTER, ElementStyle.ScrollbarGutter.AUTO));
+        keyword("scrollbar-gutter-stable", s -> s.set(ElementStyle.SCROLLBAR_GUTTER, ElementStyle.ScrollbarGutter.STABLE));
+        keyword("scrollbar-gutter-both-edges", s -> s.set(ElementStyle.SCROLLBAR_GUTTER, ElementStyle.ScrollbarGutter.BOTH_EDGES));
+        keyword("scrollbar-stable", s -> s.set(ElementStyle.SCROLLBAR_GUTTER, ElementStyle.ScrollbarGutter.STABLE));
+        keyword("scrollbar-both-edges", s -> s.set(ElementStyle.SCROLLBAR_GUTTER, ElementStyle.ScrollbarGutter.BOTH_EDGES));
+        // bar floats over the content, which is what ctml does unless it is told otherwise
+        keyword("scrollbar-overlay", s -> s.set(ElementStyle.SCROLLBAR_GUTTER, ElementStyle.ScrollbarGutter.AUTO));
+
+        // what happens to a wheel the box cannot use, both axes at once and one at a time
+        for (ElementStyle.Overscroll overscroll : ElementStyle.Overscroll.values()) {
+            String suffix = overscroll.name().toLowerCase();
+            keyword("overscroll-" + suffix, s -> s.set(ElementStyle.OVERSCROLL_BEHAVIOR, overscroll));
+            keyword("overscroll-x-" + suffix, s -> s.set(ElementStyle.OVERSCROLL_BEHAVIOR_X, overscroll));
+            keyword("overscroll-y-" + suffix, s -> s.set(ElementStyle.OVERSCROLL_BEHAVIOR_Y, overscroll));
+        }
+
+        // whether a scroll lands at once or slides there
+        keyword("scroll-auto", s -> s.set(ElementStyle.SCROLL_BEHAVIOR, ElementStyle.ScrollBehavior.AUTO));
+        keyword("scroll-smooth", s -> s.set(ElementStyle.SCROLL_BEHAVIOR, ElementStyle.ScrollBehavior.SMOOTH));
+
+        // whether what is on show is held still when something above it resizes
+        keyword("overflow-anchor-auto", s -> s.set(ElementStyle.OVERFLOW_ANCHOR, ElementStyle.OverflowAnchor.AUTO));
+        keyword("overflow-anchor-none", s -> s.set(ElementStyle.OVERFLOW_ANCHOR, ElementStyle.OverflowAnchor.NONE));
         keyword("scrollbar-square", s -> s.set(ElementStyle.SCROLLBAR_RADIUS, 0));
         keyword("scrollbar-rounded", s -> s.set(ElementStyle.SCROLLBAR_RADIUS, 2));
 
@@ -295,12 +317,32 @@ public final class TailwindParser {
             if (lines > 0) s.set(ElementStyle.TEXT_OVERFLOW, ElementStyle.TextOverflow.ELLIPSIS);
         });
 
-        // gradients: the direction class picks the axis, the stop classes fill in the colours
+        // gradients: the shape class picks the axis, the stop classes fill in the colours.
+        // bg-gradient-to-r is tailwind v3's spelling and bg-linear-to-r v4's; both are taken.
         for (Gradient.Direction direction : Gradient.Direction.values()) {
             String suffix = direction.name().toLowerCase().replace('_', '-');
             keyword("bg-gradient-" + suffix, s -> direction(s, ElementStyle.BACKGROUND_GRADIENT, direction));
+            keyword("bg-linear-" + suffix, s -> direction(s, ElementStyle.BACKGROUND_GRADIENT, direction));
             keyword("text-gradient-" + suffix, s -> direction(s, ElementStyle.TEXT_GRADIENT, direction));
+            keyword("text-linear-" + suffix, s -> direction(s, ElementStyle.TEXT_GRADIENT, direction));
         }
+
+        keyword("bg-radial", s -> kind(s, ElementStyle.BACKGROUND_GRADIENT, Gradient.Kind.RADIAL, 0));
+        keyword("bg-conic", s -> kind(s, ElementStyle.BACKGROUND_GRADIENT, Gradient.Kind.CONIC, 0));
+        keyword("text-radial", s -> kind(s, ElementStyle.TEXT_GRADIENT, Gradient.Kind.RADIAL, 0));
+        keyword("text-conic", s -> kind(s, ElementStyle.TEXT_GRADIENT, Gradient.Kind.CONIC, 0));
+
+        // and an angle spelled out: bg-linear-[30deg] ramps that way, bg-conic-[90deg] starts there
+        valued("bg-linear", angle(ElementStyle.BACKGROUND_GRADIENT, Gradient.Kind.LINEAR));
+        valued("bg-conic", angle(ElementStyle.BACKGROUND_GRADIENT, Gradient.Kind.CONIC));
+        valued("text-linear", angle(ElementStyle.TEXT_GRADIENT, Gradient.Kind.LINEAR));
+        valued("text-conic", angle(ElementStyle.TEXT_GRADIENT, Gradient.Kind.CONIC));
+
+        // where the background stops, and bg-clip-text for one clipped to the glyphs of the text
+        keyword("bg-clip-border", s -> s.set(ElementStyle.BACKGROUND_CLIP, ElementStyle.BackgroundClip.BORDER_BOX));
+        keyword("bg-clip-padding", s -> s.set(ElementStyle.BACKGROUND_CLIP, ElementStyle.BackgroundClip.PADDING_BOX));
+        keyword("bg-clip-content", s -> s.set(ElementStyle.BACKGROUND_CLIP, ElementStyle.BackgroundClip.CONTENT_BOX));
+        keyword("bg-clip-text", s -> s.set(ElementStyle.BACKGROUND_CLIP, ElementStyle.BackgroundClip.TEXT));
 
         valued("from", stop(ElementStyle.BACKGROUND_GRADIENT, Stop.FROM));
         valued("via", stop(ElementStyle.BACKGROUND_GRADIENT, Stop.VIA));
@@ -408,19 +450,54 @@ public final class TailwindParser {
         style.set(key, style.get(key, Gradient.of(direction)).withDirection(direction));
     }
 
-    /** from- / via- / to-, each one merged into the gradient the other classes are building. */
+    /** The same for a shape with no direction to it, and for one whose angle was spelled out. */
+    private static void kind(ElementStyle.Builder style, ElementStyle.Key<Gradient> key, Gradient.Kind kind, float angle){
+        style.set(key, style.get(key, Gradient.linear(angle)).withKind(kind, angle));
+    }
+
+    /** bg-linear-[30deg] and bg-conic-[90deg], where the value is an angle rather than a named side. */
+    private static Valued angle(ElementStyle.Key<Gradient> key, Gradient.Kind kind){
+        return (style, value) -> {
+            String raw = unwrap(value);
+            if (raw.endsWith("deg")) raw = raw.substring(0, raw.length() - 3);
+            Float degrees = decimal(raw);
+            if (degrees != null) kind(style, key, kind, degrees);
+        };
+    }
+
+    /**
+     * from- / via- / to-, each one merged into the gradient the other classes are building.
+     * The value is a colour, or a percentage ("from-20%") which moves that stop along the gradient
+     * without saying anything about its colour.
+     */
     private static Valued stop(ElementStyle.Key<Gradient> key, Stop stop){
         return (style, value) -> {
-            Integer color = TailwindColors.parse(value);
-            if (color == null) return;
+            Float position = position(value);
+            Integer color = position == null ? TailwindColors.parse(value) : null;
+            if (color == null && position == null) return;
 
             Gradient gradient = style.get(key, Gradient.of(Gradient.Direction.TO_R));
+            Gradient.Stop held = switch (stop) {
+                case FROM -> gradient.from();
+                case VIA -> gradient.via();
+                case TO -> gradient.to();
+            };
+            Gradient.Stop merged = color != null ? held.withColor(color) : held.withPosition(position);
+
             style.set(key, switch (stop) {
-                case FROM -> gradient.withFrom(color);
-                case VIA -> gradient.withVia(color);
-                case TO -> gradient.withTo(color);
+                case FROM -> gradient.withFrom(merged);
+                case VIA -> gradient.withVia(merged);
+                case TO -> gradient.withTo(merged);
             });
         };
+    }
+
+    /** A stop position: "20%" or "[20%]", as a fraction of the way along. Anything else is not one. */
+    private static Float position(String value){
+        String raw = unwrap(value);
+        if (!raw.endsWith("%")) return null;
+        Float percent = decimal(raw.substring(0, raw.length() - 1));
+        return percent == null ? null : percent / 100.0f;
     }
 
     /** grid-cols-3 is three equal shares; grid-cols-[100px_1fr] is the track list spelled out. */

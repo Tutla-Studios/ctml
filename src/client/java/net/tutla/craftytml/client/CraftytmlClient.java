@@ -4,6 +4,7 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.loader.api.FabricLoader;
 import net.tutla.craftytml.client.dom.DOMTreeElement;
 import net.tutla.craftytml.client.dom.DOMTreeNode;
+import net.tutla.craftytml.client.render.UIRegistry;
 import net.tutla.craftytml.client.tusan.CTMLTusan;
 import net.tutla.tums.Tums;
 import net.tutla.tums.tusan.MinecraftEnvironment;
@@ -60,6 +61,7 @@ public class CraftytmlClient implements ClientModInitializer {
         Tums.getRegister().add(interpreter.data);
 
         if (interpreter.returned != null){
+            UIRegistry.register(script.getFileName().toString(), (DOMTreeElement) interpreter.returned);
             System.out.println(((DOMTreeElement) interpreter.returned).render(" "));
         }
     }

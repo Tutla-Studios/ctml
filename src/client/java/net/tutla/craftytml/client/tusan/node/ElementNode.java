@@ -99,7 +99,7 @@ public class ElementNode extends Node {
             ctx.nextToken();
             ElementProperty property = PropertyRegistry.getPropertyFromToken(ctx.getCurrentToken().type);
             Object value;
-            if (property.type != ElementPropertyType.BOOLEAN){
+            if (property.type != ElementPropertyType.BOOLEAN || ctx.getNextToken().type == PrebuiltTusanTokenType.EQUAL){
                 ctx.tokenContext.expectTokenType(PrebuiltTusanTokenType.EQUAL);
                 ctx.nextToken();
                 value = new Expression(ctx).create().value; // TODO: Make property validate for types

@@ -1,9 +1,7 @@
 package net.tutla.craftytml.client.tusan.register;
 
 import net.tutla.craftytml.client.ctml.CTMLElement;
-import net.tutla.craftytml.client.ctml.element.CTML;
-import net.tutla.craftytml.client.ctml.element.Division;
-import net.tutla.craftytml.client.ctml.element.Span;
+import net.tutla.craftytml.client.ctml.element.*;
 import net.tutla.craftytml.client.tusan.CTMLTokenType;
 import net.tutla.tums.tusan.lexer.TokenType;
 
@@ -18,6 +16,14 @@ public class ElementRegistry {
         register(new Division());
         register(new CTML());
         register(new Span());
+        register(new Table());
+        register(new TableHead());
+        register(new TableBody());
+        register(new TableFoot());
+        register(new Caption());
+        register(new TableRow());
+        register(new TableHeaderCell());
+        register(new TableCell());
     }
 
     public static void register(CTMLElement element){

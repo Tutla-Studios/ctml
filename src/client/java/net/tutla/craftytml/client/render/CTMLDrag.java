@@ -45,9 +45,13 @@ public final class CTMLDrag {
          * from one frame to the next, so a dropped or clamped movement cannot leave it behind.
          */
         public void follow(double mouseX, double mouseY){
-            element.setDragOffset(
-                    Math.clamp(startX + Math.round(mouseX - grabX), minX, maxX),
-                    Math.clamp(startY + Math.round(mouseY - grabY), minY, maxY));
+            int x = Math.clamp(startX + Math.round(mouseX - grabX), minX, maxX);
+            int y = Math.clamp(startY + Math.round(mouseY - grabY), minY, maxY);
+            element.setDragOffset(x, y);
+            // and how far along the room that was, which is what survives a resize
+            element.setDragShare(
+                    maxX > minX ? (x - minX) / (float) (maxX - minX) : -1,
+                    maxY > minY ? (y - minY) / (float) (maxY - minY) : -1);
         }
     }
 

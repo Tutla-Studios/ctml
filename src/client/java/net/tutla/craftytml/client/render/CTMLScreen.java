@@ -109,6 +109,20 @@ public class CTMLScreen extends Screen {
         return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
     }
 
+    /** Puts back whatever the user last did to this screen's elements, by their ids. */
+    @Override
+    protected void init() {
+        super.init();
+        CTMLState.restore(getTitle().getString(), domTreeHeadElement);
+    }
+
+    /** And remembers it on the way out, which is the only place it can be written down. */
+    @Override
+    public void removed() {
+        CTMLState.remember(getTitle().getString(), domTreeHeadElement);
+        super.removed();
+    }
+
     @Override
     public void onClose() {
         this.minecraft.setScreenAndShow(parent);

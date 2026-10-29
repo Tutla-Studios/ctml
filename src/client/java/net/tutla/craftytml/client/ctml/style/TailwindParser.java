@@ -38,6 +38,20 @@ public final class TailwindParser {
         keyword("inline", s -> s.set(ElementStyle.DISPLAY, ElementStyle.Display.INLINE));
         keyword("inline-block", s -> s.set(ElementStyle.DISPLAY, ElementStyle.Display.INLINE_BLOCK));
         keyword("flex", s -> s.set(ElementStyle.DISPLAY, ElementStyle.Display.FLEX));
+        keyword("grid", s -> s.set(ElementStyle.DISPLAY, ElementStyle.Display.GRID));
+        keyword("table", s -> s.set(ElementStyle.DISPLAY, ElementStyle.Display.TABLE));
+        keyword("table-row", s -> s.set(ElementStyle.DISPLAY, ElementStyle.Display.TABLE_ROW));
+        keyword("table-cell", s -> s.set(ElementStyle.DISPLAY, ElementStyle.Display.TABLE_CELL));
+        keyword("table-row-group", s -> s.set(ElementStyle.DISPLAY, ElementStyle.Display.TABLE_ROW_GROUP));
+        keyword("table-header-group", s -> s.set(ElementStyle.DISPLAY, ElementStyle.Display.TABLE_HEADER_GROUP));
+        keyword("table-footer-group", s -> s.set(ElementStyle.DISPLAY, ElementStyle.Display.TABLE_FOOTER_GROUP));
+        keyword("table-caption", s -> s.set(ElementStyle.DISPLAY, ElementStyle.Display.TABLE_CAPTION));
+        keyword("border-collapse", s -> s.set(ElementStyle.BORDER_COLLAPSE, ElementStyle.BorderCollapse.COLLAPSE));
+        keyword("border-separate", s -> s.set(ElementStyle.BORDER_COLLAPSE, ElementStyle.BorderCollapse.SEPARATE));
+        keyword("caption-top", s -> s.set(ElementStyle.CAPTION_SIDE, ElementStyle.CaptionSide.TOP));
+        keyword("caption-bottom", s -> s.set(ElementStyle.CAPTION_SIDE, ElementStyle.CaptionSide.BOTTOM));
+        keyword("table-auto", s -> s.set(ElementStyle.TABLE_LAYOUT, ElementStyle.TableLayout.AUTO));
+        keyword("table-fixed", s -> s.set(ElementStyle.TABLE_LAYOUT, ElementStyle.TableLayout.FIXED));
         keyword("hidden", s -> s.set(ElementStyle.DISPLAY, ElementStyle.Display.NONE));
 
         // position
@@ -46,6 +60,14 @@ public final class TailwindParser {
         keyword("absolute", s -> s.set(ElementStyle.POSITION, ElementStyle.Position.ABSOLUTE));
         keyword("fixed", s -> s.set(ElementStyle.POSITION, ElementStyle.Position.FIXED));
         keyword("sticky", s -> s.set(ElementStyle.POSITION, ElementStyle.Position.STICKY));
+
+        keyword("float-left", s -> s.set(ElementStyle.FLOAT, ElementStyle.Floating.LEFT));
+        keyword("float-right", s -> s.set(ElementStyle.FLOAT, ElementStyle.Floating.RIGHT));
+        keyword("float-none", s -> s.set(ElementStyle.FLOAT, ElementStyle.Floating.NONE));
+        keyword("clear-left", s -> s.set(ElementStyle.CLEAR, ElementStyle.Clear.LEFT));
+        keyword("clear-right", s -> s.set(ElementStyle.CLEAR, ElementStyle.Clear.RIGHT));
+        keyword("clear-both", s -> s.set(ElementStyle.CLEAR, ElementStyle.Clear.BOTH));
+        keyword("clear-none", s -> s.set(ElementStyle.CLEAR, ElementStyle.Clear.NONE));
 
         // box sizing
         keyword("box-content", s -> s.set(ElementStyle.BOX_SIZING, ElementStyle.BoxSizing.CONTENT_BOX));
@@ -94,6 +116,26 @@ public final class TailwindParser {
         keyword("justify-around", s -> s.set(ElementStyle.JUSTIFY_CONTENT, ElementStyle.JustifyContent.SPACE_AROUND));
         keyword("justify-evenly", s -> s.set(ElementStyle.JUSTIFY_CONTENT, ElementStyle.JustifyContent.SPACE_EVENLY));
 
+        // grid
+        keyword("grid-flow-row", s -> s.set(ElementStyle.GRID_AUTO_FLOW, ElementStyle.GridFlow.ROW));
+        keyword("grid-flow-col", s -> s.set(ElementStyle.GRID_AUTO_FLOW, ElementStyle.GridFlow.COLUMN));
+        keyword("grid-cols-none", s -> s.set(ElementStyle.GRID_TEMPLATE_COLUMNS, ElementStyle.Tracks.NONE));
+        keyword("grid-rows-none", s -> s.set(ElementStyle.GRID_TEMPLATE_ROWS, ElementStyle.Tracks.NONE));
+        keyword("col-span-full", s -> s.set(ElementStyle.GRID_COLUMN_SPAN, Integer.MAX_VALUE));
+        keyword("row-span-full", s -> s.set(ElementStyle.GRID_ROW_SPAN, Integer.MAX_VALUE));
+        keyword("col-auto", s -> s.set(ElementStyle.GRID_COLUMN_START, null).set(ElementStyle.GRID_COLUMN_SPAN, null));
+        keyword("row-auto", s -> s.set(ElementStyle.GRID_ROW_START, null).set(ElementStyle.GRID_ROW_SPAN, null));
+
+        keyword("justify-items-start", s -> s.set(ElementStyle.JUSTIFY_ITEMS, ElementStyle.AlignItems.START));
+        keyword("justify-items-center", s -> s.set(ElementStyle.JUSTIFY_ITEMS, ElementStyle.AlignItems.CENTER));
+        keyword("justify-items-end", s -> s.set(ElementStyle.JUSTIFY_ITEMS, ElementStyle.AlignItems.END));
+        keyword("justify-items-stretch", s -> s.set(ElementStyle.JUSTIFY_ITEMS, ElementStyle.AlignItems.STRETCH));
+        keyword("justify-self-auto", s -> s.set(ElementStyle.JUSTIFY_SELF, null));
+        keyword("justify-self-start", s -> s.set(ElementStyle.JUSTIFY_SELF, ElementStyle.AlignItems.START));
+        keyword("justify-self-center", s -> s.set(ElementStyle.JUSTIFY_SELF, ElementStyle.AlignItems.CENTER));
+        keyword("justify-self-end", s -> s.set(ElementStyle.JUSTIFY_SELF, ElementStyle.AlignItems.END));
+        keyword("justify-self-stretch", s -> s.set(ElementStyle.JUSTIFY_SELF, ElementStyle.AlignItems.STRETCH));
+
         keyword("items-start", s -> s.set(ElementStyle.ALIGN_ITEMS, ElementStyle.AlignItems.START));
         keyword("items-center", s -> s.set(ElementStyle.ALIGN_ITEMS, ElementStyle.AlignItems.CENTER));
         keyword("items-end", s -> s.set(ElementStyle.ALIGN_ITEMS, ElementStyle.AlignItems.END));
@@ -128,6 +170,11 @@ public final class TailwindParser {
         keyword("truncate", s -> s.set(ElementStyle.TEXT_OVERFLOW, ElementStyle.TextOverflow.ELLIPSIS)
                 .set(ElementStyle.WHITE_SPACE, ElementStyle.WhiteSpace.NOWRAP)
                 .set(ElementStyle.OVERFLOW, ElementStyle.Overflow.HIDDEN));
+        keyword("break-normal", s -> s.set(ElementStyle.WORD_BREAK, ElementStyle.WordBreak.NORMAL));
+        keyword("break-words", s -> s.set(ElementStyle.WORD_BREAK, ElementStyle.WordBreak.BREAK_WORD));
+        keyword("break-all", s -> s.set(ElementStyle.WORD_BREAK, ElementStyle.WordBreak.BREAK_ALL));
+        keyword("break-keep", s -> s.set(ElementStyle.WORD_BREAK, ElementStyle.WordBreak.KEEP_ALL));
+        keyword("line-clamp-none", s -> s.set(ElementStyle.LINE_CLAMP, 0));
         keyword("whitespace-normal", s -> s.set(ElementStyle.WHITE_SPACE, ElementStyle.WhiteSpace.NORMAL));
         keyword("whitespace-nowrap", s -> s.set(ElementStyle.WHITE_SPACE, ElementStyle.WhiteSpace.NOWRAP));
         keyword("whitespace-pre", s -> s.set(ElementStyle.WHITE_SPACE, ElementStyle.WhiteSpace.PRE));
@@ -174,9 +221,9 @@ public final class TailwindParser {
         valued("mr", spacing(ElementStyle.MARGIN_RIGHT));
         valued("mb", spacing(ElementStyle.MARGIN_BOTTOM));
         valued("ml", spacing(ElementStyle.MARGIN_LEFT));
-        valued("gap", spacing(ElementStyle.GAP));
-        valued("gap-x", spacing(ElementStyle.GAP));
-        valued("gap-y", spacing(ElementStyle.GAP));
+        valued("gap", spacingAll(ElementStyle.GAP));
+        valued("gap-x", spacing(ElementStyle.COLUMN_GAP)); // x is along a row, so it is the column gap
+        valued("gap-y", spacing(ElementStyle.ROW_GAP));
 
         // size
         valued("w", horizontal(spacing(ElementStyle.WIDTH)));
@@ -218,6 +265,35 @@ public final class TailwindParser {
         valued("shrink", (s, v) -> set(s, ElementStyle.FLEX_SHRINK, number(v)));
         valued("basis", spacing(ElementStyle.FLEX_BASIS));
         valued("order", (s, v) -> set(s, ElementStyle.ORDER, number(v)));
+        // grid templates: a plain count means that many equal shares, anything else is a track list
+        valued("grid-cols", tracks(ElementStyle.GRID_TEMPLATE_COLUMNS));
+        valued("grid-rows", tracks(ElementStyle.GRID_TEMPLATE_ROWS));
+        valued("auto-cols", (s, v) -> set(s, ElementStyle.GRID_AUTO_COLUMNS, single(v)));
+        valued("auto-rows", (s, v) -> set(s, ElementStyle.GRID_AUTO_ROWS, single(v)));
+        valued("col-span", (s, v) -> set(s, ElementStyle.GRID_COLUMN_SPAN, number(v)));
+        valued("col-start", (s, v) -> set(s, ElementStyle.GRID_COLUMN_START, number(v)));
+        valued("col-end", (s, v) -> set(s, ElementStyle.GRID_COLUMN_END, number(v)));
+        valued("row-span", (s, v) -> set(s, ElementStyle.GRID_ROW_SPAN, number(v)));
+        valued("row-start", (s, v) -> set(s, ElementStyle.GRID_ROW_START, number(v)));
+        valued("row-end", (s, v) -> set(s, ElementStyle.GRID_ROW_END, number(v)));
+
+        // columns-3 spreads the content over three, columns-[80px] over as many as fit that wide
+        valued("columns", (s, v) -> {
+            Integer count = number(v);
+            if (count != null) {
+                s.set(ElementStyle.COLUMN_COUNT, count);
+                return;
+            }
+            Length wide = spacing(v);
+            if (wide != null) s.set(ElementStyle.COLUMN_WIDTH, wide);
+        });
+
+        valued("line-clamp", (s, v) -> {
+            Integer lines = number(v);
+            if (lines == null) return;
+            s.set(ElementStyle.LINE_CLAMP, lines);
+            if (lines > 0) s.set(ElementStyle.TEXT_OVERFLOW, ElementStyle.TextOverflow.ELLIPSIS);
+        });
 
         // gradients: the direction class picks the axis, the stop classes fill in the colours
         for (Gradient.Direction direction : Gradient.Direction.values()) {
@@ -345,6 +421,29 @@ public final class TailwindParser {
                 case TO -> gradient.withTo(color);
             });
         };
+    }
+
+    /** grid-cols-3 is three equal shares; grid-cols-[100px_1fr] is the track list spelled out. */
+    private static Valued tracks(ElementStyle.Key<ElementStyle.Tracks> key){
+        return (style, value) -> {
+            Integer count = number(value);
+            if (count != null) {
+                set(style, key, new ElementStyle.Tracks(Track.repeat(count, Track.fraction(1))));
+                return;
+            }
+            List<Track> parsed = Track.parse(unwrap(value));
+            if (!parsed.isEmpty()) style.set(key, new ElementStyle.Tracks(parsed));
+        };
+    }
+
+    /** One track, for the implicit rows and columns: auto-rows-[20px], auto-rows-min, auto-rows-fr. */
+    private static ElementStyle.Tracks single(String value){
+        Track track = Track.track(unwrap(value).equals("fr") ? "1fr" : unwrap(value));
+        return track == null ? null : new ElementStyle.Tracks(List.of(track));
+    }
+
+    private static String unwrap(String value){
+        return value.startsWith("[") && value.endsWith("]") ? value.substring(1, value.length() - 1) : value;
     }
 
     private static void text(ElementStyle.Builder style, String value){

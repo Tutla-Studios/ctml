@@ -88,17 +88,25 @@ public class CTMLRenderer {
                 CTMLScroll.thumbRadius(style), fade(CTMLScroll.thumbColor(style), alpha));
     }
 
-    /** z-index decides what covers what; everything else keeps the order layout handed over. */
+    /**
+     * z-index decides what covers what, and a box the user has dragged comes over its siblings so it is
+     * not left under one it was dropped on. Everything else keeps the order layout handed over.
+     */
     static List<CTMLLayout.Box> paintOrder(List<CTMLLayout.Box> children){
         if (children.size() < 2) return children;
 
         boolean layered = false;
-        for (CTMLLayout.Box child : children) layered |= child.style().isSet(ElementStyle.Z_INDEX);
+        for (CTMLLayout.Box child : children) layered |= child.style().isSet(ElementStyle.Z_INDEX) || isDragged(child);
         if (!layered) return children;
 
         List<CTMLLayout.Box> sorted = new ArrayList<>(children);
-        sorted.sort(Comparator.comparingInt(child -> child.style().get(ElementStyle.Z_INDEX, 0))); // stable, so ties stay put
+        sorted.sort(Comparator.<CTMLLayout.Box>comparingInt(child -> child.style().get(ElementStyle.Z_INDEX, 0))
+                .thenComparingInt(child -> isDragged(child) ? 1 : 0)); // stable, so ties stay put
         return sorted;
+    }
+
+    private static boolean isDragged(CTMLLayout.Box box){
+        return box.element().getDragX() != 0 || box.element().getDragY() != 0;
     }
 
     private static void background(CTMLLayout.Box box, GuiGraphicsExtractor graphics, float alpha){

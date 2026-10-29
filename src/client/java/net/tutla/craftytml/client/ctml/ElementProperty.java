@@ -17,7 +17,9 @@ public class ElementProperty {
     }
 
     public void setValue(Object val, TusanContext ctx){
-        if (type == ElementPropertyType.INTEGER && !(val instanceof Integer)){
+        if (type == ElementPropertyType.INTEGER && val instanceof Number number){
+            value = number.intValue(); //every number a script reads is a decimal, so the whole of it is taken here
+        } else if (type == ElementPropertyType.INTEGER){
             ctx.getInterpreter().error("UnexpectedValue", "Expected integer value for property: "+name+"; got"+val.getClass(), null);
         } else if (type == ElementPropertyType.STRING && !(val instanceof String)){
             ctx.getInterpreter().error("UnexpectedValue", "Expected string value for property: "+name+"; got"+val.getClass(), null);

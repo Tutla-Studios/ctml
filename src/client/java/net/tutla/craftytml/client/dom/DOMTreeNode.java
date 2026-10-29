@@ -10,6 +10,9 @@ public abstract class DOMTreeNode {
      */
     private static long revision;
 
+    /** The revision at which anything in this node's own subtree last changed. */
+    private long subtree;
+
     public static long revision(){
         return revision;
     }
@@ -17,6 +20,19 @@ public abstract class DOMTreeNode {
     /** Called by anything that changes what layout would come out as. */
     public static void touch(){
         revision++;
+    }
+
+    /**
+     * Marks this node and everything above it as changed, so a box worked out for an element that was
+     * left alone can be used again while the ones around it are laid out afresh.
+     */
+    public void touched(){
+        revision++;
+        for (DOMTreeNode node = this; node != null; node = node.parent) node.subtree = revision;
+    }
+
+    public long subtreeRevision(){
+        return subtree;
     }
 
     public DOMTreeElement getParent(){
@@ -38,7 +54,7 @@ public abstract class DOMTreeNode {
     public void detach(){
         if (parent != null) {
             parent.children.remove(this);
-            touch();
+            parent.touched();
         }
         parent = null;
     }

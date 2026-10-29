@@ -20,7 +20,7 @@ public class DOMTreeText extends DOMTreeNode {
         String value = text == null ? "" : text;
         if (value.equals(this.text)) return;
         this.text = value;
-        touch();
+        touched();
     }
 
     @Override

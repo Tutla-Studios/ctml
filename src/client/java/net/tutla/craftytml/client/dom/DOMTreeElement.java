@@ -16,7 +16,10 @@ public class DOMTreeElement extends DOMTreeNode {
     private final CTMLElement element;
     final List<DOMTreeNode> children = new ArrayList<>();
 
-    public DOMTreeElement(CTMLElement element) { this.element = element; }
+    public DOMTreeElement(CTMLElement element) {
+        this.element = element;
+        element.bind(this); // so a style set on the element marks the tree above it as changed
+    }
 
     public CTMLElement getElement() { return element; }
 
@@ -62,6 +65,16 @@ public class DOMTreeElement extends DOMTreeNode {
         element.setDragOffset(dragX, dragY);
     }
 
+    public void setDragShare(float shareX, float shareY) {
+        element.setDragShare(shareX, shareY);
+    }
+
+    public float getDragShareX() { return element.getDragShareX(); }
+
+    public float getDragShareY() { return element.getDragShareY(); }
+
+    public boolean isDragged() { return element.isDragged(); }
+
     public int getScrollX() { return element.getScrollX(); }
 
     public int getScrollY() { return element.getScrollY(); }
@@ -88,7 +101,7 @@ public class DOMTreeElement extends DOMTreeNode {
         child.detach();
         child.parent = this;
         children.add(child);
-        touch();
+        touched();
         return this;
     }
 

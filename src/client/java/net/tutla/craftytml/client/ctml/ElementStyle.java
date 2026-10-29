@@ -29,6 +29,8 @@ public final class ElementStyle {
     public static final Key<Length> BOTTOM = key("bottom", Length.class);
     public static final Key<Length> LEFT = key("left", Length.class);
     public static final Key<Integer> Z_INDEX = key("z-index", Integer.class);
+    public static final Key<Floating> FLOAT = key("float", Floating.class);
+    public static final Key<Clear> CLEAR = key("clear", Clear.class);
 
     // box size
     public static final Key<Length> WIDTH = key("width", Length.class);
@@ -79,13 +81,38 @@ public final class ElementStyle {
     public static final Key<WhiteSpace> WHITE_SPACE = key("white-space", WhiteSpace.class);
     public static final Key<VerticalAlign> VERTICAL_ALIGN = key("vertical-align", VerticalAlign.class);
     public static final Key<TextOverflow> TEXT_OVERFLOW = key("text-overflow", TextOverflow.class);
+    public static final Key<WordBreak> WORD_BREAK = key("word-break", WordBreak.class);
+    /** How many lines text is allowed, the rest cut off with dots. Unset or 0 means as many as it takes. */
+    public static final Key<Integer> LINE_CLAMP = key("line-clamp", Integer.class);
+
+    // grid
+    public static final Key<Tracks> GRID_TEMPLATE_COLUMNS = key("grid-template-columns", Tracks.class);
+    public static final Key<Tracks> GRID_TEMPLATE_ROWS = key("grid-template-rows", Tracks.class);
+    public static final Key<Tracks> GRID_AUTO_COLUMNS = key("grid-auto-columns", Tracks.class);
+    public static final Key<Tracks> GRID_AUTO_ROWS = key("grid-auto-rows", Tracks.class);
+    public static final Key<GridFlow> GRID_AUTO_FLOW = key("grid-auto-flow", GridFlow.class);
+    public static final Key<Integer> GRID_COLUMN_START = key("grid-column-start", Integer.class);
+    public static final Key<Integer> GRID_COLUMN_END = key("grid-column-end", Integer.class);
+    public static final Key<Integer> GRID_COLUMN_SPAN = key("grid-column-span", Integer.class);
+    public static final Key<Integer> GRID_ROW_START = key("grid-row-start", Integer.class);
+    public static final Key<Integer> GRID_ROW_END = key("grid-row-end", Integer.class);
+    public static final Key<Integer> GRID_ROW_SPAN = key("grid-row-span", Integer.class);
+    public static final Key<AlignItems> JUSTIFY_ITEMS = key("justify-items", AlignItems.class);
+    public static final Key<TableLayout> TABLE_LAYOUT = key("table-layout", TableLayout.class);
+    public static final Key<BorderCollapse> BORDER_COLLAPSE = key("border-collapse", BorderCollapse.class);
+    public static final Key<CaptionSide> CAPTION_SIDE = key("caption-side", CaptionSide.class);
+    /** How many columns a block's content is spread across, and how wide each of them wants to be. */
+    public static final Key<Integer> COLUMN_COUNT = key("column-count", Integer.class);
+    public static final Key<Length> COLUMN_WIDTH = key("column-width", Length.class);
+    public static final Key<AlignItems> JUSTIFY_SELF = key("justify-self", AlignItems.class);
 
     // flex
     public static final Key<FlexDirection> FLEX_DIRECTION = key("flex-direction", FlexDirection.class);
     public static final Key<FlexWrap> FLEX_WRAP = key("flex-wrap", FlexWrap.class);
     public static final Key<JustifyContent> JUSTIFY_CONTENT = key("justify-content", JustifyContent.class);
     public static final Key<AlignItems> ALIGN_ITEMS = key("align-items", AlignItems.class);
-    public static final Key<Length> GAP = key("gap", Length.class);
+    public static final Key<Length> ROW_GAP = key("row-gap", Length.class);
+    public static final Key<Length> COLUMN_GAP = key("column-gap", Length.class);
     public static final Key<Integer> FLEX_GROW = key("flex-grow", Integer.class);
     public static final Key<Integer> FLEX_SHRINK = key("flex-shrink", Integer.class);
     public static final Key<Length> FLEX_BASIS = key("flex-basis", Length.class);
@@ -117,6 +144,7 @@ public final class ElementStyle {
     public static final Key<?>[] BORDER_WIDTH = { BORDER_TOP_WIDTH, BORDER_RIGHT_WIDTH, BORDER_BOTTOM_WIDTH, BORDER_LEFT_WIDTH };
     public static final Key<?>[] INSET = { TOP, RIGHT, BOTTOM, LEFT };
     public static final Key<?>[] OVERFLOW = { OVERFLOW_X, OVERFLOW_Y };
+    public static final Key<?>[] GAP = { ROW_GAP, COLUMN_GAP };
 
     /** The ones that pass down the tree on their own, like css does it. */
     public static final Key<?>[] INHERITED = {
@@ -124,18 +152,47 @@ public final class ElementStyle {
             TEXT_ALIGN, LINE_HEIGHT, LETTER_SPACING, WHITE_SPACE, VISIBILITY,
             // how the bars look comes down the tree the way css inherits scrollbar-width and scrollbar-color,
             // so one class on the root dresses every scroll container under it. Where they sit does not.
-            SCROLLBAR_HIDDEN, SCROLLBAR_WIDTH, SCROLLBAR_THUMB_COLOR, SCROLLBAR_TRACK_COLOR, SCROLLBAR_RADIUS
+            SCROLLBAR_HIDDEN, SCROLLBAR_WIDTH, SCROLLBAR_THUMB_COLOR, SCROLLBAR_TRACK_COLOR, SCROLLBAR_RADIUS,
+            WORD_BREAK, BORDER_COLLAPSE, CAPTION_SIDE
     };
 
     /** Nothing set at all; what an element starts out with before any style lands on it. */
     public static final ElementStyle UNSET = new ElementStyle(new Object[KEYS.size()]);
 
-    public enum Display { BLOCK, INLINE, INLINE_BLOCK, FLEX, NONE }
+    public enum Display {
+        BLOCK, INLINE, INLINE_BLOCK, FLEX, GRID,
+        TABLE, TABLE_ROW_GROUP, TABLE_HEADER_GROUP, TABLE_FOOTER_GROUP, TABLE_ROW, TABLE_CELL, TABLE_CAPTION,
+        NONE
+    }
+    /** Whether a table's columns are sized from what is in them or just shared out evenly. */
+    public enum TableLayout { AUTO, FIXED }
+    /** Whether the borders between two cells sit on top of one another or each keep their own room. */
+    public enum BorderCollapse { SEPARATE, COLLAPSE }
+    public enum CaptionSide { TOP, BOTTOM }
+    /** Which side of its block a box is pulled to, with the content running past it on the other. */
+    public enum Floating { NONE, LEFT, RIGHT }
+    /** Which floats a box has to clear before it is allowed to start. */
+    public enum Clear { NONE, LEFT, RIGHT, BOTH }
+    /** Which way a grid fills itself in when an item does not say where it goes. */
+    public enum GridFlow { ROW, COLUMN }
+
+    /** A grid template: the tracks of one axis, in order. */
+    public record Tracks(java.util.List<net.tutla.craftytml.client.ctml.style.Track> items) {
+        public static final Tracks NONE = new Tracks(java.util.List.of());
+        public int size(){ return items.size(); }
+        @Override public String toString(){ return items.isEmpty() ? "none" : items.toString(); }
+    }
     public enum Position { STATIC, RELATIVE, ABSOLUTE, FIXED, STICKY }
     public enum BoxSizing { CONTENT_BOX, BORDER_BOX }
     public enum TextAlign { LEFT, CENTER, RIGHT }
     public enum WhiteSpace { NORMAL, NOWRAP, PRE }
     public enum TextOverflow { CLIP, ELLIPSIS }
+    /**
+     * Where a line is allowed to break. NORMAL only breaks at spaces and between the characters of the
+     * scripts that are written without them; BREAK_WORD lets a word too long for its line be split,
+     * BREAK_ALL breaks wherever it runs out of room, and KEEP_ALL only ever breaks at a space.
+     */
+    public enum WordBreak { NORMAL, BREAK_WORD, BREAK_ALL, KEEP_ALL }
     public enum FlexDirection { ROW, ROW_REVERSE, COLUMN, COLUMN_REVERSE }
     public enum FlexWrap { NOWRAP, WRAP, WRAP_REVERSE }
     public enum JustifyContent { START, CENTER, END, SPACE_BETWEEN, SPACE_AROUND, SPACE_EVENLY }
@@ -152,6 +209,7 @@ public final class ElementStyle {
     public enum Visibility { VISIBLE, HIDDEN }
 
     private final Object[] values;
+    private int hash; // worked out once: these get used as map keys and nothing ever changes underneath
 
     private ElementStyle(Object[] values){ this.values = values; }
 
@@ -255,7 +313,8 @@ public final class ElementStyle {
 
     @Override
     public int hashCode(){
-        return Arrays.hashCode(values);
+        if (hash == 0) hash = Arrays.hashCode(values);
+        return hash;
     }
 
     @Override

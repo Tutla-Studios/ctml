@@ -17,11 +17,17 @@ public abstract class CTMLElement {
     private ElementStyle style = ElementStyle.UNSET; //not final like the property list cuz every style set swaps the whole thing out
     private ElementStyle computed; //style over the element's defaults, kept until something changes it
 
+    private DOMTreeNode node; //the dom node this element sits in, for marking a change on up the tree
+
     private int dragX = 0; //how far the user has dragged this element from where layout put it
     private int dragY = 0;
 
     private int scrollX = 0; //how far the content inside this element has been scrolled away from its start
     private int scrollY = 0;
+
+    //where the drag sits as a share of the room it had, so the same spot comes back after a resize
+    private float dragShareX = -1;
+    private float dragShareY = -1;
     public final Boolean hasChildren;
     //private Boolean isFirstNode = false;
 
@@ -47,7 +53,7 @@ public abstract class CTMLElement {
 
     public void updateProperty(String name, Object value, TusanContext ctx){
         propertyList.updateProperty(name, value, ctx);
-        DOMTreeNode.touch();
+        changed();
 
         if (propertyList.propertyFromName(name) instanceof ClassName classes && classes.hasValue()){
             applyClassStyles(classes.getStringValue());
@@ -91,7 +97,7 @@ public abstract class CTMLElement {
     public void setStyle(ElementStyle style){
         this.style = style == null ? ElementStyle.UNSET : style;
         computed = null;
-        DOMTreeNode.touch();
+        changed();
     }
 
     public <T> void updateStyle(ElementStyle.Key<T> key, T value){
@@ -110,11 +116,46 @@ public abstract class CTMLElement {
     public int getDragY(){ return dragY; }
 
     /** Where the element sits relative to the spot layout gave it, moved by however far it has been dragged. */
+    /**
+     * Straight pixels, which is all a script has to go on, so this forgets any share that was remembered.
+     * Whatever lays the element out works a share back out from it once it knows the room it had.
+     */
     public void setDragOffset(int dragX, int dragY){
+        dragShareX = -1;
+        dragShareY = -1;
         if (dragX == this.dragX && dragY == this.dragY) return; // layout clamps these every frame, so most calls change nothing
         this.dragX = dragX;
         this.dragY = dragY;
-        DOMTreeNode.touch();
+        changed();
+    }
+
+    /**
+     * How far along the room it was allowed the element was put, from nothing to all of it. That is what
+     * gets remembered, so a window resize or a gui scale change brings the element back to the spot it
+     * was put rather than to the same number of pixels. Below zero means nothing is remembered.
+     */
+    public void setDragShare(float shareX, float shareY){
+        dragShareX = shareX < 0 ? -1 : Math.clamp(shareX, 0.0f, 1.0f);
+        dragShareY = shareY < 0 ? -1 : Math.clamp(shareY, 0.0f, 1.0f);
+    }
+
+    public float getDragShareX(){ return dragShareX; }
+    public float getDragShareY(){ return dragShareY; }
+
+    /** Whether the element has been dragged at all, which a share of zero still counts as. */
+    public boolean isDragged(){
+        return dragX != 0 || dragY != 0 || dragShareX >= 0 || dragShareY >= 0;
+    }
+
+    /** Told to the element by the dom node built around it. */
+    public void bind(DOMTreeNode node){
+        this.node = node;
+    }
+
+    /** Says that what layout came up with for this element is out of date, and for everything above it. */
+    private void changed(){
+        if (node == null) DOMTreeNode.touch();
+        else node.touched();
     }
 
     public int getScrollX(){ return scrollX; }
@@ -128,7 +169,7 @@ public abstract class CTMLElement {
         if (scrollX == this.scrollX && scrollY == this.scrollY) return;
         this.scrollX = scrollX;
         this.scrollY = scrollY;
-        DOMTreeNode.touch();
+        changed();
     }
 
     public CTMLElement newInstance(){

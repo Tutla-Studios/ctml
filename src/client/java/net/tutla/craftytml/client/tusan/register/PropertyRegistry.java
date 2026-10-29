@@ -17,6 +17,8 @@ public class PropertyRegistry {
         register(new Draggable());
         register(new ID());
         register(new Callback());
+        register(new ColSpan());
+        register(new RowSpan());
     }
 
     public static void register(ElementProperty property){

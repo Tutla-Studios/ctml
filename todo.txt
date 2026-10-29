@@ -5,25 +5,20 @@ RENDERER / PAINT  (render/CTMLRenderer.java)
 --------------------------------------------
 - border-radius is faked: corners get cut off with three fills, there is no rounded
   rect primitive. Looks like a chamfer, not a radius.
-- background-image is parsed into the style and never drawn. Needs an Identifier plus
-  blit, and a decision about sizing (cover / contain / repeat).
+- background-image is parsed into the style and never drawn.
 - Only one border-color for all four sides. No per-side colors, no border styles.
 - opacity multiplies the alpha of each thing drawn instead of compositing the subtree,
   so overlapping children inside a faded box darken each other.
-- letter-spacing is stored and ignored; honouring it means drawing glyph by glyph.
-- Fractional font scales (text-xs is 0.75) go through the matrix, so small text is
-  blurry. Consider snapping scales or keeping a real font size ladder.
+- letter-spacing is stored and ignored.
+- Fractional font scales (text-xs is 0.75) go through the matrix, so small text is blurry.
 - No vertical centering of text inside its box.
-- text-overflow: ellipsis cuts the line by measuring one character at a time off the plain
-  string, so a line carrying per glyph bold or italic is measured a little off, and the dots
-  are "..." rather than a real ellipsis glyph. There is no line-clamp.
 - z-index sorts siblings at paint time only, so it cannot lift a box above its parent's
   siblings: there are no stacking contexts, opacity and overflow start none, and a child
   with a high z-index still paints under an uncle box drawn later.
 - Gradients ignore border-radius, so a rounded box with a gradient gets square corners,
   and background-color is skipped entirely when a gradient is set instead of drawn under it.
 - Diagonal gradient directions (bg-gradient-to-tr and the rest) are drawn as the plain
-  horizontal ramp. A real diagonal needs per pixel work or a shader.
+  horizontal ramp.
 - Horizontal gradients are one fill per pixel column, so a screen wide one is ~850 draws
   a frame. Vertical ones go through fillGradient and cost one draw per segment.
 - Gradient text is drawn glyph by glyph with graphics.text, which drops the per glyph
@@ -43,69 +38,26 @@ RENDERER / PAINT  (render/CTMLRenderer.java)
 
 LAYOUT  (render/CTMLLayout.java)
 --------------------------------
-- An inline level element is one item on its line and is never split across two, so a long span
-  wraps as a block of its own rather than breaking mid sentence the way css does.
-- Text runs are measured and wrapped here rather than by Font.split, so the bidi reordering and
-  the line breaking minecraft does for scripts without spaces are not there: breaks only happen
-  at whitespace, and a word longer than its line overflows instead of being broken.
-- text-overflow: ellipsis cuts text only. An inline box that ran past the end is left where it is
-  for the clip to deal with, and there is no line-clamp.
-- Margins collapse between siblings and through an empty block, but not out through a parent's
-  own edge, so a first or last child's margin always stays inside its parent.
-- A flex container's own text is laid out across the top rather than becoming an anonymous flex
-  item, so it does not take part in the main axis and justify-content never sees it.
-- Down a column, a flex item's automatic minimum is zero rather than its content, and its cross
-  size is the container's width unless it sets one, so align-items only bites on a row.
-- gap is one value for both axes, so row-gap and column-gap cannot differ (see the style section).
-- No grid, no columns, no floats, no tables.
-- align-content: space-around and space-evenly round their spacing down, so a line or two of
-  pixels can be left at the end of the cross axis.
-- The children of a scrolling box are shifted after they are laid out, the same way a drag shifts
-  a box, so a scroll never reflows anything. The box's own text is drawn against that offset
-  instead, since text is a property on the element and not a box of its own.
-- A box that keeps a gutter lays its children out twice, since the room the bars take can change
-  what overflows. Three passes is the cap, and an arrangement that cannot settle (a bar that
-  appears only to make itself unnecessary) keeps whatever the last pass said.
-- A dragged element is shifted after layout, so nothing reflows around it and its own children
-  move with it. It cannot be dragged out of its parent, which is the point, but it can be dragged
-  over a sibling with no way to say what is on top bar z-index.
-- Box.offsetX / offsetY is how the flow finds a moved box's original spot again. Anything new that
-  places boxes (grid, inline fragmentation) has to place them by flowX / flowY the way layoutFlex
-  does, or it will quietly wipe out drags, sticky and the position relative nudges along with them.
-- Drag offsets live on the element in gui pixels. Layout clamps them back inside the parent every
-  frame, so a resize cannot strand a box, but it cannot put one back where it was either: the
-  offset is still the same number of pixels, not the same spot.
-- The drag and scroll offsets are lost on reload and there is nowhere to persist them.
-- Layout is worked out again whenever the dom's revision moves or the screen changes size, which
-  is the whole tree at once: there is no per element invalidation, so one style change re-lays
-  everything out. Intrinsic widths are cached for the pass only.
-- position: sticky holds against the nearest scrolling ancestor, or the viewport at the root. It
-  is clamped to its parent's content box and ignores anything a scroll container above that does,
-  so sticky inside sticky only answers the inner one.
-- fixed is measured against the viewport, which is the screen, so it is the same thing as absolute
-  at the root; it no longer scrolls with a container above it.
+- A multi column block never splits a child down the middle, so its columns are only as even as
+  whole children allow and a child taller than its share makes its column taller.
+- A float is placed where it was written in the flow rather than on the line it appears on, so one
+  written between two words sits above that line instead of inside it. There is no shape-outside.
+- A box that keeps a scrollbar gutter lays its children out twice, since the room the bar takes can
+  change what overflows. An arrangement that will not settle keeps the bar rather than flickering.
 
 
 STYLE SYSTEM  (ctml/ElementStyle.java, ctml/style/*)
 ----------------------------------------------------
 - No variants at all: hover:, focus:, active:, dark:, md: and friends come back from the
-  parser as unknown. Needs element state and breakpoints first.
-- Unknown classes only get printed to stdout by applyClassStyles. Route them through the
-  interpreter's error/warn path so they show up with a line number.
+  parser as unknown.
+- Unknown classes are only printed to stdout by applyClassStyles, with no line number and
+  nothing the interpreter can report.
 - A class whose value makes no sense for its key (auto on a gap, a percent on a radius)
   is also silently ignored.
-- Css color keywords (cornflowerblue, rebeccapurple) are not supported; only the tailwind
-  palette, where a bare family name (text-green) falls back to that family's 500 shade
-  and [#hex].
-- gap-x and gap-y both write the single GAP key. No row-gap / column-gap split.
 - No box-shadow, outline, cursor, font-family, transform, transition or animation.
-- text-shadow is a ctml invention (minecraft draws text with a shadow by default) and
-  defaults to true, which is not what css would do.
-- Element defaults (CTMLElement.DEFAULTS, overridden by CTML and Span) only hold the non
-  inherited keys, since a default on every element would block the parent's value from
-  ever reaching a child. That means the text initial values only exist on <ctml>, so an
-  element laid out without a ctml root above it has no colour or font size to fall back on
-  bar the renderer's own constants.
+- The text initial values only exist on <ctml>, since a default on every element would block
+  the parent's value from ever reaching a child, so an element laid out with no ctml root above
+  it has no colour or font size to fall back on bar the renderer's own constants.
 - There is no way to set defaults from a script, and no per element reset: a new element
   has to override defaultStyle() in java.
 - bg-gradient-* / text-gradient-* are tailwind v3 spelling. v4's bg-linear-to-r,
@@ -114,34 +66,15 @@ STYLE SYSTEM  (ctml/ElementStyle.java, ctml/style/*)
 - from- / via- / to- always write the background gradient and text-from- / text-via- /
   text-to- the text one, so a stop class on its own (no direction class) silently assumes
   to-r. A stop with an unknown colour is dropped and leaves the gradient half built.
-- ElementStyle.inherit (full merge) and inheritFrom (the inherited keys only) are easy
-  to mix up. inherit is for layering tailwind under hand set styles, nothing else.
 
 
 SCREEN AND REGISTRY  (render/CTMLScreen.java, render/UIRegistry.java, CraftytmlClient.java)
 -------------------------------------------------------------------------------------------
 - No hot reload: editing a .ctml file needs a game restart.
-- CTMLScreen routes nothing but dragging and scrolling: no click handlers, no focus, no
-  keyboard, no hover and no narration for accessibility.
+- CTMLScreen routes nothing but dragging and scrolling, and the press side of both only answers
+  the left button. No click handlers, no focus, no keyboard, no hover, no narration.
 - No widget elements: only ctml, div and span exist. No button, input, img, list.
-- draggable and scrolling are the only input there is, and the press side of both only
-  answers the left button. There is still no hover, no click handlers and no focus.
-- A scrollbar takes the press before any draggable box under it does, and a drag of the
-  thumb ends on the same mouseReleased a box drag does, so it is lost the same way when
-  that never arrives.
 - Dragging goes through mouseClicked / mouseDragged / mouseReleased, and the button numbers
   there are sdl's: left is 1, middle 2, right 3, not glfw's 0 / 1 / 2. MouseHandler's
   isLeftPressed / isRightPressed are no use on a screen at all, since minecraft only keeps
   them up to date while no screen is open.
-- A drag ends on mouseReleased. If that never arrives (released outside the window, or the
-  screen changes mid drag) the element keeps following the cursor, and there is no way to
-  read the live button state back: this build is on sdl, so there is no glfwGetMouseButton
-  to ask.
-- draggable is a boolean property, so the parser takes the bare name and ignores any
-  value: draggable="false" still drags. Property types never get validated.
-- Hit testing walks the previous frame's boxes on every grab, deepest and topmost first,
-  skipping visibility hidden subtrees, fully transparent ones and anything clipped away by
-  an overflow box. It still ignores border-radius (the corners of a rounded box are live)
-  and a box faded by an ancestor's opacity rather than its own.
-- DOMTreeNode.draw() is a leftover no-op from the first prototype and should go once the
-  renderer owns drawing.

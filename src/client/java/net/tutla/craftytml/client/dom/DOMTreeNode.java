@@ -24,7 +24,5 @@ public abstract class DOMTreeNode {
         parent = null;
     }
 
-    public abstract void draw();
-
     public abstract String render(String indent);
 }

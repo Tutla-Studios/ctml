@@ -1,20 +1,5 @@
 CraftyTML - left undone
 =======================
-Everything knowingly skipped or faked in the session that built ElementStyle, the
-tailwind parser, the layout engine and the renderer. Nothing here is a mystery bug;
-it is all stuff that was cut on purpose, with where it lives.
-
-
-NEVER RUN IN THE GAME
----------------------
-- No gradle wrapper in the repo (no ./gradlew), so the build was never run. Everything
-  was compiled with javac against the 26.3 deobf jars and the fabric api jars, and the
-  layout engine was exercised through throwaway harnesses, not minecraft.
-  -> run the client once and look at a real screen before trusting any of this.
-- Nothing draws until a .ctml script in run/ctml/ui actually returns a tree. The paint
-  path (fills, scissor, pose scaling, font drawing) has never executed.
-- No tests in the repo. The layout checks lived in the scratchpad and are gone.
-
 
 RENDERER / PAINT  (render/CTMLRenderer.java)
 --------------------------------------------
@@ -42,6 +27,10 @@ LAYOUT  (render/CTMLLayout.java)
 - align-self, order, flex-basis, align-content do not exist.
 - min-content / max-content measuring is rough: it ignores wrapping inside children and
   resolves percentage padding against a zero basis.
+- maxContentWidth only measures text, so a flex item whose size comes from a child's
+  width (a wrapper around a w-8 box, no text of its own) shrinks to zero and its
+  children spill out. Every flex item in run/ctml/ui/groot.ctm carries an explicit
+  width to dodge this.
 - Text sits above every child and never between them, because text is a property on the
   element and not a node. Interleaving needs a real text node in the DOM.
 - Layout runs on every frame inside extractRenderState. It should be cached per screen
@@ -86,5 +75,3 @@ SCREEN AND REGISTRY  (render/CTMLScreen.java, render/UIRegistry.java, CraftytmlC
 - No widget elements: only ctml, div and span exist. No button, input, img, list.
 - DOMTreeNode.draw() is a leftover no-op from the first prototype and should go once the
   renderer owns drawing.
-- openedFirstUI is a static flag, so the menu UI opens once per game launch. Reopening
-  it needs a command or a key bind.

@@ -122,12 +122,6 @@ public class DOMTreeElement extends DOMTreeNode {
     }
 
     @Override
-    public void draw() {
-        //element.draw(this);
-        for (DOMTreeNode c : children) c.draw();
-    }
-
-    @Override
     public String render(String indent) {
         StringBuilder sb = new StringBuilder(indent).append("<").append(getTag());
         element.propertyList.getAssignedProperties().forEach((k, v) ->

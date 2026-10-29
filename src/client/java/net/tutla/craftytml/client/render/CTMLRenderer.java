@@ -21,10 +21,20 @@ public class CTMLRenderer {
     }
 
     public static CTMLLayout.Box render(DOMTreeElement domHeadElement, GuiGraphicsExtractor graphics, int viewWidth, int viewHeight){
-        Font font = Minecraft.getInstance().font;
-        CTMLLayout.Box root = new CTMLLayout(font, viewWidth, viewHeight).layout(domHeadElement, 0, 0, viewWidth, viewHeight);
-        if (root != null) paint(root, graphics, font, 1.0f);
+        CTMLLayout.Box root = layout(domHeadElement, viewWidth, viewHeight);
+        paint(root, graphics);
         return root;
+    }
+
+    /** Works out where everything goes without drawing any of it, so a screen can keep the answer. */
+    public static CTMLLayout.Box layout(DOMTreeElement domHeadElement, int viewWidth, int viewHeight){
+        return new CTMLLayout(Minecraft.getInstance().font, viewWidth, viewHeight)
+                .layout(domHeadElement, 0, 0, viewWidth, viewHeight);
+    }
+
+    /** Draws a tree that has already been laid out, which is every frame's half of the work. */
+    public static void paint(CTMLLayout.Box root, GuiGraphicsExtractor graphics){
+        if (root != null) paint(root, graphics, Minecraft.getInstance().font, 1.0f);
     }
 
     private static void paint(CTMLLayout.Box box, GuiGraphicsExtractor graphics, Font font, float opacity){
@@ -38,13 +48,44 @@ public class CTMLRenderer {
             borders(box, graphics, alpha);
         }
 
-        boolean clipped = style.get(ElementStyle.OVERFLOW, ElementStyle.Overflow.VISIBLE) != ElementStyle.Overflow.VISIBLE;
-        if (clipped) graphics.enableScissor(box.contentX(), box.contentY(), box.contentRight(), box.contentBottom());
+        boolean clipped = box.clipsX() || box.clipsY();
+        if (clipped) clip(box, graphics);
 
         if (!hidden) text(box, graphics, font, alpha);
         for (CTMLLayout.Box child : paintOrder(box.children())) paint(child, graphics, font, alpha);
 
         if (clipped) graphics.disableScissor();
+
+        // the bars go on last so nothing inside the box can cover them, and outside the clip so a thumb
+        // sitting in its gutter is not cut off by the very box it belongs to
+        if (!hidden) scrollbars(box, graphics, alpha);
+    }
+
+    /**
+     * Cuts everything outside the scrollport away, on whichever axes the box clips. The axis that does not
+     * clip is given the whole screen, since the scissor stack is already cut down by whatever is above.
+     */
+    private static void clip(CTMLLayout.Box box, GuiGraphicsExtractor graphics){
+        CTMLLayout.Port port = box.port();
+        graphics.enableScissor(
+                box.clipsX() ? port.x() : 0,
+                box.clipsY() ? port.y() : 0,
+                box.clipsX() ? port.right() : graphics.guiWidth(),
+                box.clipsY() ? port.bottom() : graphics.guiHeight());
+    }
+
+    /** The scrollbars of a box, track then thumb, each one a flat fill. */
+    private static void scrollbars(CTMLLayout.Box box, GuiGraphicsExtractor graphics, float alpha){
+        bar(CTMLScroll.verticalBar(box), box.style(), graphics, alpha);
+        bar(CTMLScroll.horizontalBar(box), box.style(), graphics, alpha);
+    }
+
+    private static void bar(CTMLScroll.Bar bar, ElementStyle style, GuiGraphicsExtractor graphics, float alpha){
+        if (bar == null) return;
+        int track = fade(CTMLScroll.trackColor(style), alpha);
+        if ((track >>> 24) != 0) graphics.fill(bar.x(), bar.y(), bar.right(), bar.bottom(), track);
+        rounded(graphics, bar.thumbX(), bar.thumbY(), bar.thumbWidth(), bar.thumbHeight(),
+                CTMLScroll.thumbRadius(style), fade(CTMLScroll.thumbColor(style), alpha));
     }
 
     /** z-index decides what covers what; everything else keeps the order layout handed over. */
@@ -70,18 +111,23 @@ public class CTMLRenderer {
         Integer color = box.style().get(ElementStyle.BACKGROUND_COLOR);
         if (color == null) return;
 
-        int radius = Math.min(box.style().get(ElementStyle.BORDER_RADIUS, 0), Math.min(box.width(), box.height()) / 2);
-        int filled = fade(color, alpha);
+        rounded(graphics, box.x(), box.y(), box.width(), box.height(),
+                box.style().get(ElementStyle.BORDER_RADIUS, 0), fade(color, alpha));
+    }
 
+    /** A fill with its corners cut off, since there is no rounded rect to draw with. */
+    private static void rounded(GuiGraphicsExtractor graphics, int x, int y, int width, int height, int radius, int color){
+        if (width <= 0 || height <= 0 || (color >>> 24) == 0) return;
+
+        radius = Math.min(radius, Math.min(width, height) / 2);
         if (radius <= 0) {
-            graphics.fill(box.x(), box.y(), box.right(), box.bottom(), filled);
+            graphics.fill(x, y, x + width, y + height, color);
             return;
         }
 
-        // no rounded fill to draw with, so the corners just get cut off instead
-        graphics.fill(box.x(), box.y() + radius, box.right(), box.bottom() - radius, filled);
-        graphics.fill(box.x() + radius, box.y(), box.right() - radius, box.y() + radius, filled);
-        graphics.fill(box.x() + radius, box.bottom() - radius, box.right() - radius, box.bottom(), filled);
+        graphics.fill(x, y + radius, x + width, y + height - radius, color);
+        graphics.fill(x + radius, y, x + width - radius, y + radius, color);
+        graphics.fill(x + radius, y + height - radius, x + width - radius, y + height, color);
     }
 
     /**
@@ -137,8 +183,8 @@ public class CTMLRenderer {
         boolean ramp = gradient != null && gradient.isDrawable();
 
         for (CTMLLayout.TextLine line : box.lines()) {
-            int x = box.contentX() + line.x();
-            int y = box.contentY() + line.y();
+            int x = box.contentX() + line.x() - box.port().scrollX();
+            int y = box.contentY() + line.y() - box.port().scrollY();
 
             if (line.scale() == 1.0f) {
                 if (ramp) gradientText(graphics, font, line, gradient, box, x, y, 1.0f, alpha, shadow);

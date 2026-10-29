@@ -45,6 +45,7 @@ public final class TailwindParser {
         keyword("relative", s -> s.set(ElementStyle.POSITION, ElementStyle.Position.RELATIVE));
         keyword("absolute", s -> s.set(ElementStyle.POSITION, ElementStyle.Position.ABSOLUTE));
         keyword("fixed", s -> s.set(ElementStyle.POSITION, ElementStyle.Position.FIXED));
+        keyword("sticky", s -> s.set(ElementStyle.POSITION, ElementStyle.Position.STICKY));
 
         // box sizing
         keyword("box-content", s -> s.set(ElementStyle.BOX_SIZING, ElementStyle.BoxSizing.CONTENT_BOX));
@@ -58,11 +59,33 @@ public final class TailwindParser {
         keyword("flex-wrap", s -> s.set(ElementStyle.FLEX_WRAP, ElementStyle.FlexWrap.WRAP));
         keyword("flex-wrap-reverse", s -> s.set(ElementStyle.FLEX_WRAP, ElementStyle.FlexWrap.WRAP_REVERSE));
         keyword("flex-nowrap", s -> s.set(ElementStyle.FLEX_WRAP, ElementStyle.FlexWrap.NOWRAP));
-        keyword("flex-1", s -> s.set(ElementStyle.FLEX_GROW, 1).set(ElementStyle.FLEX_SHRINK, 1));
-        keyword("flex-auto", s -> s.set(ElementStyle.FLEX_GROW, 1).set(ElementStyle.FLEX_SHRINK, 1));
-        keyword("flex-none", s -> s.set(ElementStyle.FLEX_GROW, 0).set(ElementStyle.FLEX_SHRINK, 0));
+        // the flex shorthands, which are grow / shrink / basis in one
+        keyword("flex-1", s -> s.set(ElementStyle.FLEX_GROW, 1).set(ElementStyle.FLEX_SHRINK, 1).set(ElementStyle.FLEX_BASIS, Length.ZERO));
+        keyword("flex-auto", s -> s.set(ElementStyle.FLEX_GROW, 1).set(ElementStyle.FLEX_SHRINK, 1).set(ElementStyle.FLEX_BASIS, Length.AUTO));
+        keyword("flex-initial", s -> s.set(ElementStyle.FLEX_GROW, 0).set(ElementStyle.FLEX_SHRINK, 1).set(ElementStyle.FLEX_BASIS, Length.AUTO));
+        keyword("flex-none", s -> s.set(ElementStyle.FLEX_GROW, 0).set(ElementStyle.FLEX_SHRINK, 0).set(ElementStyle.FLEX_BASIS, Length.AUTO));
         keyword("grow", s -> s.set(ElementStyle.FLEX_GROW, 1));
         keyword("shrink", s -> s.set(ElementStyle.FLEX_SHRINK, 1));
+
+        keyword("self-auto", s -> s.set(ElementStyle.ALIGN_SELF, null)); // back to whatever the container says
+        keyword("self-start", s -> s.set(ElementStyle.ALIGN_SELF, ElementStyle.AlignItems.START));
+        keyword("self-center", s -> s.set(ElementStyle.ALIGN_SELF, ElementStyle.AlignItems.CENTER));
+        keyword("self-end", s -> s.set(ElementStyle.ALIGN_SELF, ElementStyle.AlignItems.END));
+        keyword("self-stretch", s -> s.set(ElementStyle.ALIGN_SELF, ElementStyle.AlignItems.STRETCH));
+        keyword("self-baseline", s -> s.set(ElementStyle.ALIGN_SELF, ElementStyle.AlignItems.BASELINE));
+
+        keyword("content-normal", s -> s.set(ElementStyle.ALIGN_CONTENT, ElementStyle.AlignContent.START));
+        keyword("content-start", s -> s.set(ElementStyle.ALIGN_CONTENT, ElementStyle.AlignContent.START));
+        keyword("content-center", s -> s.set(ElementStyle.ALIGN_CONTENT, ElementStyle.AlignContent.CENTER));
+        keyword("content-end", s -> s.set(ElementStyle.ALIGN_CONTENT, ElementStyle.AlignContent.END));
+        keyword("content-between", s -> s.set(ElementStyle.ALIGN_CONTENT, ElementStyle.AlignContent.SPACE_BETWEEN));
+        keyword("content-around", s -> s.set(ElementStyle.ALIGN_CONTENT, ElementStyle.AlignContent.SPACE_AROUND));
+        keyword("content-evenly", s -> s.set(ElementStyle.ALIGN_CONTENT, ElementStyle.AlignContent.SPACE_EVENLY));
+        keyword("content-stretch", s -> s.set(ElementStyle.ALIGN_CONTENT, ElementStyle.AlignContent.STRETCH));
+
+        keyword("order-first", s -> s.set(ElementStyle.ORDER, -9999));
+        keyword("order-last", s -> s.set(ElementStyle.ORDER, 9999));
+        keyword("order-none", s -> s.set(ElementStyle.ORDER, 0));
 
         keyword("justify-start", s -> s.set(ElementStyle.JUSTIFY_CONTENT, ElementStyle.JustifyContent.START));
         keyword("justify-center", s -> s.set(ElementStyle.JUSTIFY_CONTENT, ElementStyle.JustifyContent.CENTER));
@@ -78,6 +101,16 @@ public final class TailwindParser {
         keyword("items-baseline", s -> s.set(ElementStyle.ALIGN_ITEMS, ElementStyle.AlignItems.BASELINE));
 
         // text
+        // vertical-align, which is what an inline item sits against on its line
+        keyword("align-baseline", s -> s.set(ElementStyle.VERTICAL_ALIGN, ElementStyle.VerticalAlign.BASELINE));
+        keyword("align-top", s -> s.set(ElementStyle.VERTICAL_ALIGN, ElementStyle.VerticalAlign.TOP));
+        keyword("align-middle", s -> s.set(ElementStyle.VERTICAL_ALIGN, ElementStyle.VerticalAlign.MIDDLE));
+        keyword("align-bottom", s -> s.set(ElementStyle.VERTICAL_ALIGN, ElementStyle.VerticalAlign.BOTTOM));
+        keyword("align-text-top", s -> s.set(ElementStyle.VERTICAL_ALIGN, ElementStyle.VerticalAlign.TEXT_TOP));
+        keyword("align-text-bottom", s -> s.set(ElementStyle.VERTICAL_ALIGN, ElementStyle.VerticalAlign.TEXT_BOTTOM));
+        keyword("align-sub", s -> s.set(ElementStyle.VERTICAL_ALIGN, ElementStyle.VerticalAlign.SUB));
+        keyword("align-super", s -> s.set(ElementStyle.VERTICAL_ALIGN, ElementStyle.VerticalAlign.SUPER));
+
         keyword("text-left", s -> s.set(ElementStyle.TEXT_ALIGN, ElementStyle.TextAlign.LEFT));
         keyword("text-center", s -> s.set(ElementStyle.TEXT_ALIGN, ElementStyle.TextAlign.CENTER));
         keyword("text-right", s -> s.set(ElementStyle.TEXT_ALIGN, ElementStyle.TextAlign.RIGHT));
@@ -90,14 +123,37 @@ public final class TailwindParser {
         keyword("no-underline", s -> s.set(ElementStyle.UNDERLINE, false).set(ElementStyle.STRIKETHROUGH, false));
         keyword("text-shadow", s -> s.set(ElementStyle.TEXT_SHADOW, true)); // ctml extra, minecraft draws text with a shadow by default
         keyword("text-shadow-none", s -> s.set(ElementStyle.TEXT_SHADOW, false));
+        keyword("text-clip", s -> s.set(ElementStyle.TEXT_OVERFLOW, ElementStyle.TextOverflow.CLIP));
+        keyword("text-ellipsis", s -> s.set(ElementStyle.TEXT_OVERFLOW, ElementStyle.TextOverflow.ELLIPSIS));
+        keyword("truncate", s -> s.set(ElementStyle.TEXT_OVERFLOW, ElementStyle.TextOverflow.ELLIPSIS)
+                .set(ElementStyle.WHITE_SPACE, ElementStyle.WhiteSpace.NOWRAP)
+                .set(ElementStyle.OVERFLOW, ElementStyle.Overflow.HIDDEN));
         keyword("whitespace-normal", s -> s.set(ElementStyle.WHITE_SPACE, ElementStyle.WhiteSpace.NORMAL));
         keyword("whitespace-nowrap", s -> s.set(ElementStyle.WHITE_SPACE, ElementStyle.WhiteSpace.NOWRAP));
         keyword("whitespace-pre", s -> s.set(ElementStyle.WHITE_SPACE, ElementStyle.WhiteSpace.PRE));
 
+        // overflow, both axes at once and one at a time
+        for (ElementStyle.Overflow overflow : ElementStyle.Overflow.values()) {
+            String suffix = overflow.name().toLowerCase();
+            keyword("overflow-" + suffix, s -> s.set(ElementStyle.OVERFLOW, overflow));
+            keyword("overflow-x-" + suffix, s -> s.set(ElementStyle.OVERFLOW_X, overflow));
+            keyword("overflow-y-" + suffix, s -> s.set(ElementStyle.OVERFLOW_Y, overflow));
+        }
+
+        // scrollbars, which css spells as scrollbar-width / scrollbar-color / scrollbar-gutter
+        keyword("scrollbar", s -> s.set(ElementStyle.SCROLLBAR_HIDDEN, false));
+        keyword("scrollbar-hidden", s -> s.set(ElementStyle.SCROLLBAR_HIDDEN, true)); // still scrolls, just nothing to see
+        keyword("scrollbar-none", s -> s.set(ElementStyle.SCROLLBAR_HIDDEN, true));
+        keyword("scrollbar-auto", s -> s.set(ElementStyle.SCROLLBAR_HIDDEN, false));
+        keyword("scrollbar-thin", s -> s.set(ElementStyle.SCROLLBAR_WIDTH, 2));
+        keyword("scrollbar-thick", s -> s.set(ElementStyle.SCROLLBAR_WIDTH, 6));
+        keyword("scrollbar-gutter", s -> s.set(ElementStyle.SCROLLBAR_GUTTER, true)); // room kept for the bar
+        keyword("scrollbar-stable", s -> s.set(ElementStyle.SCROLLBAR_GUTTER, true));
+        keyword("scrollbar-overlay", s -> s.set(ElementStyle.SCROLLBAR_GUTTER, false)); // bar floats over the content
+        keyword("scrollbar-square", s -> s.set(ElementStyle.SCROLLBAR_RADIUS, 0));
+        keyword("scrollbar-rounded", s -> s.set(ElementStyle.SCROLLBAR_RADIUS, 2));
+
         // misc
-        keyword("overflow-visible", s -> s.set(ElementStyle.OVERFLOW, ElementStyle.Overflow.VISIBLE));
-        keyword("overflow-hidden", s -> s.set(ElementStyle.OVERFLOW, ElementStyle.Overflow.HIDDEN));
-        keyword("overflow-scroll", s -> s.set(ElementStyle.OVERFLOW, ElementStyle.Overflow.SCROLL));
         keyword("visible", s -> s.set(ElementStyle.VISIBILITY, ElementStyle.Visibility.VISIBLE));
         keyword("invisible", s -> s.set(ElementStyle.VISIBILITY, ElementStyle.Visibility.HIDDEN));
         keyword("rounded", s -> s.set(ElementStyle.BORDER_RADIUS, 4));
@@ -152,8 +208,16 @@ public final class TailwindParser {
             if (percent != null) s.set(ElementStyle.OPACITY, percent / 100.0f);
         });
         valued("z", (s, v) -> set(s, ElementStyle.Z_INDEX, number(v)));
+
+        // scrollbar-w-3, scrollbar-rounded-2, scrollbar-thumb-sky-500, scrollbar-track-slate-800/50
+        valued("scrollbar-w", (s, v) -> set(s, ElementStyle.SCROLLBAR_WIDTH, pixels(v)));
+        valued("scrollbar-rounded", (s, v) -> set(s, ElementStyle.SCROLLBAR_RADIUS, pixels(v)));
+        valued("scrollbar-thumb", (s, v) -> set(s, ElementStyle.SCROLLBAR_THUMB_COLOR, TailwindColors.parse(v)));
+        valued("scrollbar-track", (s, v) -> set(s, ElementStyle.SCROLLBAR_TRACK_COLOR, TailwindColors.parse(v)));
         valued("grow", (s, v) -> set(s, ElementStyle.FLEX_GROW, number(v)));
         valued("shrink", (s, v) -> set(s, ElementStyle.FLEX_SHRINK, number(v)));
+        valued("basis", spacing(ElementStyle.FLEX_BASIS));
+        valued("order", (s, v) -> set(s, ElementStyle.ORDER, number(v)));
 
         // gradients: the direction class picks the axis, the stop classes fill in the colours
         for (Gradient.Direction direction : Gradient.Direction.values()) {

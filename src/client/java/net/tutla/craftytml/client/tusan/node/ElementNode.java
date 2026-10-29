@@ -6,6 +6,7 @@ import net.tutla.craftytml.client.ctml.ElementPropertyType;
 import net.tutla.craftytml.client.ctml.element.CTML;
 import net.tutla.craftytml.client.ctml.element.Span;
 import net.tutla.craftytml.client.dom.DOMTreeElement;
+import net.tutla.craftytml.client.dom.DOMTreeText;
 import net.tutla.craftytml.client.tusan.CTMLTokenGroup;
 import net.tutla.craftytml.client.tusan.register.ElementRegistry;
 import net.tutla.craftytml.client.tusan.register.PropertyRegistry;
@@ -46,7 +47,9 @@ public class ElementNode extends Node {
         }
 
         if (ctx.getCurrentToken().type == PrebuiltTusanTokenType.STRING){
-            DOMTreeParentElementNode.getElement().updateProperty("text", ctx.getCurrentToken().value, ctx);
+            // raw text goes into the tree as a node of its own, so it keeps its place among the elements
+            // around it instead of being flattened onto the parent's text property
+            DOMTreeParentElementNode.append(new DOMTreeText(String.valueOf(ctx.getCurrentToken().value)));
         } else {
             CTMLElement registered = ElementRegistry.getElementFromTokenType(ctx.getCurrentToken().type);
             if (registered != null){

@@ -4,6 +4,7 @@ import net.tutla.craftytml.client.ctml.property.ClassName;
 import net.tutla.craftytml.client.ctml.property.Draggable;
 import net.tutla.craftytml.client.ctml.style.TailwindParser;
 import net.tutla.craftytml.client.dom.DOMTreeElement;
+import net.tutla.craftytml.client.dom.DOMTreeNode;
 import net.tutla.craftytml.client.tusan.CTMLTokenType;
 import net.tutla.tums.tusan.TusanContext;
 
@@ -18,6 +19,9 @@ public abstract class CTMLElement {
 
     private int dragX = 0; //how far the user has dragged this element from where layout put it
     private int dragY = 0;
+
+    private int scrollX = 0; //how far the content inside this element has been scrolled away from its start
+    private int scrollY = 0;
     public final Boolean hasChildren;
     //private Boolean isFirstNode = false;
 
@@ -43,6 +47,7 @@ public abstract class CTMLElement {
 
     public void updateProperty(String name, Object value, TusanContext ctx){
         propertyList.updateProperty(name, value, ctx);
+        DOMTreeNode.touch();
 
         if (propertyList.propertyFromName(name) instanceof ClassName classes && classes.hasValue()){
             applyClassStyles(classes.getStringValue());
@@ -86,6 +91,7 @@ public abstract class CTMLElement {
     public void setStyle(ElementStyle style){
         this.style = style == null ? ElementStyle.UNSET : style;
         computed = null;
+        DOMTreeNode.touch();
     }
 
     public <T> void updateStyle(ElementStyle.Key<T> key, T value){
@@ -105,8 +111,24 @@ public abstract class CTMLElement {
 
     /** Where the element sits relative to the spot layout gave it, moved by however far it has been dragged. */
     public void setDragOffset(int dragX, int dragY){
+        if (dragX == this.dragX && dragY == this.dragY) return; // layout clamps these every frame, so most calls change nothing
         this.dragX = dragX;
         this.dragY = dragY;
+        DOMTreeNode.touch();
+    }
+
+    public int getScrollX(){ return scrollX; }
+    public int getScrollY(){ return scrollY; }
+
+    /**
+     * How far the content inside the element has been scrolled, in gui pixels, counted from its start.
+     * Layout clamps this back into range every frame, since the content can shrink underneath it.
+     */
+    public void setScrollOffset(int scrollX, int scrollY){
+        if (scrollX == this.scrollX && scrollY == this.scrollY) return;
+        this.scrollX = scrollX;
+        this.scrollY = scrollY;
+        DOMTreeNode.touch();
     }
 
     public CTMLElement newInstance(){

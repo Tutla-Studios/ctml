@@ -62,6 +62,14 @@ public class DOMTreeElement extends DOMTreeNode {
         element.setDragOffset(dragX, dragY);
     }
 
+    public int getScrollX() { return element.getScrollX(); }
+
+    public int getScrollY() { return element.getScrollY(); }
+
+    public void setScrollOffset(int scrollX, int scrollY) {
+        element.setScrollOffset(scrollX, scrollY);
+    }
+
     public <T> T getStyleValue(ElementStyle.Key<T> key) {
         return element.getStyle().get(key);
     }
@@ -80,10 +88,18 @@ public class DOMTreeElement extends DOMTreeNode {
         child.detach();
         child.parent = this;
         children.add(child);
+        touch();
         return this;
     }
 
     public List<DOMTreeNode> getChildren() { return Collections.unmodifiableList(children); }
+
+    /** The text this element holds directly, which is the text property and its text node children. */
+    public List<DOMTreeText> getTextNodes() {
+        List<DOMTreeText> result = new ArrayList<>();
+        for (DOMTreeNode c : children) if (c instanceof DOMTreeText t) result.add(t);
+        return result;
+    }
 
     public List<DOMTreeElement> getChildElements() {
         List<DOMTreeElement> result = new ArrayList<>();

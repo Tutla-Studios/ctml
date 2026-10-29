@@ -1,6 +1,5 @@
 package net.tutla.craftytml.client.render;
 
-import net.tutla.craftytml.client.ctml.ElementStyle;
 import net.tutla.craftytml.client.dom.DOMTreeElement;
 
 import java.util.List;
@@ -64,12 +63,8 @@ public final class CTMLDrag {
      * stick out of its parent and still be drawn.
      */
     private static Grip search(CTMLLayout.Box box, CTMLLayout.Box parent, double mouseX, double mouseY){
-        ElementStyle style = box.style();
-        if (style.get(ElementStyle.VISIBILITY) == ElementStyle.Visibility.HIDDEN) return null; // not drawn, so not grabbable
-        if (style.get(ElementStyle.OPACITY, 1.0f) <= 0.0f) return null;
-
-        boolean clips = style.get(ElementStyle.OVERFLOW, ElementStyle.Overflow.VISIBLE) != ElementStyle.Overflow.VISIBLE;
-        if (clips && !within(mouseX, mouseY, box.contentX(), box.contentY(), box.contentRight(), box.contentBottom())) return null;
+        if (!CTMLScroll.shown(box)) return null; // not drawn, so not grabbable
+        if (CTMLScroll.clipsAway(box, mouseX, mouseY)) return null;
 
         List<CTMLLayout.Box> children = CTMLRenderer.paintOrder(box.children());
         for (int i = children.size() - 1; i >= 0; i--) {
@@ -78,24 +73,30 @@ public final class CTMLDrag {
         }
 
         if (parent == null || !box.element().isDraggable()) return null;
-        if (!within(mouseX, mouseY, box.x(), box.y(), box.right(), box.bottom())) return null;
+        if (!CTMLScroll.within(mouseX, mouseY, box.x(), box.y(), box.right(), box.bottom())) return null;
         return grip(box, parent, mouseX, mouseY);
     }
 
-    /** The element can go anywhere inside its parent's content box, so that is where the limits come from. */
+    /**
+     * The element can go anywhere in the room its parent gives it, which is the parent's content box or,
+     * where the parent scrolls, as much of the scrollable area as the rest of the content reaches. Layout
+     * works the same room out and clamps to it every frame, so a grab and a resize cannot disagree.
+     * A scrolled parent has already moved its children, so the limits are read in that same moved space.
+     */
     private static Grip grip(CTMLLayout.Box box, CTMLLayout.Box parent, double mouseX, double mouseY){
         DOMTreeElement element = box.element();
-        int baseX = box.x() - element.getDragX(); // where layout would have put it, drag aside
-        int baseY = box.y() - element.getDragY();
+        int baseX = box.flowX(); // where layout would have put it, drag aside
+        int baseY = box.flowY();
 
-        int minX = parent.contentX() - baseX;
-        int minY = parent.contentY() - baseY;
+        int left = parent.contentX() - parent.port().scrollX();
+        int top = parent.contentY() - parent.port().scrollY();
+        int roomWidth = CTMLLayout.dragRoomWidth(parent, box);
+        int roomHeight = CTMLLayout.dragRoomHeight(parent, box);
+
+        int minX = left - baseX;
+        int minY = top - baseY;
         return new Grip(element, element.getDragX(), element.getDragY(), mouseX, mouseY,
-                minX, Math.max(minX, parent.contentRight() - box.width() - baseX),
-                minY, Math.max(minY, parent.contentBottom() - box.height() - baseY));
-    }
-
-    private static boolean within(double x, double y, int left, int top, int right, int bottom){
-        return x >= left && x < right && y >= top && y < bottom;
+                minX, Math.max(minX, left + roomWidth - box.width() - baseX),
+                minY, Math.max(minY, top + roomHeight - box.height() - baseY));
     }
 }

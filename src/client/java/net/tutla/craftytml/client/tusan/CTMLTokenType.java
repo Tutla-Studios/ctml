@@ -12,5 +12,7 @@ public enum CTMLTokenType implements TokenType {
 
     CLASS,
     TEXT,
+    ID,
     DRAGGABLE,
+    CALLBACK
 }

@@ -77,6 +77,8 @@ public final class ElementStyle {
     public static final Key<Integer> LINE_HEIGHT = key("line-height", Integer.class);
     public static final Key<Integer> LETTER_SPACING = key("letter-spacing", Integer.class);
     public static final Key<WhiteSpace> WHITE_SPACE = key("white-space", WhiteSpace.class);
+    public static final Key<VerticalAlign> VERTICAL_ALIGN = key("vertical-align", VerticalAlign.class);
+    public static final Key<TextOverflow> TEXT_OVERFLOW = key("text-overflow", TextOverflow.class);
 
     // flex
     public static final Key<FlexDirection> FLEX_DIRECTION = key("flex-direction", FlexDirection.class);
@@ -86,9 +88,26 @@ public final class ElementStyle {
     public static final Key<Length> GAP = key("gap", Length.class);
     public static final Key<Integer> FLEX_GROW = key("flex-grow", Integer.class);
     public static final Key<Integer> FLEX_SHRINK = key("flex-shrink", Integer.class);
+    public static final Key<Length> FLEX_BASIS = key("flex-basis", Length.class);
+    public static final Key<AlignContent> ALIGN_CONTENT = key("align-content", AlignContent.class);
+    /** Unset means auto: whatever align-items on the container says. */
+    public static final Key<AlignItems> ALIGN_SELF = key("align-self", AlignItems.class);
+    public static final Key<Integer> ORDER = key("order", Integer.class);
+
+    // overflow
+    public static final Key<Overflow> OVERFLOW_X = key("overflow-x", Overflow.class);
+    public static final Key<Overflow> OVERFLOW_Y = key("overflow-y", Overflow.class);
+
+    // scrollbars: a ctml invention, loosely after css scrollbar-width / scrollbar-color / scrollbar-gutter
+    public static final Key<Boolean> SCROLLBAR_HIDDEN = key("scrollbar-hidden", Boolean.class);
+    public static final Key<Integer> SCROLLBAR_WIDTH = key("scrollbar-width", Integer.class);
+    public static final Key<Integer> SCROLLBAR_THUMB_COLOR = key("scrollbar-thumb-color", Integer.class);
+    public static final Key<Integer> SCROLLBAR_TRACK_COLOR = key("scrollbar-track-color", Integer.class);
+    public static final Key<Integer> SCROLLBAR_RADIUS = key("scrollbar-radius", Integer.class);
+    /** True keeps room for the bars inside the box, false lets them float over the content. */
+    public static final Key<Boolean> SCROLLBAR_GUTTER = key("scrollbar-gutter", Boolean.class);
 
     // misc
-    public static final Key<Overflow> OVERFLOW = key("overflow", Overflow.class);
     public static final Key<Visibility> VISIBILITY = key("visibility", Visibility.class);
     public static final Key<Float> OPACITY = key("opacity", Float.class);
 
@@ -97,26 +116,39 @@ public final class ElementStyle {
     public static final Key<?>[] PADDING = { PADDING_TOP, PADDING_RIGHT, PADDING_BOTTOM, PADDING_LEFT };
     public static final Key<?>[] BORDER_WIDTH = { BORDER_TOP_WIDTH, BORDER_RIGHT_WIDTH, BORDER_BOTTOM_WIDTH, BORDER_LEFT_WIDTH };
     public static final Key<?>[] INSET = { TOP, RIGHT, BOTTOM, LEFT };
+    public static final Key<?>[] OVERFLOW = { OVERFLOW_X, OVERFLOW_Y };
 
     /** The ones that pass down the tree on their own, like css does it. */
     public static final Key<?>[] INHERITED = {
             COLOR, TEXT_GRADIENT, FONT_SIZE, BOLD, ITALIC, UNDERLINE, STRIKETHROUGH, TEXT_SHADOW,
-            TEXT_ALIGN, LINE_HEIGHT, LETTER_SPACING, WHITE_SPACE, VISIBILITY
+            TEXT_ALIGN, LINE_HEIGHT, LETTER_SPACING, WHITE_SPACE, VISIBILITY,
+            // how the bars look comes down the tree the way css inherits scrollbar-width and scrollbar-color,
+            // so one class on the root dresses every scroll container under it. Where they sit does not.
+            SCROLLBAR_HIDDEN, SCROLLBAR_WIDTH, SCROLLBAR_THUMB_COLOR, SCROLLBAR_TRACK_COLOR, SCROLLBAR_RADIUS
     };
 
     /** Nothing set at all; what an element starts out with before any style lands on it. */
     public static final ElementStyle UNSET = new ElementStyle(new Object[KEYS.size()]);
 
     public enum Display { BLOCK, INLINE, INLINE_BLOCK, FLEX, NONE }
-    public enum Position { STATIC, RELATIVE, ABSOLUTE, FIXED }
+    public enum Position { STATIC, RELATIVE, ABSOLUTE, FIXED, STICKY }
     public enum BoxSizing { CONTENT_BOX, BORDER_BOX }
     public enum TextAlign { LEFT, CENTER, RIGHT }
     public enum WhiteSpace { NORMAL, NOWRAP, PRE }
+    public enum TextOverflow { CLIP, ELLIPSIS }
     public enum FlexDirection { ROW, ROW_REVERSE, COLUMN, COLUMN_REVERSE }
     public enum FlexWrap { NOWRAP, WRAP, WRAP_REVERSE }
     public enum JustifyContent { START, CENTER, END, SPACE_BETWEEN, SPACE_AROUND, SPACE_EVENLY }
     public enum AlignItems { START, CENTER, END, STRETCH, BASELINE }
-    public enum Overflow { VISIBLE, HIDDEN, SCROLL }
+    /** How the flex lines themselves are spread across the cross axis, once there is more than one. */
+    public enum AlignContent { START, CENTER, END, SPACE_BETWEEN, SPACE_AROUND, SPACE_EVENLY, STRETCH }
+    /** Where an inline item sits against the line it is on. */
+    public enum VerticalAlign { BASELINE, TOP, MIDDLE, BOTTOM, TEXT_TOP, TEXT_BOTTOM, SUB, SUPER }
+    /**
+     * VISIBLE spills out, CLIP cuts it off and stays put, HIDDEN cuts it off but can still be scrolled
+     * from code, SCROLL always offers a bar and AUTO only offers one once there is something to scroll.
+     */
+    public enum Overflow { VISIBLE, HIDDEN, CLIP, SCROLL, AUTO }
     public enum Visibility { VISIBLE, HIDDEN }
 
     private final Object[] values;

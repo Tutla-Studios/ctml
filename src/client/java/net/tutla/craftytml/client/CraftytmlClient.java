@@ -6,6 +6,7 @@ import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.tutla.craftytml.client.dom.DOMTreeElement;
 import net.tutla.craftytml.client.render.CTMLScreen;
+import net.tutla.craftytml.client.render.DOMContext;
 import net.tutla.craftytml.client.render.UIRegistry;
 import net.tutla.craftytml.client.tusan.CTMLTusan;
 import net.tutla.tums.Tums;
@@ -45,7 +46,8 @@ public class CraftytmlClient implements ClientModInitializer {
             if (first == null) return;
 
             openedFirstUI = true;
-            client.execute(() -> client.setScreenAndShow(new CTMLScreen(first.getKey(), first.getValue(), screen)));
+            DOMContext ctx = new DOMContext(first.getValue());
+            client.execute(() -> client.setScreenAndShow(new CTMLScreen(first.getKey(), first.getValue(), screen, ctx)));
         });
     }
 

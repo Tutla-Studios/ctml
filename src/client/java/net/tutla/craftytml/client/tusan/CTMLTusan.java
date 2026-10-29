@@ -2,7 +2,6 @@ package net.tutla.craftytml.client.tusan;
 
 import net.tutla.craftytml.client.tusan.node.ElementNode;
 import net.tutla.craftytml.client.tusan.register.ElementRegistry;
-import net.tutla.craftytml.client.tusan.register.NodeRegistry;
 import net.tutla.craftytml.client.tusan.register.PropertyRegistry;
 import net.tutla.tums.tusan.lang.Tusan;
 import net.tutla.tums.tusan.lexer.LexerRule;
@@ -46,7 +45,6 @@ public class CTMLTusan extends Tusan {
 
         ElementRegistry.init();
         PropertyRegistry.init();
-        NodeRegistry.init();
 
         ElementRegistry.getRegister().forEach((element -> {
             LEXER_RULES.add(new LexerRule(element.tokenType, "<"+element.name+"\\b").setGroup(CTMLTokenGroup.ELEMENT));
@@ -56,8 +54,6 @@ public class CTMLTusan extends Tusan {
         PropertyRegistry.getRegister().forEach((property -> {
             LEXER_RULES.add(new LexerRule(property.tokenType, "\\b"+property.name+"\\b(?=(?:\"[^\"]*\"|'[^']*'|[^<>])*>)").setGroup(CTMLTokenGroup.PROPERTY));
         }));
-
-
     }
 
     public static CTMLTusan tusan(){

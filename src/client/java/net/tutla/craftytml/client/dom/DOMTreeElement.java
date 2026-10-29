@@ -3,11 +3,13 @@ package net.tutla.craftytml.client.dom;
 
 import net.tutla.craftytml.client.ctml.CTMLElement;
 import net.tutla.craftytml.client.ctml.ElementProperty;
+import net.tutla.craftytml.client.ctml.ElementStyle;
 import net.tutla.tums.tusan.TusanContext;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 
 public class DOMTreeElement extends DOMTreeNode {
@@ -32,6 +34,33 @@ public class DOMTreeElement extends DOMTreeNode {
     public Object getPropertyValue(String name) {
         ElementProperty property = getProperty(name);
         return property == null ? null : property.getValue();
+    }
+
+    public <T> DOMTreeElement style(ElementStyle.Key<T> key, T value) {
+        element.updateStyle(key, value);
+        return this;
+    }
+
+    public DOMTreeElement style(String cssName, Object value) {
+        element.updateStyle(cssName, value);
+        return this;
+    }
+
+    public ElementStyle getStyle() {
+        return element.getStyle();
+    }
+
+    public <T> T getStyleValue(ElementStyle.Key<T> key) {
+        return element.getStyle().get(key);
+    }
+
+    /** This element's own styles, with anything it leaves unset filled in from up the tree. */
+    public ElementStyle getResolvedStyle() {
+        ElementStyle resolved = element.getStyle();
+        for (DOMTreeElement ancestor = parent; ancestor != null; ancestor = ancestor.parent) {
+            resolved = resolved.inherit(ancestor.getStyle());
+        }
+        return resolved;
     }
 
     public DOMTreeElement append(DOMTreeNode child) {
@@ -103,6 +132,12 @@ public class DOMTreeElement extends DOMTreeNode {
         StringBuilder sb = new StringBuilder(indent).append("<").append(getTag());
         element.propertyList.getAssignedProperties().forEach((k, v) ->
                 sb.append(" ").append(k).append("=\"").append(v.getValue()).append("\""));
+        Map<String, Object> styles = element.getStyle().getAssignedStyles();
+        if (!styles.isEmpty()) {
+            sb.append(" style=\"");
+            styles.forEach((k, v) -> sb.append(k).append(":").append(v).append(";"));
+            sb.append("\"");
+        }
         if (children.isEmpty()) return sb.append("/>\n").toString();
         sb.append(">\n");
         for (DOMTreeNode c : children) sb.append(c.render(indent + "  "));

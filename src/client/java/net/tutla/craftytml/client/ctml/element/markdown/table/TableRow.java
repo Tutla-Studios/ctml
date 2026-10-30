@@ -1,4 +1,4 @@
-package net.tutla.craftytml.client.ctml.element;
+package net.tutla.craftytml.client.ctml.element.markdown.table;
 
 import net.tutla.craftytml.client.ctml.CTMLElement;
 import net.tutla.craftytml.client.ctml.CTMLElementProperties;

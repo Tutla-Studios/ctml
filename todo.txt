@@ -35,6 +35,10 @@ LAYOUT  (render/CTMLLayout.java)
 - WARN: grid has one track list per axis: no named lines, no areas, no subgrid, no dense packing and no
   minmax(). An fr track only has room to share where its axis has a definite size, and an auto
   track is sized from the items sitting in one track alone, not from the ones spanning several.
+- SUGGESTION: a list item's marker is one text line the item keeps left of its own content, so it is
+  drawn in the item's own colour and font and there is no ::marker to style apart from it. There is no
+  list-style-image, and list-inside indents every line of the item rather than only the line the
+  marker is on, which shows on an item that wraps.
 - SUGGESTION: a multi column block never splits a child down the middle, so its columns are only as even
   as whole children allow and a child taller than its share makes its column taller.
 
@@ -64,7 +68,9 @@ STYLE SYSTEM  (ctml/ElementStyle.java, ctml/style/*)
   palette, where a bare family name (text-green) falls back to that family's 500 shade
   and [#hex]. A stop whose colour nothing knows is left out, so the gradient comes up one stop
   short and is not drawn at all.
-- SUGGESTION: no box-shadow, outline, cursor, font-family, transform, transition or animation.
+- SUGGESTION: no box-shadow, outline, cursor, font-family, transform, transition or animation. With no
+  font-family there is nothing monospaced to put <code> and <pre> in, so they keep the spacing they
+  were written with and leave the look to the classes on them.
 - SUGGESTION: there is no way to set defaults from a script, and no per element reset: a new element
   has to override defaultStyle() in java.
 - SUGGESTION: gradient colour interpolation modifiers (bg-linear-to-r/oklch, /srgb-linear) are not
@@ -85,8 +91,10 @@ SCREEN AND REGISTRY  (render/CTMLScreen.java, render/UIRegistry.java, CraftytmlC
 - WARN: CTMLScreen routes dragging, scrolling, the scrolling keys and tab, and the press side of the
   first two only answers the left button. No click handlers (the callback property is registered and
   never called), no hover, no narration.
-- WARN: no widget elements: ctml, div, span, img and the table tags are all there is. No button,
-  input or list, and an img has no alt text and nothing to say while its texture loads.
+- WARN: no widget elements. ctml, div, span, img, the table tags and the markdown set (h1 to h6, p,
+  ul, ol, li, blockquote, pre, code, hr, br, b, strong, i, em, s, del, u, ins) are all there is: no
+  button, no text input, no scrollable list widget, and no <a>, since nothing routes a click yet.
+  An img has no alt text and nothing to say while its texture loads.
 - SUGGESTION: the button numbers in mouseClicked / mouseDragged / mouseReleased are sdl's: left is 1,
   middle 2, right 3, not glfw's 0 / 1 / 2. MouseHandler's isLeftPressed / isRightPressed are no use
   on a screen at all, since minecraft only keeps them up to date while no screen is open.

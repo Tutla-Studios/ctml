@@ -5,7 +5,12 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import net.minecraft.util.FormattedCharSequence;
 import net.tutla.craftytml.client.ctml.ElementStyle;
-import net.tutla.craftytml.client.ctml.element.Img;
+import net.tutla.craftytml.client.ctml.element.markdown.Img;
+import net.tutla.craftytml.client.ctml.element.markdown.paragraph.LineBreak;
+import net.tutla.craftytml.client.ctml.element.markdown.list.ListItem;
+import net.tutla.craftytml.client.ctml.property.Reversed;
+import net.tutla.craftytml.client.ctml.property.Start;
+import net.tutla.craftytml.client.ctml.property.Value;
 import net.tutla.craftytml.client.ctml.property.Text;
 import net.tutla.craftytml.client.ctml.style.Length;
 import net.tutla.craftytml.client.ctml.style.Track;
@@ -290,7 +295,7 @@ public final class CTMLLayout {
     private static boolean aligns(ElementStyle.Display display, boolean columns){
         if (columns) return false;
         return switch (display) {
-            case BLOCK, INLINE_BLOCK, TABLE_CELL, TABLE_CAPTION -> true;
+            case BLOCK, INLINE_BLOCK, LIST_ITEM, TABLE_CELL, TABLE_CAPTION -> true;
             default -> false;
         };
     }
@@ -382,6 +387,18 @@ public final class CTMLLayout {
         int contentY = y + margin.top + frame.top + gutterTop;
 
         int innerWidth = Math.max(0, contentWidth - gutterLeft - gutterRight);
+
+        // a list item is marked with a shape or with its number. Outside, the marker hangs in whatever
+        // room the list's own padding left of it, which is what css does and what a list looks like;
+        // inside, it takes its room out of the content instead
+        String marker = marker(element, style);
+        int markerRoom = marker == null ? 0 : textWidth(marker, style) + MARKER_GAP;
+        if (marker != null && style.get(ElementStyle.LIST_STYLE_POSITION,
+                ElementStyle.ListStylePosition.OUTSIDE) == ElementStyle.ListStylePosition.INSIDE) {
+            contentX += markerRoom;
+            innerWidth = Math.max(0, innerWidth - markerRoom);
+        }
+
         List<TextLine> lines = new ArrayList<>();
         List<Box> children = new ArrayList<>();
 
@@ -406,6 +423,14 @@ public final class CTMLLayout {
                             topMarginTaken, bands);
         };
         int baseline = flow.baseline();
+
+        if (marker != null) {
+            // level with the first line of the item, or at the top where the item holds no text at all
+            int markerY = lines.isEmpty() ? 0 : lines.getFirst().y();
+            float markerScale = lines.isEmpty() ? fontScale(style) : lines.getFirst().scale();
+            lines.add(new TextLine(sequence(marker, style), marker, -markerRoom, markerY,
+                    markerRoom - MARKER_GAP, markerScale, 0));
+        }
 
         // a picture has no content to be as tall as, so an auto height keeps the shape it came in at
         // whatever width it ended up: naming one of the two is naming both, the way css does it
@@ -554,6 +579,100 @@ public final class CTMLLayout {
     }
 
     // ---- width and height ----
+
+    /** How much room is left between a list item's marker and its content. */
+    private static final int MARKER_GAP = 2;
+
+    /** The shapes, which are what the vanilla font has for a bullet, a ring and a block. */
+    private static final String DISC = "\u2022", CIRCLE = "\u25E6", SQUARE = "\u25A0";
+
+    private static final String[] ROMAN_NUMERALS =
+            { "M", "CM", "D", "CD", "C", "XC", "L", "XL", "X", "IX", "V", "IV", "I" };
+    private static final int[] ROMAN_VALUES = { 1000, 900, 500, 400, 100, 90, 50, 40, 10, 9, 5, 4, 1 };
+
+    /**
+     * What a list item puts in front of itself, or null for anything that is not one and for a type of
+     * none. The counting types are followed by a dot, the way html writes them.
+     */
+    private static String marker(DOMTreeElement element, ElementStyle style){
+        if (style.get(ElementStyle.DISPLAY) != ElementStyle.Display.LIST_ITEM) return null;
+
+        ElementStyle.ListStyle type = style.get(ElementStyle.LIST_STYLE_TYPE, ElementStyle.ListStyle.DISC);
+        return switch (type) {
+            case NONE -> null;
+            case DISC -> DISC;
+            case CIRCLE -> CIRCLE;
+            case SQUARE -> SQUARE;
+            default -> counter(type, countOf(element)) + ".";
+        };
+    }
+
+    /**
+     * Which number a list item is. The items of a list count up from its start, or down from it where it
+     * is reversed, and an item with a value of its own takes that number and hands the count on from
+     * there, which is what html does with them.
+     */
+    private static int countOf(DOMTreeElement element){
+        DOMTreeElement list = element.getParent();
+        if (list == null) return 1;
+
+        boolean down = list.getProperty("reversed") instanceof Reversed reversed && reversed.isOn();
+        int at = list.getProperty("start") instanceof Start start && start.hasValue()
+                ? start.getFirst()
+                : (down ? countItems(list) : 1);
+
+        for (DOMTreeElement child : list.getChildElements()) {
+            if (!(child.getElement() instanceof ListItem)) continue;
+            if (child.getProperty("value") instanceof Value value && value.hasValue()) at = value.getNumber();
+            if (child == element) return at;
+            at += down ? -1 : 1;
+        }
+        return at;
+    }
+
+    private static int countItems(DOMTreeElement list){
+        int items = 0;
+        for (DOMTreeElement child : list.getChildElements()) {
+            if (child.getElement() instanceof ListItem) items++;
+        }
+        return items;
+    }
+
+    /** One number as the type writes it: 1, 01, a, A, i or I. */
+    private static String counter(ElementStyle.ListStyle type, int number){
+        return switch (type) {
+            case DECIMAL_LEADING_ZERO -> (number >= 0 && number < 10 ? "0" : "") + number;
+            case LOWER_ALPHA -> alpha(number, 'a');
+            case UPPER_ALPHA -> alpha(number, 'A');
+            case LOWER_ROMAN -> roman(number).toLowerCase();
+            case UPPER_ROMAN -> roman(number);
+            default -> String.valueOf(number);
+        };
+    }
+
+    /** a to z, then aa to az, the way a spreadsheet names its columns. */
+    private static String alpha(int number, char from){
+        if (number < 1) return String.valueOf(number);
+        StringBuilder out = new StringBuilder();
+        for (int left = number; left > 0; left = (left - 1) / 26) {
+            out.insert(0, (char) (from + (left - 1) % 26));
+        }
+        return out.toString();
+    }
+
+    /** Roman numerals, which only go as far as the numbers they have letters for. */
+    private static String roman(int number){
+        if (number < 1 || number > 3999) return String.valueOf(number);
+        StringBuilder out = new StringBuilder();
+        int left = number;
+        for (int i = 0; i < ROMAN_VALUES.length; i++) {
+            while (left >= ROMAN_VALUES[i]) {
+                out.append(ROMAN_NUMERALS[i]);
+                left -= ROMAN_VALUES[i];
+            }
+        }
+        return out.toString();
+    }
 
     /**
      * The size a replaced element comes with, { width, height }, or null for everything else. Only a
@@ -957,6 +1076,10 @@ public final class CTMLLayout {
      */
     private void collectInline(DOMTreeElement element, ElementStyle style, List<Item> items, Fragment parent,
                                int contentX, int cursorY, int width, int cbHeight, List<Box> boxes){
+        if (element.getElement() instanceof LineBreak) {
+            items.add(new Break()); // the line stops here and carries on underneath
+            return;
+        }
         if (!fragments(element, style)) {
             Box box = layout(element, style, contentX, cursorY, width, cbHeight);
             if (box == null) return;
@@ -1027,7 +1150,8 @@ public final class CTMLLayout {
     }
 
     private static boolean isBlockFlow(ElementStyle style){
-        return style.get(ElementStyle.DISPLAY, ElementStyle.Display.BLOCK) == ElementStyle.Display.BLOCK
+        ElementStyle.Display display = style.get(ElementStyle.DISPLAY, ElementStyle.Display.BLOCK);
+        return (display == ElementStyle.Display.BLOCK || display == ElementStyle.Display.LIST_ITEM)
                 && !CTMLScroll.clips(CTMLScroll.overflowX(style))
                 && !CTMLScroll.clips(CTMLScroll.overflowY(style));
     }

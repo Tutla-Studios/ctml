@@ -57,11 +57,17 @@ public class ElementNode extends Node {
                 registerAllProperties(element);
                 DOMTreeElement domTreeElementNodeCreated = createElementAndAppendToTree(element);
 
-                while (ctx.getNextToken() != null && ctx.getNextToken().group != CTMLTokenGroup.ELEMENT_CLOSE){
+                if (element.hasChildren){
+                    while (ctx.getNextToken() != null && ctx.getNextToken().group != CTMLTokenGroup.ELEMENT_CLOSE){
+                        ctx.nextToken();
+                        new ElementNode(ctx).createWrapper(domTreeElementNodeCreated);
+                    }
+                    ctx.tokenContext.expectTokenType(element.closingTokenType);
+                } else if (ctx.getNextToken() != null && ctx.getNextToken().type == element.closingTokenType){
+                    // an element that holds nothing needs no closing tag, and is allowed one anyway:
+                    // <hr> and <hr></hr> both read as the same thing
                     ctx.nextToken();
-                    new ElementNode(ctx).createWrapper(domTreeElementNodeCreated);
                 }
-                ctx.tokenContext.expectTokenType(element.closingTokenType);
             }
         }
 

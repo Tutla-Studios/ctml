@@ -24,6 +24,9 @@ public class PropertyRegistry {
         register(new ScrollInto());
         register(new Source());
         register(new TabIndex());
+        register(new Start());
+        register(new Reversed());
+        register(new Value());
     }
 
     public static void register(ElementProperty property){

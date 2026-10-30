@@ -82,6 +82,7 @@ public final class TailwindParser {
         keyword("caption-bottom", s -> s.set(ElementStyle.CAPTION_SIDE, ElementStyle.CaptionSide.BOTTOM));
         keyword("table-auto", s -> s.set(ElementStyle.TABLE_LAYOUT, ElementStyle.TableLayout.AUTO));
         keyword("table-fixed", s -> s.set(ElementStyle.TABLE_LAYOUT, ElementStyle.TableLayout.FIXED));
+        keyword("list-item", s -> s.set(ElementStyle.DISPLAY, ElementStyle.Display.LIST_ITEM));
         keyword("hidden", s -> s.set(ElementStyle.DISPLAY, ElementStyle.Display.NONE));
 
         // position
@@ -216,6 +217,20 @@ public final class TailwindParser {
             keyword("overflow-x-" + suffix, s -> s.set(ElementStyle.OVERFLOW_X, overflow));
             keyword("overflow-y-" + suffix, s -> s.set(ElementStyle.OVERFLOW_Y, overflow));
         }
+
+        // lists: what the items are marked with, and whether the marker is in the text or outside it
+        for (ElementStyle.ListStyle type : ElementStyle.ListStyle.values()) {
+            keyword("list-" + type.name().toLowerCase().replace('_', '-'),
+                    s -> s.set(ElementStyle.LIST_STYLE_TYPE, type));
+        }
+        keyword("list-inside", s -> s.set(ElementStyle.LIST_STYLE_POSITION, ElementStyle.ListStylePosition.INSIDE));
+        keyword("list-outside", s -> s.set(ElementStyle.LIST_STYLE_POSITION, ElementStyle.ListStylePosition.OUTSIDE));
+        // and the arbitrary spelling, list-[upper-roman], which is how tailwind writes the rest of them
+        valued("list", (s, v) -> {
+            ElementStyle.ListStyle type = listStyle(unwrap(v));
+            if (type != null) s.set(ElementStyle.LIST_STYLE_TYPE, type);
+            else refuse(ElementStyle.LIST_STYLE_TYPE.cssName);
+        });
 
         // scrollbars, which css spells as scrollbar-width / scrollbar-color / scrollbar-gutter
         keyword("scrollbar", s -> s.set(ElementStyle.SCROLLBAR_HIDDEN, false));
@@ -593,6 +608,14 @@ public final class TailwindParser {
     private static void object(String name, int x, int y){
         keyword("object-" + name, s -> s.set(ElementStyle.OBJECT_POSITION_X, Length.percent(x))
                 .set(ElementStyle.OBJECT_POSITION_Y, Length.percent(y)));
+    }
+
+    /** A list-style-type by its css name, or null for anything that is not one. */
+    private static ElementStyle.ListStyle listStyle(String name){
+        for (ElementStyle.ListStyle type : ElementStyle.ListStyle.values()) {
+            if (type.name().toLowerCase().replace('_', '-').equals(name)) return type;
+        }
+        return null;
     }
 
     /** One of the places a background image can sit, as the share of the box its own share lines up with. */

@@ -12,7 +12,7 @@ import net.minecraft.server.packs.resources.PreparableReloadListener;
 import net.tutla.craftytml.client.dom.DOMTreeElement;
 import net.tutla.craftytml.client.render.CTMLScreen;
 import net.tutla.craftytml.client.render.CTMLTextures;
-import net.tutla.craftytml.client.render.DOMContext;
+import net.tutla.craftytml.client.dom.DOMContext;
 import net.tutla.craftytml.client.render.UIRegistry;
 import net.tutla.craftytml.client.tusan.CTMLTusan;
 import net.tutla.tums.Tums;

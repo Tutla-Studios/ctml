@@ -1,26 +1,23 @@
-package net.tutla.craftytml.client.render;
-
-import net.tutla.craftytml.client.dom.DOMTreeElement;
+package net.tutla.craftytml.client.dom;
 
 import java.util.HashMap;
-import java.util.Map;
 import java.util.function.Consumer;
 
 public class DOMContext {
     public final HashMap<String, Object> variables = new HashMap<>();
-    private final HashMap<String, Consumer<Map<String, Object>>> callbacks = new HashMap<>();
+    private final HashMap<String, Consumer<CTMLCallback>> callbacks = new HashMap<>();
     private final DOMTreeElement headNode;
 
     public DOMContext(DOMTreeElement element){
         headNode = element;
     }
 
-    public Consumer<Map<String, Object>> getCallbackFromName(String name) {
+    public Consumer<CTMLCallback> getCallbackFromName(String name) {
         return callbacks.get(name);
     }
 
-    public void putCallBack(String name, Consumer<Map<String, Object>> variables){
-        callbacks.put(name, variables);
+    public void putCallBack(String name, Consumer<CTMLCallback> consumer){
+        callbacks.put(name, consumer);
     }
 
     public void putVariable(String name, Object value){

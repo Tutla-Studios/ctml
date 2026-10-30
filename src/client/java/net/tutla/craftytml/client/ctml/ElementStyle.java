@@ -167,6 +167,11 @@ public final class ElementStyle {
     /** How far outside the box the ring sits, so it can be held clear of the border. */
     public static final Key<Integer> RING_OFFSET = key("ring-offset", Integer.class);
 
+    // lists
+    /** What a list item puts in front of itself, and whether that goes in the text or outside it. */
+    public static final Key<ListStyle> LIST_STYLE_TYPE = key("list-style-type", ListStyle.class);
+    public static final Key<ListStylePosition> LIST_STYLE_POSITION = key("list-style-position", ListStylePosition.class);
+
     // misc
     public static final Key<Visibility> VISIBILITY = key("visibility", Visibility.class);
     public static final Key<Float> OPACITY = key("opacity", Float.class);
@@ -189,14 +194,16 @@ public final class ElementStyle {
             // how the bars look comes down the tree the way css inherits scrollbar-width and scrollbar-color,
             // so one class on the root dresses every scroll container under it. Where they sit does not.
             SCROLLBAR_HIDDEN, SCROLLBAR_WIDTH, SCROLLBAR_THUMB_COLOR, SCROLLBAR_TRACK_COLOR, SCROLLBAR_RADIUS,
-            WORD_BREAK, BORDER_COLLAPSE, CAPTION_SIDE
+            WORD_BREAK, BORDER_COLLAPSE, CAPTION_SIDE,
+            // a list says once what its items are marked with, the way css inherits both of these
+            LIST_STYLE_TYPE, LIST_STYLE_POSITION
     };
 
     /** Nothing set at all; what an element starts out with before any style lands on it. */
     public static final ElementStyle UNSET = new ElementStyle(new Object[KEYS.size()]);
 
     public enum Display {
-        BLOCK, INLINE, INLINE_BLOCK, FLEX, GRID,
+        BLOCK, INLINE, INLINE_BLOCK, FLEX, GRID, LIST_ITEM,
         TABLE, TABLE_ROW_GROUP, TABLE_HEADER_GROUP, TABLE_FOOTER_GROUP, TABLE_ROW, TABLE_CELL, TABLE_CAPTION,
         NONE
     }
@@ -273,6 +280,18 @@ public final class ElementStyle {
      * the smaller of NONE and CONTAIN, so a small picture is left alone and a big one brought in.
      */
     public enum ObjectFit { FILL, CONTAIN, COVER, NONE, SCALE_DOWN }
+
+    /**
+     * What a list item is marked with. The first three are a shape drawn with the text, the rest count
+     * the item's place in the list: 1. 2. 3., a. b. c., A. B. C., i. ii. iii. or I. II. III.
+     */
+    public enum ListStyle {
+        NONE, DISC, CIRCLE, SQUARE,
+        DECIMAL, DECIMAL_LEADING_ZERO, LOWER_ALPHA, UPPER_ALPHA, LOWER_ROMAN, UPPER_ROMAN
+    }
+
+    /** Whether the marker sits outside the item's content or takes its room out of it. */
+    public enum ListStylePosition { OUTSIDE, INSIDE }
 
     private final Object[] values;
     private int hash; // worked out once: these get used as map keys and nothing ever changes underneath

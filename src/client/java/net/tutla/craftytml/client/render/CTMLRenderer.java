@@ -8,7 +8,7 @@ import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.TextColor;
 import net.minecraft.util.FormattedCharSequence;
 import net.tutla.craftytml.client.ctml.ElementStyle;
-import net.tutla.craftytml.client.ctml.element.Img;
+import net.tutla.craftytml.client.ctml.element.markdown.Img;
 import net.tutla.craftytml.client.ctml.style.BackgroundImage;
 import net.tutla.craftytml.client.ctml.style.Gradient;
 import net.tutla.craftytml.client.ctml.style.Length;

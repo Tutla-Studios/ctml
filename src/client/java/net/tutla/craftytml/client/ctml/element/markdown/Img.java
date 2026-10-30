@@ -31,6 +31,6 @@ public class Img extends CTMLElement {
 
     /** The texture named on the element, or null where none is. */
     public String source(){
-        return propertyList.propertyFromName("src") instanceof Source src ? src.getSource() : null;
+        return resolve(propertyList.propertyFromName("src") instanceof Source src ? src.getSource() : null);
     }
 }

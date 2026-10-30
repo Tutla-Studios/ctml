@@ -2,9 +2,11 @@ package net.tutla.craftytml.client.dom;
 
 import net.tutla.craftytml.client.dom.CTMLCallback.CallbackType;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Consumer;
 
 /**
@@ -15,18 +17,26 @@ import java.util.function.Consumer;
  * given none has an id made up for it when the context is built, so {@link #getElementById} can
  * reach anything whether or not whoever wrote the script thought to name it.
  *
+ * <p>Every string the tree shows is read through {@link #resolve}, so ${name} anywhere in it is
+ * the variable of that name as it stands this frame. Putting a variable here is what makes the
+ * screen say something new: nothing else has to be told.
+ *
  * <p>It can also remember what the user did to the tree, by {@link #rememberState} and
  * {@link #restoreState}. Nothing calls those on its own: a screen opening or closing keeps nothing
  * unless the host asks it to.
  */
 public class DOMContext {
-    public final HashMap<String, Object> variables = new HashMap<>();
+    private final HashMap<String, Object> variables = new HashMap<>();
     private final HashMap<String, Consumer<CTMLCallback>> callbacks = new HashMap<>();
     private final DOMTreeElement headNode;
 
     public DOMContext(DOMTreeElement element){
         headNode = element;
         nameEverything();
+        if (headNode != null) {
+            headNode.adopt(this);
+            refresh(); // the strings were written before there was anything to read them against
+        }
     }
 
     public DOMTreeElement getHeadNode(){
@@ -41,12 +51,86 @@ public class DOMContext {
         callbacks.put(name, consumer);
     }
 
+    /**
+     * Puts a variable there and tells the screen, so every string that names it is read again and
+     * whatever it was showing changes with it. This is the door: the map behind it is this context's
+     * own, since a value changed behind the screen's back is one nothing would redraw for.
+     */
     public void putVariable(String name, Object value){
+        if (name == null) return;
+        if (Objects.equals(variables.get(name), value) && variables.containsKey(name)) return;
         variables.put(name, value);
+        refresh();
+    }
+
+    /** Takes a variable away, which leaves every string that named it reading as empty. */
+    public void removeVariable(String name){
+        if (name == null || !variables.containsKey(name)) return;
+        variables.remove(name);
+        refresh();
     }
 
     public Object getVariableValue(String name){
         return variables.get(name);
+    }
+
+    public Map<String, Object> getVariables(){
+        return Collections.unmodifiableMap(variables);
+    }
+
+    /**
+     * Reads a string the way the screen shows it: ${name} is the variable of that name, and one
+     * nothing has put there yet reads as nothing at all rather than leaving the braces on show.
+     * $${ is how a string says ${ and means it.
+     *
+     * <p>A string with no ${ in it is handed straight back, which is almost every string there is.
+     */
+    public String resolve(String raw){
+        if (raw == null) return null;
+        int at = raw.indexOf("${");
+        if (at < 0) return raw;
+
+        StringBuilder out = new StringBuilder(raw.length());
+        int from = 0;
+        while (at >= 0) {
+            if (at > 0 && raw.charAt(at - 1) == '$') { // $${ was written, so ${ is meant
+                out.append(raw, from, at - 1).append("${");
+                from = at + 2;
+                at = raw.indexOf("${", from);
+                continue;
+            }
+
+            int close = raw.indexOf('}', at + 2);
+            if (close < 0) break; // nothing closes it, so the rest of the string is just a string
+
+            out.append(raw, from, at);
+            Object value = variables.get(raw.substring(at + 2, close).strip());
+            if (value != null) out.append(value);
+            from = close + 1;
+            at = raw.indexOf("${", from);
+        }
+        return out.append(raw, from, raw.length()).toString();
+    }
+
+    /** Whether a string has anything in it for {@link #resolve} to do. */
+    public static boolean hasVariables(String raw){
+        return raw != null && raw.contains("${");
+    }
+
+    /**
+     * Says that every string naming a variable is out of date: the ones that are text are laid out
+     * again, and the ones that are class lists are read onto their elements afresh. Only the elements
+     * carrying a ${ are touched, so a variable nothing mentions costs a walk and no layout.
+     */
+    public void refresh(){
+        if (headNode == null) return;
+        headNode.walk(node -> {
+            if (node instanceof DOMTreeText run) {
+                if (hasVariables(run.getWrittenText())) run.touched();
+                return;
+            }
+            if (node instanceof DOMTreeElement element) element.rereadVariables();
+        });
     }
 
     /**

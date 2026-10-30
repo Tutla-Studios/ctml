@@ -12,7 +12,17 @@ public class DOMTreeText extends DOMTreeNode {
         this.text = text == null ? "" : text;
     }
 
+    /**
+     * The run as the screen shows it, with every ${variable} in it filled in out of the context the
+     * element around it is in. A run with no element over it, or none in a context, reads as written.
+     */
     public String getText(){
+        DOMTreeElement owner = getParent();
+        return owner == null ? text : owner.resolve(text);
+    }
+
+    /** The run exactly as it was written, braces and all, which is what a variable is looked up by. */
+    public String getWrittenText(){
         return text;
     }
 

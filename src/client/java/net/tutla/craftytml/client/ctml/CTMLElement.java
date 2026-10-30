@@ -9,6 +9,7 @@ import net.tutla.craftytml.client.ctml.property.ScrollX;
 import net.tutla.craftytml.client.ctml.property.ScrollY;
 import net.tutla.craftytml.client.ctml.property.TabIndex;
 import net.tutla.craftytml.client.ctml.style.TailwindParser;
+import net.tutla.craftytml.client.dom.DOMContext;
 import net.tutla.craftytml.client.dom.DOMTreeElement;
 import net.tutla.craftytml.client.dom.DOMTreeNode;
 import net.tutla.craftytml.client.tusan.CTMLTokenType;
@@ -31,6 +32,7 @@ public abstract class CTMLElement {
     private static final AtomicInteger MINTED = new AtomicInteger();
 
     private DOMTreeNode node; //the dom node this element sits in, for marking a change on up the tree
+    private DOMContext context; //the context its strings read their ${variables} out of, once it is in one
 
     private int dragX = 0; //how far the user has dragged this element from where layout put it
     private int dragY = 0;
@@ -85,7 +87,9 @@ public abstract class CTMLElement {
         ElementProperty property = propertyList.propertyFromName(name);
         if (property instanceof ID id && id.hasValue()) TAKEN_IDS.add(id.getStringValue());
         if (property instanceof ClassName classes && classes.hasValue()){
-            applyClassStyles(classes.getStringValue(), ctx); // the ctx is what lets a bad class point at itself
+            // the ctx is what lets a bad class point at itself, and the classes are read as the
+            // screen shows them: a ${variable} in the list names a class like anything else does
+            applyClassStyles(resolve(classes.getStringValue()), ctx);
         }
         // the three a script sets to scroll the element, which is the only lever a script has
         if (property instanceof ScrollX x && x.hasValue()) scrollFromScript(x.getPixels(), scrollTargetY);
@@ -114,6 +118,23 @@ public abstract class CTMLElement {
     }
 
     /**
+     * The class list without the names that are still ${something}: a placeholder nothing has filled
+     * in is not a class anyone mistyped, so it is left out rather than warned about. It comes back as
+     * soon as the variable it names is put there.
+     */
+    private static String named(String classList){
+        if (!DOMContext.hasVariables(classList)) return classList;
+
+        StringBuilder kept = new StringBuilder();
+        for (String each : classList.strip().split("\\s+")) {
+            if (each.isEmpty() || each.contains("${")) continue;
+            if (!kept.isEmpty()) kept.append(' ');
+            kept.append(each);
+        }
+        return kept.toString();
+    }
+
+    /**
      * Reads a class list onto the element, and says so about every class it could not use: one
      * nothing knows at all, and one whose value is no use to the style it names. Neither stops the
      * screen being built, since a single typo should cost one class and not the whole file.
@@ -121,7 +142,7 @@ public abstract class CTMLElement {
     public void applyClassStyles(String classList, TusanContext ctx){
         ElementStyle.Builder parsed = ElementStyle.builder();
 
-        for (TailwindParser.Problem problem : TailwindParser.parseInto(parsed, classList)) {
+        for (TailwindParser.Problem problem : TailwindParser.parseInto(parsed, named(classList))) {
             String message = switch (problem.reason()) {
                 case UNKNOWN -> "<" + name + "> has the class \"" + problem.className()
                         + "\", which nothing knows how to style";
@@ -217,7 +238,7 @@ public abstract class CTMLElement {
     /** The callback named on the element, or null where it names none. */
     public String getCallback(){
         return propertyList.propertyFromName("callback") instanceof Callback callback && callback.hasValue()
-                ? callback.getStringValue()
+                ? resolve(callback.getStringValue())
                 : null;
     }
 
@@ -263,6 +284,50 @@ public abstract class CTMLElement {
     /** Told to the element by the dom node built around it. */
     public void bind(DOMTreeNode node){
         this.node = node;
+    }
+
+    /**
+     * Told to the element by the context it ends up in, which is where its strings look their
+     * ${variables} up. An element that is in none reads its strings exactly as they were written.
+     */
+    public void setContext(DOMContext context){
+        this.context = context;
+    }
+
+    public DOMContext getContext(){
+        return context;
+    }
+
+    /** A string as the screen shows it, with every ${variable} in it filled in. */
+    public String resolve(String raw){
+        return context == null ? raw : context.resolve(raw);
+    }
+
+    /**
+     * A string property as the screen shows it: the value with its ${variables} filled in, or null
+     * where nothing set it. Every string the element is read for comes through here, bar the id,
+     * which is the one string that has to stay what it was: it is what the element is found by.
+     */
+    public String getStringProperty(String name){
+        ElementProperty property = propertyList.propertyFromName(name);
+        if (property == null || !property.hasValue()) return null;
+        return resolve(String.valueOf(property.getValue()));
+    }
+
+    /**
+     * Said to the element when a variable changed: anything of its own naming one is out of date, and
+     * a class list naming one has to be read on again, since classes are parsed as they are set.
+     */
+    public void rereadVariables(){
+        boolean moved = false;
+        for (ElementProperty property : propertyList.getAssignedProperties().values()) {
+            if (property.name.equals("id")) continue; // an id is never interpolated, so it never moves
+            if (!(property.getValue() instanceof String written) || !DOMContext.hasVariables(written)) continue;
+
+            if (property instanceof ClassName) applyClassStyles(resolve(written), null);
+            moved = true;
+        }
+        if (moved) changed();
     }
 
     /** Says that what layout came up with for this element is out of date, and for everything above it. */
@@ -396,7 +461,7 @@ public abstract class CTMLElement {
     public String takeScrollInto(){
         String id = scrollInto;
         scrollInto = null;
-        return id;
+        return resolve(id);
     }
 
     public CTMLElement newInstance(){

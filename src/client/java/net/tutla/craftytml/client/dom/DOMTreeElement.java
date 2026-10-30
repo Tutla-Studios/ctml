@@ -161,9 +161,29 @@ public class DOMTreeElement extends DOMTreeNode {
         child.detach();
         child.parent = this;
         children.add(child);
+        // whatever is put in a tree reads its strings out of that tree's context, however late it arrives
+        if (element.getContext() != null && child instanceof DOMTreeElement added) added.adopt(element.getContext());
         touched();
         return this;
     }
+
+    /** Hands this context to the element and everything under it, so their strings can be read. */
+    public void adopt(DOMContext context) {
+        walk(node -> {
+            if (node instanceof DOMTreeElement each) each.getElement().setContext(context);
+        });
+    }
+
+    public DOMContext getContext() { return element.getContext(); }
+
+    /** A string with every ${variable} in it filled in from the context, the way the screen shows it. */
+    public String resolve(String raw) { return element.resolve(raw); }
+
+    /** A string property as the screen shows it, or null where nothing set it. */
+    public String getString(String name) { return element.getStringProperty(name); }
+
+    /** Said to the element when a variable changed, so what it shows is worked out again. */
+    public void rereadVariables() { element.rereadVariables(); }
 
     public List<DOMTreeNode> getChildren() { return Collections.unmodifiableList(children); }
 

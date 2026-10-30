@@ -505,6 +505,11 @@
       <div class="w-full text-xs text-slate-500 mt-1" text="press it, or tab to it and hit enter"></div>
     </div>
 
+    <div class="w-full bg-slate-800 border border-slate-700 rounded-sm px-1 py-[2px] text-xs text-slate-400" text="variables in strings">
+      <button class="px-1 py-[2px] rounded-sm bg-amber-600 border border-amber-400 text-slate-900 text-xs" callback="clickCookie" text="cookie"></button>
+      <div class="w-full mt-1 text-xs text-amber-200">cookies: ${cookies}</div>
+      <div class="w-full text-xs ${cookieMood}" text="${cookieWord}"></div>
+      <div class="w-full text-xs text-slate-500 mt-1" text="the text says ${cookies} and nothing here was rewritten"></div>
+    </div>
   </div>
-
 </ctml>

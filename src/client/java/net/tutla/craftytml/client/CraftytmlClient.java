@@ -76,6 +76,7 @@ public class CraftytmlClient implements ClientModInitializer {
             openedFirstUI = true;
             DOMContext ctx = new DOMContext(first.getValue());
             registerDemoCallbacks(ctx);
+            registerCookieCounter(ctx);
             client.execute(() -> client.setScreenAndShow(new CTMLScreen(first.getKey(), first.getValue(), screen, ctx)));
         });
     }
@@ -90,6 +91,31 @@ public class CraftytmlClient implements ClientModInitializer {
             boolean showing = panel.getStyleValue(ElementStyle.DISPLAY) != ElementStyle.Display.NONE;
             panel.property("class", classes(panel, "hidden", showing), null);
             callback.getElement().property("text", showing ? "show the panel" : "hide the panel", null);
+        });
+    }
+
+    /**
+     * And the other half of the demo: a counter that lives in the context as a variable, which the
+     * script shows by writing ${cookies} in the middle of a string. Nothing here touches the element
+     * that shows it, or knows which element that is: putting the variable is the whole of it, and
+     * every string naming it is read again on the next frame.
+     *
+     * <p>A class list is a string like any other, so the colour of the word under the count is a
+     * variable too, and a variable nobody has set yet reads as nothing at all.
+     */
+    private static void registerCookieCounter(DOMContext ctx){
+        ctx.putVariable("cookies", 0);
+        ctx.putVariable("cookieWord", "no cookies yet");
+        ctx.putVariable("cookieMood", "text-slate-500");
+
+        ctx.putCallBack("clickCookie", callback -> {
+            if (!callback.isPress()) return;
+
+            DOMContext context = callback.getCtx();
+            int count = context.getVariableValue("cookies") instanceof Integer had ? had + 1 : 1;
+            context.putVariable("cookies", count);
+            context.putVariable("cookieWord", count == 1 ? "one cookie" : count + " cookies");
+            context.putVariable("cookieMood", count < 5 ? "text-amber-300" : "text-amber-100");
         });
     }
 

@@ -11,7 +11,6 @@ import net.tutla.craftytml.client.ctml.element.markdown.list.ListItem;
 import net.tutla.craftytml.client.ctml.property.Reversed;
 import net.tutla.craftytml.client.ctml.property.Start;
 import net.tutla.craftytml.client.ctml.property.Value;
-import net.tutla.craftytml.client.ctml.property.Text;
 import net.tutla.craftytml.client.ctml.style.Length;
 import net.tutla.craftytml.client.ctml.style.Track;
 import net.tutla.craftytml.client.dom.DOMTreeElement;
@@ -3410,7 +3409,7 @@ public final class CTMLLayout {
     }
 
     private static String text(DOMTreeElement element){
-        return element.getProperty("text") instanceof Text t && t.hasValue() ? t.getStringValue() : null;
+        return element.getString("text"); // as the screen shows it: every ${variable} in it is filled in
     }
 
     /**

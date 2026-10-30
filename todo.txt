@@ -10,27 +10,16 @@ Every line is a bug or a caveat that is still true of the code, labelled by how 
 
 RENDERER / PAINT  (render/CTMLRenderer.java)
 --------------------------------------------
-- WARN: the four borders are each one straight fill, so a rounded box still has square border corners.
-  The background inside them is rounded, the frame around them is not.
-- WARN: background-image is parsed into the style and never drawn.
-- WARN: only one border-color for all four sides. No per-side colors, no border styles.
-- WARN: opacity multiplies the alpha of each thing drawn instead of compositing the subtree,
-  so overlapping children inside a faded box darken each other.
-- WARN: letter-spacing is parsed by tracking-* and then ignored by both layout and paint.
-- WARN: z-index sorts siblings at paint time only, so it cannot lift a box above its parent's
-  siblings: there are no stacking contexts, opacity and overflow start none, and a child
-  with a high z-index still paints under an uncle box drawn later.
-- SUGGESTION: no vertical centering of text inside its box.
-- SUGGESTION: a radial gradient is drawn as a dozen flat discs and a conic one as 64 flat wedges,
-  since there is nothing to draw a ramp with but a two colour fill. Both cost a couple of hundred fills,
-  translucent stops blend where the pieces overlap, and the innermost pixels of a conic one take
-  their colour from whichever wedge was drawn last. A straight ramp is one fill per pair of stops
-  at any angle, so it has none of this.
-- SUGGESTION: a gradient over a rounded box is clipped row by row, which is a draw per row of the
-  corners. Fine for the radii tailwind names, dear for a pill a hundred pixels tall.
-- SUGGESTION: gradient text is still one draw call per glyph, since each one takes its own colour
-  off the ramp. The styles and the advances are the line's own, so only the colour is ours.
-
+- SUGGESTION: opacity is drawn as a group rather than composited. Everything inside a faded box is drawn
+  at the group's alpha, and whatever an opaque square background of the group covers is left out of the
+  draws under it, so the ordinary overlap no longer darkens twice. Nothing on the gui side can draw a
+  subtree off screen and fade the result, so two translucent children of a faded box, or two under a
+  rounded or translucent background, do still show through one another.
+- SUGGESTION: a background image is one layer, and how big it is comes from the size read off the front
+  of the png. Anything else a texture can be, an atlas sprite among them, has no size to cover or
+  contain with and is stretched over the whole box instead. No background-origin, no
+  background-attachment, no repeat-space or repeat-round, and a rounded box draws its tiles once per
+  row of its corners rather than once.
 
 LAYOUT  (render/CTMLLayout.java)
 --------------------------------
@@ -56,17 +45,12 @@ OVERFLOW AND SCROLLING  (render/CTMLScroll.java)
   whose children are all one box has nothing to hold on to.
 - SUGGESTION: scrollIntoView brings a box in from the nearest edge in one pass, so a box inside two
   scroll containers at once is brought the rest of the way on the frame after.
-- SUGGESTION: overscroll-contain and overscroll-none do the same thing, there being no bounce at the
-  end of a scroll to stop.
 - SUGGESTION: scroll-smooth slides the wheel and the keys as well as the scrolls a script asks for.
   Css only promises the last of those.
 
 
 STYLE SYSTEM  (ctml/ElementStyle.java, ctml/style/*)
 ----------------------------------------------------
-- CRITICAL: unknown classes are only printed to stdout by applyClassStyles, with no line number and
-  nothing the interpreter can report. A class whose value makes no sense for its key (auto on a gap,
-  a percent on a radius, bg-linear-[sideways]) is not even printed: it is taken as known and dropped.
 - WARN: no variants at all: hover:, focus:, active:, dark:, md: and friends come back from the
   parser as unknown.
 - WARN: the text initial values only exist on <ctml>, since a default on every element would block
@@ -77,8 +61,6 @@ STYLE SYSTEM  (ctml/ElementStyle.java, ctml/style/*)
   and [#hex]. A stop whose colour nothing knows is left out, so the gradient comes up one stop
   short and is not drawn at all.
 - SUGGESTION: no box-shadow, outline, cursor, font-family, transform, transition or animation.
-- SUGGESTION: text-shadow is a ctml invention (minecraft draws text with a shadow by default) and
-  defaults to true, which is not what css would do.
 - SUGGESTION: there is no way to set defaults from a script, and no per element reset: a new element
   has to override defaultStyle() in java.
 - SUGGESTION: gradient colour interpolation modifiers (bg-linear-to-r/oklch, /srgb-linear) are not
@@ -89,10 +71,12 @@ STYLE SYSTEM  (ctml/ElementStyle.java, ctml/style/*)
 
 SCREEN AND REGISTRY  (render/CTMLScreen.java, render/UIRegistry.java, CraftytmlClient.java)
 -------------------------------------------------------------------------------------------
-- CRITICAL: a drag of a box or of a scrollbar thumb ends on mouseReleased. If that never arrives (released
-  outside the window, or the screen changes mid drag) it keeps following the cursor, and there is
-  no way to read the live button state back: this build is on sdl, so there is no
-  glfwGetMouseButton to ask.
+- SUGGESTION: a drag of a box or of a scrollbar thumb ends on mouseReleased, and there is still no way
+  to read the live button state back: this build is on sdl, so there is no glfwGetMouseButton to ask.
+  A release that never arrives is worked out from the cursor instead, since a button that is down
+  reports every movement it makes, so one that moves with nothing reported lets go within a few
+  frames. A release lost while the cursor then never moves again is still held, until it moves or
+  anything at all is pressed; nothing moves in the meantime, so it costs nothing but the grip.
 - WARN: no hot reload: editing a .ctml file needs a game restart.
 - WARN: CTMLScreen routes dragging, scrolling and the scrolling keys, and the press side of the first
   two only answers the left button. No click handlers (the callback property is registered and never

@@ -2,10 +2,16 @@ package net.tutla.craftytml.client;
 
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
+import net.fabricmc.fabric.api.resource.v1.ResourceLoader;
+import net.fabricmc.fabric.api.resource.v1.reloader.SimpleReloadListener;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.gui.screens.TitleScreen;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.packs.PackType;
+import net.minecraft.server.packs.resources.PreparableReloadListener;
 import net.tutla.craftytml.client.dom.DOMTreeElement;
 import net.tutla.craftytml.client.render.CTMLScreen;
+import net.tutla.craftytml.client.render.CTMLTextures;
 import net.tutla.craftytml.client.render.DOMContext;
 import net.tutla.craftytml.client.render.UIRegistry;
 import net.tutla.craftytml.client.tusan.CTMLTusan;
@@ -35,7 +41,29 @@ public class CraftytmlClient implements ClientModInitializer {
 
         runAllScripts(ctmlDir, tusan, MinecraftEnvironment.CLIENT);
 
+        forgetTextureSizesOnReload();
         openFirstUIOnMainMenu();
+    }
+
+    /**
+     * A background image is measured once and the size kept, since nothing on the gui side will say how
+     * big a texture is. A resource reload can swap the image for one a different size, so the sizes are
+     * dropped whenever the packs are read again.
+     */
+    public static void forgetTextureSizesOnReload(){
+        ResourceLoader.get(PackType.CLIENT_RESOURCES).registerReloadListener(
+                Identifier.fromNamespaceAndPath("craftytml", "texture-sizes"),
+                new SimpleReloadListener<Void>() {
+                    @Override
+                    protected Void prepare(PreparableReloadListener.SharedState state){
+                        return null;
+                    }
+
+                    @Override
+                    protected void apply(Void nothing, PreparableReloadListener.SharedState state){
+                        CTMLTextures.forget();
+                    }
+                });
     }
 
     public static void openFirstUIOnMainMenu(){

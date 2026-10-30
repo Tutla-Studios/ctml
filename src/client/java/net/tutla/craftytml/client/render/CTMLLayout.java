@@ -113,8 +113,11 @@ public final class CTMLLayout {
     /**
      * One drawn line of text, already placed against its box's content corner and already scaled for its
      * font size. content is the same text as a plain string, for the drawing that has to go glyph by glyph.
+     * spacing is the letter-spacing the line was measured with, which the drawing has to put back between
+     * the glyphs; it is counted after every one of them, the last included, the way css does.
      */
-    public record TextLine(FormattedCharSequence text, String content, int x, int y, int width, float scale) {}
+    public record TextLine(FormattedCharSequence text, String content, int x, int y, int width, float scale,
+                           int spacing) {}
 
     /** Everything layout needs to ask about text, so the measuring can be swapped out. */
     public interface TextMetrics {
@@ -277,6 +280,19 @@ public final class CTMLLayout {
         this.viewHeight = viewHeight;
     }
 
+    /**
+     * Whether a box lines its own content up inside itself. A block container does, since css's
+     * align-content reaches them; the layouts that align their content as they place it do not, and
+     * neither does a multi column block, whose columns are already as tall as the box.
+     */
+    private static boolean aligns(ElementStyle.Display display, boolean columns){
+        if (columns) return false;
+        return switch (display) {
+            case BLOCK, INLINE_BLOCK, TABLE_CELL, TABLE_CAPTION -> true;
+            default -> false;
+        };
+    }
+
     /** The screen is the root's containing block, so unless it says otherwise the root box is the screen. */
     private static final ElementStyle ROOT_DEFAULTS = ElementStyle.builder()
             .set(ElementStyle.WIDTH, Length.FULL)
@@ -366,11 +382,13 @@ public final class CTMLLayout {
                 ? -1
                 : Math.max(0, definiteHeight - gutterTop - gutterBottom);
 
-        Flow flow = switch (style.get(ElementStyle.DISPLAY, ElementStyle.Display.BLOCK)) {
+        boolean columns = style.isSet(ElementStyle.COLUMN_COUNT) || style.isSet(ElementStyle.COLUMN_WIDTH);
+        ElementStyle.Display display = style.get(ElementStyle.DISPLAY, ElementStyle.Display.BLOCK);
+        Flow flow = switch (display) {
             case FLEX -> layoutFlex(element, style, contentX, contentY, innerWidth, childBasis, lines, children);
             case GRID -> layoutGrid(element, style, contentX, contentY, innerWidth, childBasis, lines, children);
             case TABLE -> layoutTable(element, style, contentX, contentY, innerWidth, childBasis, lines, children);
-            default -> style.isSet(ElementStyle.COLUMN_COUNT) || style.isSet(ElementStyle.COLUMN_WIDTH)
+            default -> columns
                     ? layoutColumns(element, style, contentX, contentY, innerWidth, childBasis, lines, children)
                     : layoutFlow(element, style, contentX, contentY, innerWidth, childBasis, lines, children,
                             topMarginTaken, bands);
@@ -381,6 +399,20 @@ public final class CTMLLayout {
                 ? Math.max(0, forcedHeight - frame.vertical())
                 : contentHeight(style, cbWidth, cbHeight, flow.height() + gutterTop + gutterBottom);
         int innerHeight = Math.max(0, contentHeight - gutterTop - gutterBottom);
+
+        // a block container lines its content up inside a taller box with align-content, which is what
+        // centres lines of text in a box the way nothing else can: flex and grid align their own.
+        int lead = aligns(display, columns) ? spread(1, innerHeight - flow.height(),
+                style.get(ElementStyle.ALIGN_CONTENT, ElementStyle.AlignContent.START))[0] : 0;
+        if (lead > 0) {
+            for (int i = 0; i < lines.size(); i++) {
+                TextLine line = lines.get(i);
+                lines.set(i, new TextLine(line.text(), line.content(), line.x(), line.y() + lead,
+                        line.width(), line.scale(), line.spacing()));
+            }
+            for (int i = 0; i < children.size(); i++) children.set(i, shift(children.get(i), 0, lead));
+            if (baseline != NO_BASELINE) baseline += lead;
+        }
 
         // anything taken out of the flow gets placed against this box once it has a size
         layoutOutOfFlow(element, style, contentX, contentY, innerWidth, innerHeight, children);
@@ -909,7 +941,7 @@ public final class CTMLLayout {
     private boolean collapsesTop(ElementStyle style, int basis){
         return isBlockFlow(style)
                 && style.resolve(ElementStyle.PADDING_TOP, basis, viewWidth, viewHeight, 0) == 0
-                && style.get(ElementStyle.BORDER_TOP_WIDTH, 0) == 0;
+                && borderWidth(style, ElementStyle.BORDER_TOP_WIDTH, ElementStyle.BORDER_TOP_STYLE) == 0;
     }
 
     /** The same at the bottom, where a box with a height of its own has nowhere for the margin to go. */
@@ -1134,7 +1166,7 @@ public final class CTMLLayout {
         for (int i = 0; i < text.length(); ) {
             int codePoint = text.codePointAt(i);
             String glyph = new String(Character.toChars(codePoint));
-            int width = Math.round(metrics.width(sequence(glyph, run.style())) * run.scale());
+            int width = runWidth(glyph, run.style(), run.scale());
             if (used + width > room && !(kept.isEmpty() && atLeastOne)) break;
             used += width;
             kept.append(glyph);
@@ -1293,7 +1325,8 @@ public final class CTMLLayout {
                 String content = run.text.toString();
                 if (content.isEmpty()) continue;
                 int y = baselineY - Math.round(metrics.ascent() * run.scale) - originY;
-                into.add(new TextLine(sequence(content, run.style), content, run.x - originX, y, run.width, run.scale));
+                into.add(new TextLine(sequence(content, run.style), content, run.x - originX, y, run.width,
+                        run.scale, letterSpacing(run.style)));
             }
             runs.clear();
         }
@@ -1395,7 +1428,7 @@ public final class CTMLLayout {
      * box that ran off the end is already laid out, so the box's own clip is what deals with it.
      */
     private List<Item> ellipsise(List<Item> line, ElementStyle style, int width, boolean must){
-        int dots = Math.round(metrics.width(sequence(ELLIPSIS, style)) * fontScale(style));
+        int dots = runWidth(ELLIPSIS, style, fontScale(style));
         int room = Math.max(0, width - dots);
         List<Item> kept = new ArrayList<>(line.size());
         int used = 0;
@@ -1439,7 +1472,7 @@ public final class CTMLLayout {
         for (int i = 0; i < text.length(); ) {
             int codePoint = text.codePointAt(i);
             String glyph = new String(Character.toChars(codePoint));
-            int width = Math.round(metrics.width(sequence(glyph, run.style())) * run.scale());
+            int width = runWidth(glyph, run.style(), run.scale());
             if (used + width > room) break;
             used += width;
             kept.append(glyph);
@@ -1630,7 +1663,20 @@ public final class CTMLLayout {
     }
 
     private Run run(String text, ElementStyle style, float scale, boolean space, Fragment owner){
-        return new Run(text, style, scale, Math.round(metrics.width(sequence(text, style)) * scale), space, owner);
+        return new Run(text, style, scale, runWidth(text, style, scale), space, owner);
+    }
+
+    /**
+     * How wide a run of text comes out: what the font makes of it at its size, plus the room letter-spacing
+     * asks for after each of its characters.
+     */
+    private int runWidth(String text, ElementStyle style, float scale){
+        return Math.round(metrics.width(sequence(text, style)) * scale)
+                + letterSpacing(style) * text.codePointCount(0, text.length());
+    }
+
+    static int letterSpacing(ElementStyle style){
+        return style.get(ElementStyle.LETTER_SPACING, 0);
     }
 
     // ---- flex ----
@@ -1843,7 +1889,7 @@ public final class CTMLLayout {
                     int dy = targetY - contentY;
                     for (TextLine line : item.measuredLines) {
                         lines.add(new TextLine(line.text(), line.content(),
-                                line.x() + dx, line.y() + dy, line.width(), line.scale()));
+                                line.x() + dx, line.y() + dy, line.width(), line.scale(), line.spacing()));
                     }
                     if (baseline == NO_BASELINE) baseline = item.textBaseline + dy;
                     main += item.outerMain(row) + gap;
@@ -2000,7 +2046,8 @@ public final class CTMLLayout {
     /** Copies measured lines over to where the item was put. */
     private static void placeText(MeasuredText text, int dx, int dy, List<TextLine> into){
         for (TextLine line : text.lines()) {
-            into.add(new TextLine(line.text(), line.content(), line.x() + dx, line.y() + dy, line.width(), line.scale()));
+            into.add(new TextLine(line.text(), line.content(), line.x() + dx, line.y() + dy, line.width(),
+                    line.scale(), line.spacing()));
         }
     }
 
@@ -2826,8 +2873,9 @@ public final class CTMLLayout {
     private static int sharedBorder(List<Row> rows){
         for (Row row : rows) {
             for (Cell cell : row.cells) {
-                int border = Math.max(cell.style.get(ElementStyle.BORDER_LEFT_WIDTH, 0),
-                        cell.style.get(ElementStyle.BORDER_TOP_WIDTH, 0));
+                int border = Math.max(
+                        borderWidth(cell.style, ElementStyle.BORDER_LEFT_WIDTH, ElementStyle.BORDER_LEFT_STYLE),
+                        borderWidth(cell.style, ElementStyle.BORDER_TOP_WIDTH, ElementStyle.BORDER_TOP_STYLE));
                 if (border > 0) return border;
             }
         }
@@ -3169,7 +3217,7 @@ public final class CTMLLayout {
 
     private int textWidth(String text, ElementStyle style){
         if (text == null || text.isBlank()) return 0;
-        return Math.round(metrics.width(sequence(text.strip(), style)) * fontScale(style));
+        return runWidth(text.strip(), style, fontScale(style));
     }
 
     private int longestWord(String text, ElementStyle style){
@@ -3271,8 +3319,16 @@ public final class CTMLLayout {
 
     private static Edges borderEdges(ElementStyle style){
         return new Edges(
-                style.get(ElementStyle.BORDER_TOP_WIDTH, 0), style.get(ElementStyle.BORDER_RIGHT_WIDTH, 0),
-                style.get(ElementStyle.BORDER_BOTTOM_WIDTH, 0), style.get(ElementStyle.BORDER_LEFT_WIDTH, 0));
+                borderWidth(style, ElementStyle.BORDER_TOP_WIDTH, ElementStyle.BORDER_TOP_STYLE),
+                borderWidth(style, ElementStyle.BORDER_RIGHT_WIDTH, ElementStyle.BORDER_RIGHT_STYLE),
+                borderWidth(style, ElementStyle.BORDER_BOTTOM_WIDTH, ElementStyle.BORDER_BOTTOM_STYLE),
+                borderWidth(style, ElementStyle.BORDER_LEFT_WIDTH, ElementStyle.BORDER_LEFT_STYLE));
+    }
+
+    /** A side with no style to it takes up no room, which is what css does with border-style none. */
+    public static int borderWidth(ElementStyle style, ElementStyle.Key<Integer> width,
+                                 ElementStyle.Key<ElementStyle.BorderStyle> kind){
+        return style.get(kind) == ElementStyle.BorderStyle.NONE ? 0 : style.get(width, 0);
     }
 
     /** Padding and border together, which is what sits between the border box and the content. */

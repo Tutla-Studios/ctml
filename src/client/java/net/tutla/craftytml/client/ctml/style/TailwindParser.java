@@ -9,18 +9,48 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
+import java.util.function.UnaryOperator;
 
 /**
  * Turns a tailwind class list into an ElementStyle.
  * Classes that are just a word ("flex", "italic") sit in KEYWORDS, the ones carrying a value
  * ("p-4", "bg-red-500", "w-[120px]") sit in VALUED under their prefix, so adding a utility is one line.
- * Anything unrecognised is handed back by parseInto and otherwise ignored.
+ * Anything the parser cannot use is handed back by parseInto, whether it is a class nothing knows
+ * at all or a known one carrying a value that makes no sense for it, so whatever called can say so.
  */
 public final class TailwindParser {
     /** A tailwind spacing unit is 0.25rem; one unit to four gui pixels keeps the scale usable in game. */
     public static final int SPACING_UNIT = 4;
 
     private interface Valued { void apply(ElementStyle.Builder style, String value); }
+
+    /** A class the parser could not use, and why. */
+    public record Problem(String className, Reason reason, String key) {
+        /**
+         * UNKNOWN is a class nothing knows at all, a variant ("hover:") or a typo; BAD_VALUE is one
+         * whose prefix is known but whose value is not something that style can take.
+         */
+        public enum Reason { UNKNOWN, BAD_VALUE }
+
+        @Override
+        public String toString(){
+            return reason == Reason.UNKNOWN
+                    ? className
+                    : className + " (" + (key == null ? "bad value" : "no value " + key + " can take") + ")";
+        }
+    }
+
+    /**
+     * Where a setter says the value it was handed is no use to it. The setters are lambdas with
+     * nothing to return, so the refusal is left here for the class being applied to pick up.
+     * Thread bound, since nothing says which thread a screen is built on.
+     */
+    private static final ThreadLocal<String> REFUSED = new ThreadLocal<>();
+
+    /** Said by a setter that cannot use its value, naming the style that would have taken it. */
+    private static void refuse(String key){
+        if (REFUSED.get() == null) REFUSED.set(key == null ? "" : key);
+    }
 
     private enum Stop { FROM, VIA, TO }
 
@@ -228,6 +258,14 @@ public final class TailwindParser {
         keyword("rounded", s -> s.set(ElementStyle.BORDER_RADIUS, 4));
         keyword("border", s -> s.set(ElementStyle.BORDER_WIDTH, 1));
 
+        // how the frame is drawn, which css spells border-style. none takes the width down to nothing
+        keyword("border-solid", s -> s.set(ElementStyle.BORDER_STYLE, ElementStyle.BorderStyle.SOLID));
+        keyword("border-dashed", s -> s.set(ElementStyle.BORDER_STYLE, ElementStyle.BorderStyle.DASHED));
+        keyword("border-dotted", s -> s.set(ElementStyle.BORDER_STYLE, ElementStyle.BorderStyle.DOTTED));
+        keyword("border-double", s -> s.set(ElementStyle.BORDER_STYLE, ElementStyle.BorderStyle.DOUBLE));
+        keyword("border-none", s -> s.set(ElementStyle.BORDER_STYLE, ElementStyle.BorderStyle.NONE));
+        keyword("border-hidden", s -> s.set(ElementStyle.BORDER_STYLE, ElementStyle.BorderStyle.NONE));
+
         // spacing
         valued("p", spacingAll(ElementStyle.PADDING));
         valued("px", spacing(ElementStyle.PADDING_LEFT, ElementStyle.PADDING_RIGHT));
@@ -243,9 +281,10 @@ public final class TailwindParser {
         valued("mr", spacing(ElementStyle.MARGIN_RIGHT));
         valued("mb", spacing(ElementStyle.MARGIN_BOTTOM));
         valued("ml", spacing(ElementStyle.MARGIN_LEFT));
-        valued("gap", spacingAll(ElementStyle.GAP));
-        valued("gap-x", spacing(ElementStyle.COLUMN_GAP)); // x is along a row, so it is the column gap
-        valued("gap-y", spacing(ElementStyle.ROW_GAP));
+        // a gap is one length and nothing else: auto has nothing to mean between two items
+        valued("gap", gap(ElementStyle.ROW_GAP, ElementStyle.COLUMN_GAP));
+        valued("gap-x", gap(ElementStyle.COLUMN_GAP)); // x is along a row, so it is the column gap
+        valued("gap-y", gap(ElementStyle.ROW_GAP));
 
         // size
         valued("w", horizontal(spacing(ElementStyle.WIDTH)));
@@ -266,7 +305,7 @@ public final class TailwindParser {
         valued("left", spacing(ElementStyle.LEFT));
 
         // the ones that need more than a straight spacing value
-        valued("bg", (s, v) -> set(s, ElementStyle.BACKGROUND_COLOR, TailwindColors.parse(v)));
+        valued("bg", TailwindParser::background);
         valued("text", TailwindParser::text);
         valued("border", TailwindParser::border);
         valued("rounded", (s, v) -> set(s, ElementStyle.BORDER_RADIUS, RADII.containsKey(v) ? RADII.get(v) : pixels(v)));
@@ -275,6 +314,7 @@ public final class TailwindParser {
         valued("opacity", (s, v) -> {
             Integer percent = number(v);
             if (percent != null) s.set(ElementStyle.OPACITY, percent / 100.0f);
+            else refuse(ElementStyle.OPACITY.cssName);
         });
         valued("z", (s, v) -> set(s, ElementStyle.Z_INDEX, number(v)));
 
@@ -308,11 +348,15 @@ public final class TailwindParser {
             }
             Length wide = spacing(v);
             if (wide != null) s.set(ElementStyle.COLUMN_WIDTH, wide);
+            else refuse(ElementStyle.COLUMN_COUNT.cssName);
         });
 
         valued("line-clamp", (s, v) -> {
             Integer lines = number(v);
-            if (lines == null) return;
+            if (lines == null) {
+                refuse(ElementStyle.LINE_CLAMP.cssName);
+                return;
+            }
             s.set(ElementStyle.LINE_CLAMP, lines);
             if (lines > 0) s.set(ElementStyle.TEXT_OVERFLOW, ElementStyle.TextOverflow.ELLIPSIS);
         });
@@ -343,6 +387,44 @@ public final class TailwindParser {
         keyword("bg-clip-padding", s -> s.set(ElementStyle.BACKGROUND_CLIP, ElementStyle.BackgroundClip.PADDING_BOX));
         keyword("bg-clip-content", s -> s.set(ElementStyle.BACKGROUND_CLIP, ElementStyle.BackgroundClip.CONTENT_BOX));
         keyword("bg-clip-text", s -> s.set(ElementStyle.BACKGROUND_CLIP, ElementStyle.BackgroundClip.TEXT));
+
+        // how big a background image comes out, where it sits and whether it tiles. The image itself is
+        // named by bg-[url(ns:path.png)] or bg-[image:ns:path.png], which the bg- setter picks out.
+        keyword("bg-auto", s -> image(s, i -> i.withFit(BackgroundImage.Fit.AUTO)));
+        keyword("bg-cover", s -> image(s, i -> i.withFit(BackgroundImage.Fit.COVER)));
+        keyword("bg-contain", s -> image(s, i -> i.withFit(BackgroundImage.Fit.CONTAIN)));
+        valued("bg-size", (s, v) -> {
+            Length[] pair = lengths(v);
+            if (pair != null) image(s, i -> i.withSize(pair[0], pair[1]));
+            else refuse(ElementStyle.BACKGROUND_IMAGE.cssName);
+        });
+
+        keyword("bg-repeat", s -> image(s, i -> i.withRepeat(BackgroundImage.Repeat.REPEAT)));
+        keyword("bg-repeat-x", s -> image(s, i -> i.withRepeat(BackgroundImage.Repeat.REPEAT_X)));
+        keyword("bg-repeat-y", s -> image(s, i -> i.withRepeat(BackgroundImage.Repeat.REPEAT_Y)));
+        keyword("bg-no-repeat", s -> image(s, i -> i.withRepeat(BackgroundImage.Repeat.NO_REPEAT)));
+
+        // a percentage lines that much of the image up with that much of the box, so these are all
+        // percentages: bg-center holds the middle of the image over the middle of the box at any size
+        position("center", 50, 50);
+        position("left", 0, 50);
+        position("right", 100, 50);
+        position("top", 50, 0);
+        position("bottom", 50, 100);
+        position("top-left", 0, 0);
+        position("top-right", 100, 0);
+        position("bottom-left", 0, 100);
+        position("bottom-right", 100, 100);
+        // and tailwind v3's way round for the corners, which plenty of markup still says
+        position("left-top", 0, 0);
+        position("right-top", 100, 0);
+        position("left-bottom", 0, 100);
+        position("right-bottom", 100, 100);
+        valued("bg-position", (s, v) -> {
+            Length[] pair = lengths(v);
+            if (pair != null) image(s, i -> i.withPosition(pair[0], pair[1]));
+            else refuse(ElementStyle.BACKGROUND_IMAGE.cssName);
+        });
 
         valued("from", stop(ElementStyle.BACKGROUND_GRADIENT, Stop.FROM));
         valued("via", stop(ElementStyle.BACKGROUND_GRADIENT, Stop.VIA));
@@ -389,32 +471,43 @@ public final class TailwindParser {
         return style.build();
     }
 
-    /** Applies every class it knows onto the builder and hands back the ones it didn't. */
-    public static List<String> parseInto(ElementStyle.Builder style, String classList){
-        List<String> unknown = new ArrayList<>();
-        if (classList == null) return unknown;
+    /** Applies every class it can onto the builder and hands back the ones it could not. */
+    public static List<Problem> parseInto(ElementStyle.Builder style, String classList){
+        List<Problem> problems = new ArrayList<>();
+        if (classList == null) return problems;
 
         for (String className : classList.strip().split("\\s+")) {
-            if (!className.isEmpty() && !apply(style, className)) unknown.add(className);
+            if (className.isEmpty()) continue;
+            Problem problem = apply(style, className);
+            if (problem != null) problems.add(problem);
         }
 
-        return unknown;
+        return problems;
     }
 
-    private static boolean apply(ElementStyle.Builder style, String className){
+    private static Problem apply(ElementStyle.Builder style, String className){
         Consumer<ElementStyle.Builder> keyword = KEYWORDS.get(className);
         if (keyword != null) {
             keyword.accept(style);
-            return true;
+            return null;
         }
 
         for (String prefix : PREFIXES) {
             if (!className.startsWith(prefix + "-")) continue;
-            VALUED.get(prefix).apply(style, className.substring(prefix.length() + 1));
-            return true;
+
+            REFUSED.remove();
+            try {
+                VALUED.get(prefix).apply(style, className.substring(prefix.length() + 1));
+                String refused = REFUSED.get();
+                return refused == null
+                        ? null
+                        : new Problem(className, Problem.Reason.BAD_VALUE, refused.isEmpty() ? null : refused);
+            } finally {
+                REFUSED.remove();
+            }
         }
 
-        return false;
+        return new Problem(className, Problem.Reason.UNKNOWN, null);
     }
 
     private static void keyword(String className, Consumer<ElementStyle.Builder> setter){
@@ -433,16 +526,78 @@ public final class TailwindParser {
         };
     }
 
+    /** The gaps, which take a plain length: auto is a margin's trick and means nothing here. */
+    @SafeVarargs
+    private static Valued gap(ElementStyle.Key<Length>... keys){
+        return (style, value) -> {
+            Length length = spacing(value);
+            if (length == null || length.isAuto()) {
+                refuse(keys[0].cssName);
+                return;
+            }
+            for (ElementStyle.Key<Length> key : keys) style.set(key, length);
+        };
+    }
+
     private static Valued spacingAll(ElementStyle.Key<?>[] shorthand){
         return (style, value) -> {
             Length length = spacing(value);
             if (length != null) style.set(shorthand, length);
+            else refuse(shorthand[0].cssName);
         };
     }
 
     /** Along the x axis "screen" means the viewport's width rather than its height. */
     private static Valued horizontal(Valued setter){
         return (style, value) -> setter.apply(style, value.equals("screen") ? "svw" : value);
+    }
+
+    /** One of the places a background image can sit, as the share of the box its own share lines up with. */
+    private static void position(String name, int x, int y){
+        keyword("bg-" + name, s -> image(s, i -> i.withPosition(Length.percent(x), Length.percent(y))));
+    }
+
+    /**
+     * bg- takes a colour, and an image where one is named: bg-[url(ns:path.png)] or
+     * bg-[image:ns:path.png]. Everything else about the image is said by its own classes, in any order,
+     * since they all merge into the one background-image the element is building.
+     */
+    private static void background(ElementStyle.Builder style, String value){
+        String source = source(value);
+        if (source != null) {
+            if (source.isBlank()) refuse(ElementStyle.BACKGROUND_IMAGE.cssName);
+            else image(style, i -> i.withSource(source));
+            return;
+        }
+        set(style, ElementStyle.BACKGROUND_COLOR, TailwindColors.parse(value));
+    }
+
+    /** The image an url() or an image: names, or null where the value names no image at all. */
+    private static String source(String value){
+        String raw = unwrap(value);
+        if (raw.startsWith("url(") && raw.endsWith(")")) {
+            return raw.substring(4, raw.length() - 1).replace("'", "").replace("\"", "").strip();
+        }
+        return raw.startsWith("image:") ? raw.substring("image:".length()).strip() : null;
+    }
+
+    /** Merges one more thing said about the background image into the one being built. */
+    private static void image(ElementStyle.Builder style, UnaryOperator<BackgroundImage> change){
+        style.set(ElementStyle.BACKGROUND_IMAGE,
+                change.apply(style.get(ElementStyle.BACKGROUND_IMAGE, BackgroundImage.NONE)));
+    }
+
+    /**
+     * The two lengths a size or a position is written with, underscore separated the way tailwind
+     * spells an arbitrary pair: "[64px_32px]", "[50%_auto]", or one value standing for both axes.
+     */
+    private static Length[] lengths(String value){
+        String[] parts = unwrap(value).split("[_,]");
+        if (parts.length < 1 || parts.length > 2) return null;
+
+        Length first = Length.parse(parts[0]);
+        Length second = parts.length == 2 ? Length.parse(parts[1]) : first;
+        return first == null || second == null ? null : new Length[]{ first, second };
     }
 
     /** A direction class on its own, which keeps whatever stops are already there. */
@@ -462,6 +617,7 @@ public final class TailwindParser {
             if (raw.endsWith("deg")) raw = raw.substring(0, raw.length() - 3);
             Float degrees = decimal(raw);
             if (degrees != null) kind(style, key, kind, degrees);
+            else refuse(key.cssName);
         };
     }
 
@@ -474,7 +630,10 @@ public final class TailwindParser {
         return (style, value) -> {
             Float position = position(value);
             Integer color = position == null ? TailwindColors.parse(value) : null;
-            if (color == null && position == null) return;
+            if (color == null && position == null) {
+                refuse(key.cssName); // neither a colour anything knows nor a place along the ramp
+                return;
+            }
 
             Gradient gradient = style.get(key, Gradient.of(Gradient.Direction.TO_R));
             Gradient.Stop held = switch (stop) {
@@ -510,6 +669,7 @@ public final class TailwindParser {
             }
             List<Track> parsed = Track.parse(unwrap(value));
             if (!parsed.isEmpty()) style.set(key, new ElementStyle.Tracks(parsed));
+            else refuse(key.cssName);
         };
     }
 
@@ -532,18 +692,24 @@ public final class TailwindParser {
         set(style, ElementStyle.COLOR, TailwindColors.parse(value));
     }
 
+    /**
+     * border and the classes that name a side: a width for every side ("border-2"), a colour for every
+     * side ("border-sky-500"), or one side's own ("border-t", "border-t-2", "border-t-sky-500"), where
+     * x and y name the pair of sides along an axis.
+     */
     private static void border(ElementStyle.Builder style, String value){
-        ElementStyle.Key<Integer> side = switch (value.length() > 1 ? value.substring(0, 2) : value) {
-            case "t", "t-" -> ElementStyle.BORDER_TOP_WIDTH;
-            case "r", "r-" -> ElementStyle.BORDER_RIGHT_WIDTH;
-            case "b", "b-" -> ElementStyle.BORDER_BOTTOM_WIDTH;
-            case "l", "l-" -> ElementStyle.BORDER_LEFT_WIDTH;
-            default -> null;
-        };
+        String name = value.length() > 1 && value.charAt(1) == '-' ? value.substring(0, 1) : value;
+        Sides sides = SIDES.get(name);
 
-        if (side != null) { // border-t, or border-t-2 for a width with it
-            String width = value.length() > 2 ? value.substring(2) : "";
-            style.set(side, width.isEmpty() ? 1 : number(width)); // border widths are straight pixels, not spacing units
+        if (sides != null) {
+            String rest = value.length() > name.length() + 1 ? value.substring(name.length() + 1) : "";
+            if (rest.isEmpty()) { // border-t on its own is a single pixel, like border is
+                style.set(sides.widths(), 1);
+                return;
+            }
+            Integer width = number(rest); // border widths are straight pixels, not spacing units
+            if (width != null) style.set(sides.widths(), width);
+            else set(style, sides.colors(), TailwindColors.parse(rest));
             return;
         }
 
@@ -558,7 +724,29 @@ public final class TailwindParser {
 
     private static <T> void set(ElementStyle.Builder style, ElementStyle.Key<T> key, T value){
         if (value != null) style.set(key, value);
+        else refuse(key.cssName);
     }
+
+    private static void set(ElementStyle.Builder style, ElementStyle.Key<?>[] shorthand, Object value){
+        if (value != null) style.set(shorthand, value);
+    }
+
+    /** The keys one side name stands for, so border-t and border-x can be read the same way. */
+    private record Sides(ElementStyle.Key<?>[] widths, ElementStyle.Key<?>[] colors) {}
+
+    private static final Map<String, Sides> SIDES = Map.of(
+            "t", new Sides(new ElementStyle.Key<?>[]{ ElementStyle.BORDER_TOP_WIDTH },
+                    new ElementStyle.Key<?>[]{ ElementStyle.BORDER_TOP_COLOR }),
+            "r", new Sides(new ElementStyle.Key<?>[]{ ElementStyle.BORDER_RIGHT_WIDTH },
+                    new ElementStyle.Key<?>[]{ ElementStyle.BORDER_RIGHT_COLOR }),
+            "b", new Sides(new ElementStyle.Key<?>[]{ ElementStyle.BORDER_BOTTOM_WIDTH },
+                    new ElementStyle.Key<?>[]{ ElementStyle.BORDER_BOTTOM_COLOR }),
+            "l", new Sides(new ElementStyle.Key<?>[]{ ElementStyle.BORDER_LEFT_WIDTH },
+                    new ElementStyle.Key<?>[]{ ElementStyle.BORDER_LEFT_COLOR }),
+            "x", new Sides(new ElementStyle.Key<?>[]{ ElementStyle.BORDER_LEFT_WIDTH, ElementStyle.BORDER_RIGHT_WIDTH },
+                    new ElementStyle.Key<?>[]{ ElementStyle.BORDER_LEFT_COLOR, ElementStyle.BORDER_RIGHT_COLOR }),
+            "y", new Sides(new ElementStyle.Key<?>[]{ ElementStyle.BORDER_TOP_WIDTH, ElementStyle.BORDER_BOTTOM_WIDTH },
+                    new ElementStyle.Key<?>[]{ ElementStyle.BORDER_TOP_COLOR, ElementStyle.BORDER_BOTTOM_COLOR }));
 
     /**
      * Everything a size class can say: the spacing scale ("4"), the odd keywords ("px", "auto", "full",

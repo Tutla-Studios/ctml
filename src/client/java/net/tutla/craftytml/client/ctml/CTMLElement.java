@@ -12,7 +12,6 @@ import net.tutla.craftytml.client.tusan.CTMLTokenType;
 import net.tutla.tums.tusan.TusanContext;
 
 import java.lang.reflect.InvocationTargetException;
-import java.util.List;
 
 public abstract class CTMLElement {
     public final String name;
@@ -73,7 +72,7 @@ public abstract class CTMLElement {
 
         ElementProperty property = propertyList.propertyFromName(name);
         if (property instanceof ClassName classes && classes.hasValue()){
-            applyClassStyles(classes.getStringValue());
+            applyClassStyles(classes.getStringValue(), ctx); // the ctx is what lets a bad class point at itself
         }
         // the three a script sets to scroll the element, which is the only lever a script has
         if (property instanceof ScrollX x && x.hasValue()) setScrollOffset(x.getPixels(), scrollY);
@@ -98,9 +97,30 @@ public abstract class CTMLElement {
     }
 
     public void applyClassStyles(String classList){
+        applyClassStyles(classList, null);
+    }
+
+    /**
+     * Reads a class list onto the element, and says so about every class it could not use: one
+     * nothing knows at all, and one whose value is no use to the style it names. Neither stops the
+     * screen being built, since a single typo should cost one class and not the whole file.
+     */
+    public void applyClassStyles(String classList, TusanContext ctx){
         ElementStyle.Builder parsed = ElementStyle.builder();
-        List<String> unknown = TailwindParser.parseInto(parsed, classList);
-        if (!unknown.isEmpty()) System.out.println("[CTML] <" + name + "> has classes nothing knows how to style: " + unknown);
+
+        for (TailwindParser.Problem problem : TailwindParser.parseInto(parsed, classList)) {
+            String message = switch (problem.reason()) {
+                case UNKNOWN -> "<" + name + "> has the class \"" + problem.className()
+                        + "\", which nothing knows how to style";
+                case BAD_VALUE -> "<" + name + "> has the class \"" + problem.className()
+                        + "\", whose value is not one " + (problem.key() == null ? "it" : problem.key())
+                        + " can take";
+            };
+            CTMLDiagnostics.warn(problem.reason() == TailwindParser.Problem.Reason.UNKNOWN
+                    ? "UnknownClass"
+                    : "UnusableValue", message, ctx);
+        }
+
         setStyle(style.inherit(parsed.build()));
     }
 

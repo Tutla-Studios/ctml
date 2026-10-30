@@ -1,5 +1,6 @@
 package net.tutla.craftytml.client.ctml;
 
+import net.tutla.craftytml.client.ctml.style.BackgroundImage;
 import net.tutla.craftytml.client.ctml.style.Gradient;
 import net.tutla.craftytml.client.ctml.style.Length;
 
@@ -58,12 +59,20 @@ public final class ElementStyle {
     public static final Key<Integer> BORDER_RIGHT_WIDTH = key("border-right-width", Integer.class);
     public static final Key<Integer> BORDER_BOTTOM_WIDTH = key("border-bottom-width", Integer.class);
     public static final Key<Integer> BORDER_LEFT_WIDTH = key("border-left-width", Integer.class);
-    public static final Key<Integer> BORDER_COLOR = key("border-color", Integer.class);
+    public static final Key<Integer> BORDER_TOP_COLOR = key("border-top-color", Integer.class);
+    public static final Key<Integer> BORDER_RIGHT_COLOR = key("border-right-color", Integer.class);
+    public static final Key<Integer> BORDER_BOTTOM_COLOR = key("border-bottom-color", Integer.class);
+    public static final Key<Integer> BORDER_LEFT_COLOR = key("border-left-color", Integer.class);
+    public static final Key<BorderStyle> BORDER_TOP_STYLE = key("border-top-style", BorderStyle.class);
+    public static final Key<BorderStyle> BORDER_RIGHT_STYLE = key("border-right-style", BorderStyle.class);
+    public static final Key<BorderStyle> BORDER_BOTTOM_STYLE = key("border-bottom-style", BorderStyle.class);
+    public static final Key<BorderStyle> BORDER_LEFT_STYLE = key("border-left-style", BorderStyle.class);
     public static final Key<Integer> BORDER_RADIUS = key("border-radius", Integer.class);
 
     // background
     public static final Key<Integer> BACKGROUND_COLOR = key("background-color", Integer.class);
-    public static final Key<String> BACKGROUND_IMAGE = key("background-image", String.class);
+    /** The image behind the box, with how big it is drawn, where it sits and whether it tiles. */
+    public static final Key<BackgroundImage> BACKGROUND_IMAGE = key("background-image", BackgroundImage.class);
     public static final Key<Gradient> BACKGROUND_GRADIENT = key("background-gradient", Gradient.class);
     /** How far the background reaches, and TEXT for a background clipped to the glyphs of the text. */
     public static final Key<BackgroundClip> BACKGROUND_CLIP = key("background-clip", BackgroundClip.class);
@@ -153,6 +162,8 @@ public final class ElementStyle {
     public static final Key<?>[] MARGIN = { MARGIN_TOP, MARGIN_RIGHT, MARGIN_BOTTOM, MARGIN_LEFT };
     public static final Key<?>[] PADDING = { PADDING_TOP, PADDING_RIGHT, PADDING_BOTTOM, PADDING_LEFT };
     public static final Key<?>[] BORDER_WIDTH = { BORDER_TOP_WIDTH, BORDER_RIGHT_WIDTH, BORDER_BOTTOM_WIDTH, BORDER_LEFT_WIDTH };
+    public static final Key<?>[] BORDER_COLOR = { BORDER_TOP_COLOR, BORDER_RIGHT_COLOR, BORDER_BOTTOM_COLOR, BORDER_LEFT_COLOR };
+    public static final Key<?>[] BORDER_STYLE = { BORDER_TOP_STYLE, BORDER_RIGHT_STYLE, BORDER_BOTTOM_STYLE, BORDER_LEFT_STYLE };
     public static final Key<?>[] INSET = { TOP, RIGHT, BOTTOM, LEFT };
     public static final Key<?>[] OVERFLOW = { OVERFLOW_X, OVERFLOW_Y };
     public static final Key<?>[] GAP = { ROW_GAP, COLUMN_GAP };
@@ -180,6 +191,11 @@ public final class ElementStyle {
     public enum TableLayout { AUTO, FIXED }
     /** Whether the borders between two cells sit on top of one another or each keep their own room. */
     public enum BorderCollapse { SEPARATE, COLLAPSE }
+    /**
+     * How a side of the frame is drawn. DOUBLE is two lines with a gap, each a third of the width, and
+     * NONE takes the side's width down to nothing, which is what css does with a style of none or hidden.
+     */
+    public enum BorderStyle { SOLID, DASHED, DOTTED, DOUBLE, NONE }
     public enum CaptionSide { TOP, BOTTOM }
     /** Which side of its block a box is pulled to, with the content running past it on the other. */
     public enum Floating { NONE, LEFT, RIGHT }

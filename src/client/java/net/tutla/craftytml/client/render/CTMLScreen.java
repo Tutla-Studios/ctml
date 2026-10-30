@@ -36,6 +36,9 @@ public class CTMLScreen extends Screen {
      */
     private DOMTreeElement scrollFocus;
 
+    /** Watches the cursor while something is held, so a release that never arrives cannot be waited on. */
+    private final CTMLDrag.Watch watch = new CTMLDrag.Watch();
+
     /** When the last frame was drawn, so a smooth scroll moves by time rather than by frames. */
     private long drawnAt;
 
@@ -88,12 +91,18 @@ public class CTMLScreen extends Screen {
             revision = DOMTreeNode.revision();
         }
 
+        // a press ends on a release, and one that never arrives would leave the box following the
+        // cursor for good, so a cursor drawn away from where the drag last saw it lets go instead
+        if (holding() && watch.lost(mouseX, mouseY)) release();
+
         CTMLRenderer.paint(layout, graphics);
     }
 
     /** Takes hold of whatever draggable box the press landed on, and swallows the click if it found one. */
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        release(); // a press means whatever was held before is long since let go, heard of or not
+
         if (event.button() == LEFT_BUTTON) {
             // a press hands the keyboard to whatever scroll container it landed in
             DOMTreeElement pressed = CTMLScroll.focusAt(layout, event.x(), event.y());
@@ -102,10 +111,14 @@ public class CTMLScreen extends Screen {
             bar = CTMLScroll.grab(layout, event.x(), event.y()); // the bars are drawn over everything in their box
             if (bar != null) {
                 scrollFocus = bar.element();
+                watch.saw(event.x(), event.y());
                 return true;
             }
             grip = CTMLDrag.grab(layout, event.x(), event.y());
-            if (grip != null) return true;
+            if (grip != null) {
+                watch.saw(event.x(), event.y());
+                return true;
+            }
         }
         return super.mouseClicked(event, doubleClick);
     }
@@ -117,6 +130,12 @@ public class CTMLScreen extends Screen {
      */
     @Override
     public boolean mouseDragged(MouseButtonEvent event, double deltaX, double deltaY) {
+        if (holding() && event.button() != LEFT_BUTTON) {
+            release(); // another button is doing the dragging now, so the left one is no longer down
+            return super.mouseDragged(event, deltaX, deltaY);
+        }
+
+        watch.saw(event.x(), event.y());
         if (bar != null) {
             bar.follow(event.x(), event.y());
             return true;
@@ -128,12 +147,22 @@ public class CTMLScreen extends Screen {
 
     @Override
     public boolean mouseReleased(MouseButtonEvent event) {
-        if ((grip != null || bar != null) && event.button() == LEFT_BUTTON) {
-            grip = null;
-            bar = null;
+        if (holding() && event.button() == LEFT_BUTTON) {
+            release();
             return true;
         }
         return super.mouseReleased(event);
+    }
+
+    /** Whether the user has hold of a box or of a scrollbar thumb. */
+    private boolean holding() {
+        return grip != null || bar != null;
+    }
+
+    /** Lets go of whatever was held. Safe to call when nothing is. */
+    private void release() {
+        grip = null;
+        bar = null;
     }
 
     /** The wheel goes to the innermost scrollable box under the cursor, and outwards from there. */
@@ -176,12 +205,14 @@ public class CTMLScreen extends Screen {
     @Override
     protected void init() {
         super.init();
+        release(); // a resize rebuilds the screen, and nothing held across it can be trusted
         CTMLState.restore(getTitle().getString(), domTreeHeadElement);
     }
 
     /** And remembers it on the way out, which is the only place it can be written down. */
     @Override
     public void removed() {
+        release(); // the screen is going away mid drag, so the release will never arrive
         CTMLState.remember(getTitle().getString(), domTreeHeadElement);
         super.removed();
     }

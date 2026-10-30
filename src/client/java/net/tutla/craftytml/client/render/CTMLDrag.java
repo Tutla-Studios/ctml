@@ -55,6 +55,41 @@ public final class CTMLDrag {
         }
     }
 
+    /**
+     * Whether a drag has been left holding on. A press ends on a release, and a release that never
+     * arrives (let go outside the window, or the screen changed under it) would otherwise leave the
+     * box following the cursor for good. There is no way to ask for the button's state on this build,
+     * so the cursor itself is the evidence: while the button is down every movement arrives as a drag,
+     * so a cursor drawn somewhere the drag was never told about means the button is up.
+     * Nothing has moved by then, since a drag that is not happening sends nothing to follow.
+     */
+    public static final class Watch {
+        /** How far the drawn cursor may sit from where the drag last saw it before it counts as away. */
+        public static final int SLACK = 2;
+        /** How many frames running it has to be away before the drag is let go, so a late frame is forgiven. */
+        public static final int PATIENCE = 3;
+
+        private double x;
+        private double y;
+        private int away;
+
+        /** Told where the drag has just been taken to, which is where the cursor is meant to be. */
+        public void saw(double mouseX, double mouseY){
+            x = mouseX;
+            y = mouseY;
+            away = 0;
+        }
+
+        /** Told once a frame where the cursor is being drawn. True when the drag should be let go. */
+        public boolean lost(double mouseX, double mouseY){
+            if (Math.abs(mouseX - x) <= SLACK && Math.abs(mouseY - y) <= SLACK) {
+                away = 0;
+                return false;
+            }
+            return ++away >= PATIENCE;
+        }
+    }
+
     /** The draggable box under the cursor, or null. Nothing is grabbed from the root itself: it has no parent to move in. */
     public static Grip grab(CTMLLayout.Box root, double mouseX, double mouseY){
         return root == null ? null : search(root, null, mouseX, mouseY);

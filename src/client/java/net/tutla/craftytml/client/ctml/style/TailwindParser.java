@@ -4,10 +4,12 @@ import net.tutla.craftytml.client.ctml.ElementStyle;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.UnaryOperator;
 
@@ -17,6 +19,10 @@ import java.util.function.UnaryOperator;
  * ("p-4", "bg-red-500", "w-[120px]") sit in VALUED under their prefix, so adding a utility is one line.
  * Anything the parser cannot use is handed back by parseInto, whether it is a class nothing knows
  * at all or a known one carrying a value that makes no sense for it, so whatever called can say so.
+ *
+ * <p>A class can be written behind one or more {@link Variant}s, as "hover:bg-sky-500" is: those are
+ * read apart from the rest by {@link #read}, which hands back a layer per set of variants for the
+ * element to put on while they hold.
  */
 public final class TailwindParser {
     /** A tailwind spacing unit is 0.25rem; one unit to four gui pixels keeps the scale usable in game. */
@@ -27,8 +33,9 @@ public final class TailwindParser {
     /** A class the parser could not use, and why. */
     public record Problem(String className, Reason reason, String key) {
         /**
-         * UNKNOWN is a class nothing knows at all, a variant ("hover:") or a typo; BAD_VALUE is one
-         * whose prefix is known but whose value is not something that style can take.
+         * UNKNOWN is a class nothing knows at all, a typo or a variant ("print:") there is nothing
+         * to test; BAD_VALUE is one whose prefix is known but whose value is not something that
+         * style can take.
          */
         public enum Reason { UNKNOWN, BAD_VALUE }
 
@@ -272,6 +279,10 @@ public final class TailwindParser {
         // misc
         keyword("visible", s -> s.set(ElementStyle.VISIBILITY, ElementStyle.Visibility.VISIBLE));
         keyword("invisible", s -> s.set(ElementStyle.VISIBILITY, ElementStyle.Visibility.HIDDEN));
+
+        // which way round the colours under here are read, which is what the dark: variant looks at
+        keyword("scheme-light", s -> s.set(ElementStyle.COLOR_SCHEME, ElementStyle.ColorScheme.LIGHT));
+        keyword("scheme-dark", s -> s.set(ElementStyle.COLOR_SCHEME, ElementStyle.ColorScheme.DARK));
         keyword("rounded", s -> s.set(ElementStyle.BORDER_RADIUS, 4));
         keyword("border", s -> s.set(ElementStyle.BORDER_WIDTH, 1));
 
@@ -518,23 +529,99 @@ public final class TailwindParser {
     private TailwindParser(){}
 
     public static ElementStyle parse(String classList){
-        ElementStyle.Builder style = ElementStyle.builder();
-        parseInto(style, classList);
-        return style.build();
+        return read(classList).base();
     }
 
-    /** Applies every class it can onto the builder and hands back the ones it could not. */
+    /**
+     * Applies every class it can onto the builder and hands back the ones it could not. The classes
+     * behind a variant are read for whether they make sense, and so still say so when they do not,
+     * but their styles are dropped, since a builder has nowhere to keep the condition on them: use
+     * {@link #read} to keep them.
+     */
     public static List<Problem> parseInto(ElementStyle.Builder style, String classList){
+        Sheet sheet = read(classList);
+        style.setAll(sheet.base());
+        return sheet.problems();
+    }
+
+    /**
+     * A class list read apart into the styles that are always there and the ones waiting on a variant.
+     * Every class with the same set of variants in front of it ends up in one layer, in the order the
+     * first of them was written, so a layer that comes later has the say over one that comes earlier.
+     */
+    public record Sheet(ElementStyle base, List<Layer> layers, List<Problem> problems) {
+        public static final Sheet EMPTY = new Sheet(ElementStyle.UNSET, List.of(), List.of());
+    }
+
+    /**
+     * Styles that only land while every variant in front of them holds, with that set of variants as
+     * one number as well, which is what an element tests against the variants it finds holding.
+     */
+    public record Layer(Set<Variant> variants, long mask, ElementStyle style) {}
+
+    public static Sheet read(String classList){
+        if (classList == null) return Sheet.EMPTY;
+
+        ElementStyle.Builder base = ElementStyle.builder();
+        Map<Set<Variant>, ElementStyle.Builder> layers = new LinkedHashMap<>();
         List<Problem> problems = new ArrayList<>();
-        if (classList == null) return problems;
 
         for (String className : classList.strip().split("\\s+")) {
             if (className.isEmpty()) continue;
-            Problem problem = apply(style, className);
-            if (problem != null) problems.add(problem);
+
+            List<String> parts = segments(className);
+            String utility = parts.getLast();
+            Set<Variant> variants = EnumSet.noneOf(Variant.class);
+            boolean known = !utility.isEmpty();
+
+            for (String name : parts.subList(0, parts.size() - 1)) {
+                Variant variant = Variant.named(name);
+                if (variant == null) known = false;
+                else variants.add(variant);
+            }
+
+            if (!known) { // a variant nothing here has, or a variant with no class behind it
+                problems.add(new Problem(className, Problem.Reason.UNKNOWN, null));
+                continue;
+            }
+
+            ElementStyle.Builder into = variants.isEmpty()
+                    ? base
+                    : layers.computeIfAbsent(variants, v -> ElementStyle.builder());
+
+            Problem problem = apply(into, utility);
+            // said against the class as it was written, variants and all, so a warning can be found
+            if (problem != null) problems.add(new Problem(className, problem.reason(), problem.key()));
         }
 
-        return problems;
+        List<Layer> read = new ArrayList<>();
+        layers.forEach((variants, style) -> read.add(new Layer(variants, Variant.mask(variants), style.build())));
+        return new Sheet(base.build(), read, problems);
+    }
+
+    /**
+     * A class split at the colons in front of it: every variant in order, and then the class itself
+     * last. Only the colons outside brackets count, so the one in bg-[url(mod:a.png)] is left alone.
+     */
+    private static List<String> segments(String className){
+        List<String> parts = new ArrayList<>();
+        int depth = 0;
+        int start = 0;
+        for (int i = 0; i < className.length(); i++) {
+            switch (className.charAt(i)) {
+                case '[', '(' -> depth++;
+                case ']', ')' -> depth--;
+                case ':' -> {
+                    if (depth == 0) {
+                        parts.add(className.substring(start, i));
+                        start = i + 1;
+                    }
+                }
+                default -> { }
+            }
+        }
+        parts.add(className.substring(start));
+        return parts;
     }
 
     private static Problem apply(ElementStyle.Builder style, String className){

@@ -53,27 +53,36 @@ OVERFLOW AND SCROLLING  (render/CTMLScroll.java, render/CTMLFocus.java)
   names the cases; this picks a new anchor and waits for the frame after.
 - SUGGESTION: tab walks the ring through everything that can take it in one order, and there is no way
   to hold it inside a part of the screen: no focus trap, and no arrow key walking within a group.
-  A ring is drawn by ring-*, so styling what has the keyboard any other way needs a focus: variant,
-  which the parser has none of.
+  A ring is drawn by ring-*, and anything else about what has the keyboard is a focus: or
+  focus-within: class on it.
 
 
 STYLE SYSTEM  (ctml/ElementStyle.java, ctml/style/*)
 ----------------------------------------------------
-- WARN: no variants at all: hover:, focus:, active:, dark:, md: and friends come back from the
-  parser as unknown.
-- WARN: the text initial values only exist on <ctml>, since a default on every element would block
-  the parent's value from ever reaching a child, so an element laid out with no ctml root above
-  it has no colour or font size to fall back on bar the renderer's own constants.
+- SUGGESTION: the variants are the ones that can be answered from the element and the screen alone:
+  hover, focus, focus-visible, focus-within, active, dark, the breakpoints sm to 2xl and their max-
+  halves, and first, last, only, odd and even. Nothing else is one: no group- or peer-, since no
+  element watches another's state for it, and no print, motion-reduce or contrast-more, since there
+  is no such setting to read. focus-visible is the same as focus, a ctml focus always being drawn.
+  The three about the mouse and the keyboard are told to the tree by the screen it is open in, so a
+  host that draws a tree itself with CTMLRenderer.render has to say them with setHovered and friends.
+- SUGGESTION: the breakpoints are gui pixels rather than css ones, since that is what ctml measures
+  in: sm 320, md 480, lg 640, xl 854, 2xl 1024, which puts the usual minecraft window around md and
+  lg rather than off the end of css's own 640 to 1536.
+- SUGGESTION: dark: asks the nearest element at or above it that set a colour scheme with scheme-dark
+  or scheme-light, and Media.dark() where none did. A scheme set behind a variant is not read when
+  that question is being answered, so dark:scheme-light says nothing to the element under it.
 - SUGGESTION: no box-shadow, outline, cursor, font-family, transform, transition or animation. With no
   font-family there is nothing monospaced to put <code> and <pre> in, so they keep the spacing they
   were written with and leave the look to the classes on them.
 - SUGGESTION: there is no way to set defaults from a script, and no per element reset: a new element
   has to override defaultStyle() in java.
-- SUGGESTION: an element's styles are two layers, the class property under whatever was set by hand,
-  and reading the class property again replaces everything the classes said before it rather than
-  piling onto it, which is what lets a callback show a box it had hidden. There is no classList, but
-  the property holds the list the element was written with and reads back as it stands, so adding or
-  taking away one class is an edit to that string: nothing is lost by having to write it back whole.
+- SUGGESTION: an element's styles are three layers, the plain classes under every layer of classes
+  whose variants are holding under whatever was set by hand, and reading the class property again
+  replaces everything the classes said before it rather than piling onto it, which is what lets a
+  callback show a box it had hidden. There is no classList, but the property holds the list the
+  element was written with and reads back as it stands, so adding or taking away one class is an
+  edit to that string: nothing is lost by having to write it back whole.
 - SUGGESTION: gradient colour interpolation modifiers (bg-linear-to-r/oklch, /srgb-linear) are not
   read, and every ramp is mixed channel by channel in plain srgb.
 - SUGGESTION: a from- / via- / to- class with no shape class before it assumes bg-linear-to-r, and
@@ -97,8 +106,8 @@ SCREEN AND REGISTRY  (render/CTMLScreen.java, render/UIRegistry.java, CraftytmlC
   is ctml, div, span, img, button, the table tags and the markdown set (h1 to h6, p, ul, ol, li,
   blockquote, pre, code, hr, br, b, strong, i, em, s, del, u, ins). An img has no alt text and nothing
   to say while its texture loads, and a button is a box that can be pressed: it is not disabled by
-  anything, has no pressed or hovered look of its own, and nothing in the parser can style it per
-  state anyway.
+  anything, and has no pressed or hovered look of its own, so one is written on it with hover: and
+  active: like on any other box.
 - SUGGESTION: every element ends up with an id, its own or one handed out in order the first time it is
   asked for, and getElementById walks the tree each time it is called rather than keeping a map: a
   tree that changes shape can never hand back something stale, at the cost of a walk per lookup.

@@ -2,8 +2,8 @@
 
   <div class="flex-1 h-full flex flex-col gap-1">
 
-    <div class="w-full bg-slate-800 border border-slate-600 rounded px-1 py-[2px] text-center text-amber-400 font-bold" text="CraftyTML" draggable>
-      <div class="w-full text-center text-slate-400 font-normal text-xs" text="tailwind demo: div, span, table, img and the markdown set"></div>
+    <div class="w-full bg-slate-800 border border-slate-600 rounded px-1 py-[2px] text-center text-amber-400 font-bold" text="CraftyTML" >
+      <div class="w-full text-center text-slate-400 font-normal text-xs" text="uhh ts full demo"></div>
     </div>
 
     <div class="w-full bg-slate-800 border border-slate-700 rounded-sm px-1 py-[2px] text-xs text-slate-400" text="font sizes">
@@ -498,18 +498,78 @@
     </div>
 
     <div class="w-full bg-slate-800 border border-slate-700 rounded-sm px-1 py-[2px] text-xs text-slate-400" text="buttons and callbacks">
-      <button class="px-1 py-[2px] rounded-sm bg-sky-600 border border-sky-400 text-slate-100 text-xs" callback="togglePanel" text="hide the panel"></button>
+      <button class="px-1 py-[2px] rounded-sm bg-sky-600 border border-sky-400 text-slate-100 text-xs hover:bg-sky-500 active:bg-sky-700 focus:border-slate-100" callback="togglePanel" text="hide the panel"></button>
       <div id="callback-panel" class="w-full mt-1 px-1 py-[2px] rounded-sm bg-emerald-900 border border-emerald-600 text-emerald-200 text-xs" text="the panel the button toggles">
         <div class="w-full text-xs text-emerald-400" text="the callback swaps this box's class property"></div>
       </div>
       <div class="w-full text-xs text-slate-500 mt-1" text="press it, or tab to it and hit enter"></div>
+      <div class="w-full text-xs text-slate-500" text="its lit and pressed looks are hover: and active: classes"></div>
     </div>
 
     <div class="w-full bg-slate-800 border border-slate-700 rounded-sm px-1 py-[2px] text-xs text-slate-400" text="variables in strings">
-      <button class="px-1 py-[2px] rounded-sm bg-amber-600 border border-amber-400 text-slate-900 text-xs" callback="clickCookie" text="cookie"></button>
+      <button class="px-1 py-[2px] rounded-sm bg-amber-600 border border-amber-400 text-slate-900 text-xs hover:bg-amber-400 active:bg-amber-700" callback="clickCookie" text="cookie"></button>
       <div class="w-full mt-1 text-xs text-amber-200">cookies: ${cookies}</div>
       <div class="w-full text-xs ${cookieMood}" text="${cookieWord}"></div>
       <div class="w-full text-xs text-slate-500 mt-1" text="the text says ${cookies} and nothing here was rewritten"></div>
+    </div>
+
+    <div class="w-full bg-slate-800 border border-slate-700 rounded-sm px-1 py-[2px] text-xs text-slate-400" text="hover and press">
+      <div class="w-full flex flex-row gap-1 items-start">
+        <div class="w-10 h-6 rounded-sm bg-slate-700 hover:bg-sky-600 active:bg-sky-300 active:text-slate-900">
+          <div class="w-full text-center text-xs text-slate-300" text="hov"></div>
+        </div>
+        <div class="w-10 h-6 rounded-sm bg-slate-700 border border-slate-600 hover:border-amber-400 hover:text-amber-300">
+          <div class="w-full text-center text-xs text-slate-300" text="brdr"></div>
+        </div>
+        <div class="w-10 h-6 rounded-sm bg-emerald-800 hover:w-16 hover:bg-emerald-600">
+          <div class="w-full text-center text-xs text-emerald-200" text="wide"></div>
+        </div>
+      </div>
+      <div class="w-full text-xs text-slate-500" text="the cursor reaches the box and everything it is inside"></div>
+      <div class="w-full text-xs text-slate-500" text="hold the left button on one for its active: colour"></div>
+    </div>
+
+    <div class="w-full bg-slate-800 border border-slate-700 rounded-sm px-1 py-[2px] text-xs text-slate-400" text="focus and focus-within">
+      <div class="w-full flex flex-row gap-1 items-start pl-1 border-l-2 border-slate-700 focus-within:border-sky-400">
+        <div class="w-10 h-6 rounded-sm bg-slate-700 focus:bg-sky-700 focus:text-sky-200" tabindex=3>
+          <div class="w-full text-center text-xs text-slate-300" text="3rd"></div>
+        </div>
+        <div class="w-10 h-6 rounded-sm bg-slate-700 focus:bg-emerald-700 focus:text-emerald-200" tabindex=4>
+          <div class="w-full text-center text-xs text-slate-300" text="4th"></div>
+        </div>
+      </div>
+      <div class="w-full text-xs text-slate-500" text="tab to one: it takes its own colour"></div>
+      <div class="w-full text-xs text-slate-500" text="and the row keeps the bar while either of them has it"></div>
+    </div>
+
+    <div class="w-full bg-slate-800 border border-slate-700 rounded-sm px-1 py-[2px] text-xs text-slate-400" text="where a row comes in the list">
+      <div class="w-full flex flex-col">
+        <div class="w-full px-1 text-xs odd:bg-slate-700 even:bg-slate-600 first:text-amber-300 last:text-rose-300" text="first, and odd"></div>
+        <div class="w-full px-1 text-xs odd:bg-slate-700 even:bg-slate-600 first:text-amber-300 last:text-rose-300" text="even"></div>
+        <div class="w-full px-1 text-xs odd:bg-slate-700 even:bg-slate-600 first:text-amber-300 last:text-rose-300" text="odd"></div>
+        <div class="w-full px-1 text-xs odd:bg-slate-700 even:bg-slate-600 first:text-amber-300 last:text-rose-300" text="last, and even"></div>
+      </div>
+      <div class="w-full text-xs text-slate-500 mt-1" text="odd and even stripe them, first and last colour the ends"></div>
+      <div class="w-full text-xs text-slate-500" text="css counts from one, so the first row is an odd one"></div>
+    </div>
+
+    <div class="w-full bg-slate-800 border border-slate-700 rounded-sm px-1 py-[2px] text-xs text-slate-400" text="the viewport">
+      <div class="w-full px-1 py-[2px] rounded-sm bg-slate-700 max-md:bg-rose-800 md:bg-emerald-800 lg:bg-sky-800">
+        <span class="block md:hidden text-xs text-rose-200" text="under md: this window is narrow"></span>
+        <span class="hidden md:block lg:hidden text-xs text-emerald-200" text="md: somewhere in the middle"></span>
+        <span class="hidden lg:block text-xs text-sky-200" text="lg and up: plenty of room"></span>
+      </div>
+      <div class="w-full text-xs text-slate-500 mt-1" text="resize the window or change the gui scale"></div>
+      <div class="w-full text-xs text-slate-500" text="gui pixels, not css ones: sm 320 md 480 lg 640 xl 854"></div>
+    </div>
+
+    <div class="w-full bg-slate-800 border border-slate-700 rounded-sm px-1 py-[2px] text-xs text-slate-400" text="dark and the colour scheme">
+      <div class="w-full scheme-dark px-1 py-[2px] rounded-sm border border-slate-600 bg-slate-100 text-slate-900 dark:bg-slate-900 dark:text-sky-300" text="scheme-dark, so the dark: classes land"></div>
+      <div class="w-full mt-1 scheme-light px-1 py-[2px] rounded-sm border border-slate-600 bg-slate-100 text-slate-900 dark:bg-slate-900 dark:text-sky-300" text="scheme-light, so the same box reads the other way"></div>
+      <div class="w-full mt-1 scheme-dark px-1 py-[2px] rounded-sm border border-slate-700 bg-slate-900">
+        <div class="w-full px-1 text-xs bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-emerald-300" text="the scheme comes from the box around this one"></div>
+      </div>
+      <div class="w-full text-xs text-slate-500 mt-1" text="with nothing saying, dark: is whatever the host set"></div>
     </div>
   </div>
 </ctml>

@@ -10,6 +10,8 @@ import net.tutla.craftytml.client.dom.DOMContext;
 import net.tutla.craftytml.client.dom.DOMTreeElement;
 import net.tutla.craftytml.client.dom.DOMTreeNode;
 
+import java.util.List;
+
 public class CTMLScreen extends Screen {
     private static final int LEFT_BUTTON = CTMLEvents.MouseButton.LEFT;
 
@@ -41,6 +43,13 @@ public class CTMLScreen extends Screen {
 
     /** What the cursor was last over that names a callback, so entering a new one is told about once. */
     private DOMTreeElement hovered;
+
+    /**
+     * What the cursor is over, what has the keyboard and what is being pressed, which is what the
+     * hover:, focus: and active: style variants ask about. Only the elements whose classes ask get
+     * anything out of it, so a page with none of those is told nothing all frame.
+     */
+    private final CTMLStates states = new CTMLStates();
 
     /** Watches the cursor while something is held, so a release that never arrives cannot be waited on. */
     private final CTMLDrag.Watch watch = new CTMLDrag.Watch();
@@ -79,6 +88,15 @@ public class CTMLScreen extends Screen {
         drawnAt = now;
         CTMLScroll.animate(layout, elapsed);
 
+        // the chain of boxes under the cursor, which both the hover callback and the hover: variant
+        // are worked out from. It is tested against the boxes of the frame before, which is the only
+        // layout there is at this point; anything a state moves bumps the revision, so the layout
+        // below is worked out again with the new styles and this frame draws where things end up
+        List<CTMLLayout.Box> under = CTMLFocus.path(layout, mouseX, mouseY);
+        states.cursor(under);
+        states.keyboard(focus);
+
+        CTMLLayout.Box was = layout;
         long current = DOMTreeNode.revision();
         if (layout == null || current != revision || width != laidOutWidth || height != laidOutHeight) {
             layout = CTMLRenderer.layout(domTreeHeadElement, width, height);
@@ -100,12 +118,19 @@ public class CTMLScreen extends Screen {
             revision = DOMTreeNode.revision();
         }
 
+        // the boxes have moved, so where the cursor is may have as well. Worked out once more against
+        // where things ended up, so what hears about a hover is what is under the cursor now
+        if (layout != was) {
+            under = CTMLFocus.path(layout, mouseX, mouseY);
+            states.cursor(under);
+        }
+
         // a press ends on a release, and one that never arrives would leave the box following the
         // cursor for good, so a cursor drawn away from where the drag last saw it lets go instead
         if (holding() && watch.lost(mouseX, mouseY)) release();
 
         // the cursor moving onto something that wants to hear about it, which is told once on the way in
-        DOMTreeElement over = CTMLEvents.at(layout, domCtx, mouseX, mouseY);
+        DOMTreeElement over = CTMLEvents.at(under, domCtx);
         if (over != hovered) {
             hovered = over;
             CTMLEvents.hover(domCtx, over);
@@ -120,6 +145,9 @@ public class CTMLScreen extends Screen {
         release(); // a press means whatever was held before is long since let go, heard of or not
 
         if (event.button() == LEFT_BUTTON) {
+            // everything the press landed in is active while it is held, the way css has it
+            states.press(CTMLFocus.path(layout, event.x(), event.y()));
+
             // a press hands the keyboard to whatever it landed on, or to the nearest box above it that
             // can take it. Nothing focusable under the cursor leaves the focus where it was
             DOMTreeElement pressed = CTMLFocus.at(layout, event.x(), event.y());
@@ -187,6 +215,7 @@ public class CTMLScreen extends Screen {
     private void release() {
         grip = null;
         bar = null;
+        states.release(); // nothing is active once the button is up, held box or not
     }
 
     /**
@@ -245,6 +274,7 @@ public class CTMLScreen extends Screen {
         release(); // a resize rebuilds the screen, and nothing held across it can be trusted
         reveal = false;
         hovered = null;
+        states.clear();
     }
 
     /**
@@ -255,6 +285,7 @@ public class CTMLScreen extends Screen {
     @Override
     public void removed() {
         release(); // the screen is going away mid drag, so the release will never arrive
+        states.clear(); // and nothing left on the tree should look hovered or focused the next time it is shown
         super.removed();
     }
 

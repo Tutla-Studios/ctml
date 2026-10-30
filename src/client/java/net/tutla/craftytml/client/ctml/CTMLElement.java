@@ -8,7 +8,9 @@ import net.tutla.craftytml.client.ctml.property.ScrollInto;
 import net.tutla.craftytml.client.ctml.property.ScrollX;
 import net.tutla.craftytml.client.ctml.property.ScrollY;
 import net.tutla.craftytml.client.ctml.property.TabIndex;
+import net.tutla.craftytml.client.ctml.style.Media;
 import net.tutla.craftytml.client.ctml.style.TailwindParser;
+import net.tutla.craftytml.client.ctml.style.Variant;
 import net.tutla.craftytml.client.dom.DOMContext;
 import net.tutla.craftytml.client.dom.DOMTreeElement;
 import net.tutla.craftytml.client.dom.DOMTreeNode;
@@ -16,16 +18,26 @@ import net.tutla.craftytml.client.tusan.CTMLTokenType;
 import net.tutla.tums.tusan.TusanContext;
 
 import java.lang.reflect.InvocationTargetException;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public abstract class CTMLElement {
+public abstract class CTMLElement implements Variant.State {
     public final String name;
     public final CTMLElementProperties propertyList; //wierd naming convention cuz properties would eb for an instance not like the shi itself iywim
     private ElementStyle style = ElementStyle.UNSET; //not final like the property list cuz every style set swaps the whole thing out
     private ElementStyle classStyle = ElementStyle.UNSET; //what the class property last read as, under the styles set by hand
+    private List<TailwindParser.Layer> classLayers = List.of(); //and the ones behind a variant, in the order written
+    private long usedVariants; //every variant those layers name, so a state nothing asks about costs nothing
     private ElementStyle computed; //style over the element's defaults, kept until something changes it
+    private long computedFor; //the variants that were holding when that was worked out
+
+    //what the variants about this element itself ask: see Variant
+    private boolean hovered;
+    private boolean focused;
+    private boolean focusWithin;
+    private boolean active;
 
     //every id in play, so one made up here can never land on one a script wrote
     private static final Set<String> TAKEN_IDS = ConcurrentHashMap.newKeySet();
@@ -108,6 +120,21 @@ public abstract class CTMLElement {
             .set(ElementStyle.BOX_SIZING, ElementStyle.BoxSizing.BORDER_BOX) // what tailwind's preflight does
             .build();
 
+    /**
+     * The initial values of the styles that come down the tree, which belong to nothing in particular:
+     * putting them on an element as a default would stop the parent's value ever reaching it. They are
+     * seeded once at the root of whatever is being laid out instead, so the tree bottoms out in them
+     * however it is rooted, with or without a {@code <ctml>} over it.
+     */
+    public static final ElementStyle INHERITED_INITIAL = ElementStyle.builder()
+            .set(ElementStyle.COLOR, 0xFFFFFFFF)
+            .set(ElementStyle.FONT_SIZE, 16)
+            .set(ElementStyle.TEXT_ALIGN, ElementStyle.TextAlign.LEFT)
+            .set(ElementStyle.TEXT_SHADOW, true) // minecraft draws text with a shadow unless told not to
+            .set(ElementStyle.WHITE_SPACE, ElementStyle.WhiteSpace.NORMAL)
+            .set(ElementStyle.VISIBILITY, ElementStyle.Visibility.VISIBLE)
+            .build();
+
     /** Overridden by the elements that behave differently from a plain div. */
     public ElementStyle defaultStyle(){
         return DEFAULTS;
@@ -140,9 +167,9 @@ public abstract class CTMLElement {
      * screen being built, since a single typo should cost one class and not the whole file.
      */
     public void applyClassStyles(String classList, TusanContext ctx){
-        ElementStyle.Builder parsed = ElementStyle.builder();
+        TailwindParser.Sheet sheet = TailwindParser.read(named(classList));
 
-        for (TailwindParser.Problem problem : TailwindParser.parseInto(parsed, named(classList))) {
+        for (TailwindParser.Problem problem : sheet.problems()) {
             String message = switch (problem.reason()) {
                 case UNKNOWN -> "<" + name + "> has the class \"" + problem.className()
                         + "\", which nothing knows how to style";
@@ -158,20 +185,149 @@ public abstract class CTMLElement {
         // the class property says everything the classes have to say, so reading it again replaces what
         // it said before rather than piling onto it: a script that takes "hidden" off the list means it
         // to go. Styles set by hand are a layer of their own and sit on top of this, the way css has them
-        classStyle = parsed.build();
+        classStyle = sheet.base();
+        classLayers = sheet.layers();
+        usedVariants = 0;
+        for (TailwindParser.Layer layer : classLayers) usedVariants |= layer.mask();
         computed = null;
         changed();
     }
 
     /** Everything set on the element, with its own defaults underneath for whatever is left. */
     public ElementStyle getStyle(){
-        if (computed == null) computed = style.inherit(classStyle).inherit(defaultStyle());
+        long holding = holdingVariants();
+        if (computed == null || holding != computedFor) {
+            computed = getOwnStyle(holding).inherit(defaultStyle());
+            computedFor = holding;
+        }
         return computed;
     }
 
     /** Only what was actually set on this element, so defaults don't get mistaken for author styles. */
     public ElementStyle getOwnStyle(){
-        return style.inherit(classStyle);
+        return getOwnStyle(holdingVariants());
+    }
+
+    /**
+     * The three layers the classes and the script make, innermost first: the classes with no variant
+     * in front of them, then every layer of classes whose variants are holding, in the order they were
+     * written, and then whatever was set on the element by hand over all of it.
+     */
+    private ElementStyle getOwnStyle(long holding){
+        ElementStyle layered = classStyle;
+        if (holding != 0) {
+            for (TailwindParser.Layer layer : classLayers) {
+                if ((layer.mask() & ~holding) == 0) layered = layer.style().inherit(layered);
+            }
+        }
+        return style.inherit(layered);
+    }
+
+    /** Which of the variants this element's own classes ask about are holding right now, as one number. */
+    private long holdingVariants(){
+        if (usedVariants == 0) return 0;
+
+        long holding = 0;
+        for (Variant variant : Variant.values()) {
+            long bit = 1L << variant.ordinal();
+            if ((usedVariants & bit) != 0 && variant.holds(this)) holding |= bit;
+        }
+        return holding;
+    }
+
+    /**
+     * Whether the cursor is over the element or over something inside it, which is what hover: asks.
+     * Said by whatever is watching the cursor, and only worth anything where a class asked about it:
+     * the answer is kept either way, and the tree is only marked as changed where it moves something.
+     */
+    public boolean setHovered(boolean hovered){
+        if (this.hovered == hovered) return false;
+        this.hovered = hovered;
+        return restyled(Variant.HOVER);
+    }
+
+    /** Whether the element itself has the keyboard, behind focus: and focus-visible:. */
+    public boolean setFocused(boolean focused){
+        if (this.focused == focused) return false;
+        this.focused = focused;
+        return restyled(Variant.FOCUS, Variant.FOCUS_VISIBLE, Variant.FOCUS_WITHIN);
+    }
+
+    /** Whether something inside the element has it, which only focus-within: asks about. */
+    public boolean setFocusWithin(boolean focusWithin){
+        if (this.focusWithin == focusWithin) return false;
+        this.focusWithin = focusWithin;
+        return restyled(Variant.FOCUS_WITHIN);
+    }
+
+    /** Whether a button is being held on the element or on something inside it, behind active:. */
+    public boolean setActive(boolean active){
+        if (this.active == active) return false;
+        this.active = active;
+        return restyled(Variant.ACTIVE);
+    }
+
+    /**
+     * Says the element may look different now, and whether that is worth laying anything out for:
+     * a state no class on it asks about changes nothing, however often it moves.
+     */
+    private boolean restyled(Variant... variants){
+        for (Variant variant : variants) {
+            if ((usedVariants & (1L << variant.ordinal())) == 0) continue;
+            computed = null;
+            changed();
+            return true;
+        }
+        return false;
+    }
+
+    @Override public boolean isHovered(){ return hovered; }
+    @Override public boolean isFocused(){ return focused; }
+    @Override public boolean isFocusWithin(){ return focusWithin; }
+    @Override public boolean isActive(){ return active; }
+
+    /**
+     * Whether the element is being drawn dark: what the nearest element at or above it that set a
+     * colour scheme set it to, or what the host says the ui as a whole is where none of them did.
+     * The scheme is read off the styles themselves rather than through getStyle, which is what is
+     * being worked out when this is asked.
+     */
+    @Override
+    public boolean isDark(){
+        for (CTMLElement each = this; each != null; each = each.parentElement()) {
+            ElementStyle.ColorScheme scheme = each.style.get(ElementStyle.COLOR_SCHEME);
+            if (scheme == null) scheme = each.classStyle.get(ElementStyle.COLOR_SCHEME);
+            if (scheme != null) return scheme == ElementStyle.ColorScheme.DARK;
+        }
+        return Media.isDark();
+    }
+
+    @Override
+    public int siblingIndex(){
+        DOMTreeElement parent = node == null ? null : node.getParent();
+        if (parent == null) return -1;
+
+        int index = 0;
+        for (DOMTreeNode sibling : parent.getChildren()) {
+            if (sibling == node) return index;
+            if (sibling instanceof DOMTreeElement) index++;
+        }
+        return -1;
+    }
+
+    @Override
+    public int siblingCount(){
+        DOMTreeElement parent = node == null ? null : node.getParent();
+        if (parent == null) return 0;
+
+        int count = 0;
+        for (DOMTreeNode sibling : parent.getChildren()) if (sibling instanceof DOMTreeElement) count++;
+        return count;
+    }
+
+    private CTMLElement parentElement(){
+        DOMTreeElement parent = node == null ? null : node.getParent();
+        return parent == null ? null : parent.getElement();
     }
 
     public void setStyle(ElementStyle style){

@@ -9,20 +9,16 @@ import net.tutla.craftytml.client.tusan.CTMLTokenType;
 
 public class CTML extends CTMLElement {
     /**
-     * The document root, so this is html and body in one: it fills the screen and holds the text
-     * values everything below inherits, since there is nothing further up to get them from.
+     * The document root, so this is html and body in one: it fills the screen, and the text values
+     * everything below inherits bottom out in it. Those are {@link CTMLElement#INHERITED_INITIAL},
+     * which layout seeds at whatever it is rooted at, so a tree with no ctml over it has them too.
      */
     private static final ElementStyle ROOT_DEFAULTS = DEFAULTS.toBuilder()
             .set(ElementStyle.WIDTH, Length.FULL)
             .set(ElementStyle.HEIGHT, Length.FULL)
             .set(ElementStyle.MARGIN, Length.ZERO)
             .set(ElementStyle.PADDING, Length.ZERO)
-            .set(ElementStyle.COLOR, 0xFFFFFFFF)
-            .set(ElementStyle.FONT_SIZE, 16)
-            .set(ElementStyle.TEXT_ALIGN, ElementStyle.TextAlign.LEFT)
-            .set(ElementStyle.TEXT_SHADOW, true) // minecraft draws text with a shadow unless told not to
-            .set(ElementStyle.WHITE_SPACE, ElementStyle.WhiteSpace.NORMAL)
-            .set(ElementStyle.VISIBILITY, ElementStyle.Visibility.VISIBLE)
+            .setAll(INHERITED_INITIAL)
             .build();
 
     public CTML(){

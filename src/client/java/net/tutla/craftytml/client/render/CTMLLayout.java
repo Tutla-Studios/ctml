@@ -4,6 +4,7 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import net.minecraft.util.FormattedCharSequence;
+import net.tutla.craftytml.client.ctml.CTMLElement;
 import net.tutla.craftytml.client.ctml.ElementStyle;
 import net.tutla.craftytml.client.ctml.element.markdown.Img;
 import net.tutla.craftytml.client.ctml.element.markdown.paragraph.LineBreak;
@@ -12,6 +13,7 @@ import net.tutla.craftytml.client.ctml.property.Reversed;
 import net.tutla.craftytml.client.ctml.property.Start;
 import net.tutla.craftytml.client.ctml.property.Value;
 import net.tutla.craftytml.client.ctml.style.Length;
+import net.tutla.craftytml.client.ctml.style.Media;
 import net.tutla.craftytml.client.ctml.style.Track;
 import net.tutla.craftytml.client.dom.DOMTreeElement;
 import net.tutla.craftytml.client.dom.DOMTreeNode;
@@ -178,7 +180,11 @@ public final class CTMLLayout {
 
     private static final Map<DOMTreeElement, Sizes> SIZES = new WeakHashMap<>();
 
-    private record Measured(int basis, ElementStyle style) {}
+    /**
+     * The viewport is in here beside the room and the style, since what is inside the subtree can be
+     * measured against it: a vw unit reads it, and so does a breakpoint variant on a class down there.
+     */
+    private record Measured(int basis, ElementStyle style, long view) {}
 
     /**
      * Everything the layout of an element depends on bar where it was put: the style it inherits, the
@@ -284,6 +290,24 @@ public final class CTMLLayout {
         this.metrics = metrics;
         this.viewWidth = viewWidth;
         this.viewHeight = viewHeight;
+        // the breakpoint variants are asked about on an element, which has no viewport to look at,
+        // so this is where the viewport they read is written down
+        Media.measured(viewWidth, viewHeight);
+        forget();
+    }
+
+    /**
+     * Everything measured before, where anything a style depends on from outside the tree has moved
+     * since: the viewport is in the keys below, but a colour scheme the host switched is in neither
+     * the keys nor any element's revision, so there would be no telling the stale boxes apart.
+     */
+    private static long mediaGeneration = -1;
+
+    private static void forget(){
+        if (mediaGeneration == Media.generation()) return;
+        mediaGeneration = Media.generation();
+        SIZES.clear();
+        REUSABLE.clear();
     }
 
     /**
@@ -299,10 +323,16 @@ public final class CTMLLayout {
         };
     }
 
-    /** The screen is the root's containing block, so unless it says otherwise the root box is the screen. */
+    /**
+     * The screen is the root's containing block, so unless it says otherwise the root box is the screen,
+     * and the inherited text values bottom out here: whatever is laid out is the top of its own tree,
+     * with or without a {@code <ctml>} over it, so this is the one place they can be seeded for every
+     * tree alike. An element that sets one of its own still has the say, the way a root always does.
+     */
     private static final ElementStyle ROOT_DEFAULTS = ElementStyle.builder()
             .set(ElementStyle.WIDTH, Length.FULL)
             .set(ElementStyle.HEIGHT, Length.FULL)
+            .setAll(CTMLElement.INHERITED_INITIAL)
             .build();
 
     public Box layout(DOMTreeElement element, int x, int y, int availableWidth, int availableHeight){
@@ -748,7 +778,7 @@ public final class CTMLLayout {
      */
     private Intrinsic intrinsic(DOMTreeElement element, ElementStyle style, int basis){
         Sizes sizes = SIZES.computeIfAbsent(element, e -> new Sizes()).at(element.subtreeRevision());
-        Measured key = new Measured(basis, style);
+        Measured key = new Measured(basis, style, viewKey());
         Intrinsic cached = sizes.widths.get(key);
         if (cached != null) return cached;
 
@@ -877,7 +907,7 @@ public final class CTMLLayout {
      */
     private int contentMinimum(DOMTreeElement element, ElementStyle style, int basis){
         Sizes sizes = SIZES.computeIfAbsent(element, e -> new Sizes()).at(element.subtreeRevision());
-        Measured key = new Measured(basis, style);
+        Measured key = new Measured(basis, style, viewKey());
         Integer cached = sizes.minimums.get(key);
         if (cached != null) return cached;
 

@@ -174,6 +174,12 @@ public final class ElementStyle {
 
     // misc
     public static final Key<Visibility> VISIBILITY = key("visibility", Visibility.class);
+    /**
+     * Whether what is under here is drawn light or dark, which is what the dark: variant asks about.
+     * Css hands this to the widgets the browser draws itself; ctml draws none, so it is only ever the
+     * switch behind the variant, and the nearest element above that sets it is the one that answers.
+     */
+    public static final Key<ColorScheme> COLOR_SCHEME = key("color-scheme", ColorScheme.class);
     public static final Key<Float> OPACITY = key("opacity", Float.class);
 
     // the shorthands that just hand the same value to all four sides
@@ -196,7 +202,9 @@ public final class ElementStyle {
             SCROLLBAR_HIDDEN, SCROLLBAR_WIDTH, SCROLLBAR_THUMB_COLOR, SCROLLBAR_TRACK_COLOR, SCROLLBAR_RADIUS,
             WORD_BREAK, BORDER_COLLAPSE, CAPTION_SIDE,
             // a list says once what its items are marked with, the way css inherits both of these
-            LIST_STYLE_TYPE, LIST_STYLE_POSITION
+            LIST_STYLE_TYPE, LIST_STYLE_POSITION,
+            // one scheme on the root puts everything under it into dark:, the way css inherits it
+            COLOR_SCHEME
     };
 
     /** Nothing set at all; what an element starts out with before any style lands on it. */
@@ -273,6 +281,8 @@ public final class ElementStyle {
     /** Where a background stops. TEXT is css's background-clip: text, which clips it to the glyphs. */
     public enum BackgroundClip { BORDER_BOX, PADDING_BOX, CONTENT_BOX, TEXT }
     public enum Visibility { VISIBLE, HIDDEN }
+    /** Which way round the colours under an element are meant to be read. */
+    public enum ColorScheme { LIGHT, DARK }
 
     /**
      * What a picture does with a box that is not its shape: FILL stretches to it, CONTAIN fits inside it
@@ -436,6 +446,12 @@ public final class ElementStyle {
         public <T> T get(Key<T> key, T fallback){
             T value = get(key);
             return value == null ? fallback : value;
+        }
+
+        /** Everything the other style sets, over whatever the builder holds; its unset slots are left alone. */
+        public Builder setAll(ElementStyle style){
+            for (int i = 0; i < values.length; i++) if (style.values[i] != null) values[i] = style.values[i];
+            return this;
         }
 
         public <T> Builder set(Key<T> key, T value){

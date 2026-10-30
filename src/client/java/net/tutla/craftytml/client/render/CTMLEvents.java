@@ -27,8 +27,15 @@ public final class CTMLEvents {
 
     /** The element a press at this spot would reach, or null where nothing there wants one. */
     public static DOMTreeElement at(CTMLLayout.Box root, DOMContext ctx, double x, double y){
+        return at(CTMLFocus.path(root, x, y), ctx);
+    }
+
+    /**
+     * The same, for a caller that has the chain of boxes under the cursor already: a screen works that
+     * out once a frame, both for this and for the states the style variants ask about.
+     */
+    public static DOMTreeElement at(List<CTMLLayout.Box> under, DOMContext ctx){
         if (ctx == null) return null;
-        List<CTMLLayout.Box> under = CTMLFocus.path(root, x, y);
         for (int i = under.size() - 1; i >= 0; i--) {
             DOMTreeElement element = under.get(i).element();
             if (element.getCallback() != null) return element;

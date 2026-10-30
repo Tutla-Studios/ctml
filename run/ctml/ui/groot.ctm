@@ -1,0 +1,510 @@
+<ctml class="w-full h-full bg-slate-900 text-slate-100 text-shadow p-1 flex flex-row gap-1 overflow-x-hidden overflow-y-auto scrollbar-thumb-slate-500 scrollbar-track-slate-800">
+
+  <div class="flex-1 h-full flex flex-col gap-1">
+
+    <div class="w-full bg-slate-800 border border-slate-600 rounded px-1 py-[2px] text-center text-amber-400 font-bold" text="CraftyTML" draggable>
+      <div class="w-full text-center text-slate-400 font-normal text-xs" text="tailwind demo: div, span, table, img and the markdown set"></div>
+    </div>
+
+    <div class="w-full bg-slate-800 border border-slate-700 rounded-sm px-1 py-[2px] text-xs text-slate-400" text="font sizes">
+      <div class="w-full flex flex-row gap-1 items-end text-sky-300">
+        <span class="text-xs" text="xs"></span>
+        <span class="text-sm" text="sm"></span>
+        <span class="text-base" text="bs"></span>
+        <span class="text-lg" text="lg"></span>
+        <span class="text-xl" text="xl"></span>
+        <span class="text-2xl" text="2x"></span>
+      </div>
+    </div>
+
+    <div class="w-full bg-slate-800 border border-slate-700 rounded-sm px-1 py-[2px] text-xs text-slate-400" text="font styles">
+      <div class="w-full flex flex-row gap-1 text-xs">
+        <span class="font-bold text-slate-100" text="bold"></span>
+        <span class="italic text-emerald-300" text="ital"></span>
+        <span class="underline text-amber-300" text="undr"></span>
+        <span class="line-through text-rose-300" text="strk"></span>
+        <span class="text-shadow-none text-slate-500" text="flat"></span>
+      </div>
+    </div>
+
+    <div class="w-full bg-slate-800 border border-slate-700 rounded-sm px-1 py-[2px] text-xs text-slate-400" text="align and leading">
+      <div class="w-full border-l-2 border-sky-500 pl-1 text-left text-xs text-slate-200" text="left"></div>
+      <div class="w-full border-l-2 border-amber-500 pl-1 text-center text-xs text-slate-200" text="center"></div>
+      <div class="w-full border-l-2 border-rose-500 pl-1 text-right text-xs text-slate-200" text="right"></div>
+      <div class="w-full leading-6 text-xs text-slate-500" text="leading-6"></div>
+    </div>
+
+    <div class="w-full bg-slate-800 border border-slate-700 rounded-sm px-1 py-[2px] text-xs text-slate-400" text="whitespace and raw">
+      <div class="w-full h-3 overflow-hidden whitespace-nowrap text-xs bg-slate-700 text-slate-200" text="nowrap, clipped by overflow"></div>
+      <div class="w-full text-xs text-cyan-300" >raw child content, no attribute</div>
+    </div>
+
+    <div class="w-full bg-slate-800 border border-slate-700 rounded-sm px-1 py-[2px] text-xs text-slate-400" text="opacity, visibility">
+      <div class="w-full flex flex-row gap-1 items-center">
+        <div class="w-3 h-4 bg-white opacity-100"></div>
+        <div class="w-3 h-4 bg-white opacity-75"></div>
+        <div class="w-3 h-4 bg-white opacity-50"></div>
+        <div class="w-3 h-4 bg-white opacity-25"></div>
+        <div class="w-3 h-4 bg-white invisible"></div>
+        <div class="w-3 h-4 bg-white hidden"></div>
+        <span class="text-xs text-slate-500" text="2 gone"></span>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="flex-1 h-full flex flex-col gap-1">
+
+    <div class="w-full bg-slate-800 border border-slate-700 rounded-sm px-1 py-[2px] text-xs text-slate-400" text="palette families">
+      <div class="w-full flex flex-row">
+        <div class="w-[6px] h-3 bg-red-500"></div>
+        <div class="w-[6px] h-3 bg-orange-500"></div>
+        <div class="w-[6px] h-3 bg-amber-500"></div>
+        <div class="w-[6px] h-3 bg-yellow-500"></div>
+        <div class="w-[6px] h-3 bg-lime-500"></div>
+        <div class="w-[6px] h-3 bg-green-500"></div>
+        <div class="w-[6px] h-3 bg-emerald-500"></div>
+        <div class="w-[6px] h-3 bg-teal-500"></div>
+        <div class="w-[6px] h-3 bg-cyan-500"></div>
+        <div class="w-[6px] h-3 bg-sky-500"></div>
+        <div class="w-[6px] h-3 bg-blue-500"></div>
+        <div class="w-[6px] h-3 bg-indigo-500"></div>
+        <div class="w-[6px] h-3 bg-violet-500"></div>
+        <div class="w-[6px] h-3 bg-purple-500"></div>
+        <div class="w-[6px] h-3 bg-fuchsia-500"></div>
+        <div class="w-[6px] h-3 bg-pink-500"></div>
+        <div class="w-[6px] h-3 bg-rose-500"></div>
+      </div>
+    </div>
+
+    <div class="w-full bg-slate-800 border border-slate-700 rounded-sm px-1 py-[2px] text-xs text-slate-400" text="shades 50 to 950">
+      <div class="w-full flex flex-row">
+        <div class="w-2 h-3 bg-sky-50"></div>
+        <div class="w-2 h-3 bg-sky-100"></div>
+        <div class="w-2 h-3 bg-sky-200"></div>
+        <div class="w-2 h-3 bg-sky-300"></div>
+        <div class="w-2 h-3 bg-sky-400"></div>
+        <div class="w-2 h-3 bg-sky-500"></div>
+        <div class="w-2 h-3 bg-sky-600"></div>
+        <div class="w-2 h-3 bg-sky-700"></div>
+        <div class="w-2 h-3 bg-sky-800"></div>
+        <div class="w-2 h-3 bg-sky-900"></div>
+        <div class="w-2 h-3 bg-sky-950"></div>
+      </div>
+    </div>
+
+    <div class="w-full bg-slate-800 border border-slate-700 rounded-sm px-1 py-[2px] text-xs text-slate-400" text="hex, family, alpha">
+      <div class="w-full flex flex-row gap-1">
+        <div class="w-4 h-3 bg-[#ff00aa]"></div>
+        <div class="w-4 h-3 bg-[#0fc]"></div>
+        <div class="w-4 h-3 bg-green"></div>
+        <div class="w-4 h-3 bg-white/50"></div>
+        <div class="w-4 h-3 bg-white/25"></div>
+      </div>
+      <div class="w-full text-xs text-[#00ffcc]" text="arbitrary ink"></div>
+    </div>
+
+    <div class="w-full bg-slate-800 border border-slate-700 rounded-sm px-1 py-[2px] text-xs text-slate-400" text="position">
+      <div class="w-full flex flex-row gap-1 items-start">
+        <div class="relative w-8 h-6 bg-slate-700">
+          <div class="absolute top-0 right-0 w-2 h-2 bg-rose-500"></div>
+          <div class="absolute bottom-0 left-0 w-2 h-2 bg-sky-500"></div>
+          <div class="absolute inset-x-0 top-2 h-1 bg-amber-400"></div>
+        </div>
+        <div class="w-6 h-6 bg-slate-700">
+          <div class="relative top-1 left-1 w-4 h-4 bg-amber-500"></div>
+        </div>
+        <div class="w-6 h-6 bg-slate-700 flex flex-row justify-center items-center">
+          <div class="w-3 h-3 bg-emerald-400 rounded-full"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="w-full bg-slate-800 border border-slate-700 rounded-sm px-1 py-[2px] text-xs text-slate-400" text="sizing">
+      <div class="w-1/3 h-1 bg-violet-300"></div>
+      <div class="w-1/2 h-1 bg-violet-400 mt-1"></div>
+      <div class="w-full h-1 bg-violet-500 mt-1"></div>
+      <div class="w-[60px] h-1 bg-violet-600 mt-1"></div>
+      <div class="w-full flex flex-row gap-1 items-center mt-1">
+        <div class="size-3 bg-violet-200"></div>
+        <div class="min-w-8 h-[10px] bg-violet-700"></div>
+        <div class="max-w-[40px] text-xs text-slate-300" text="max-w wraps"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="flex-1 h-full flex flex-col gap-1">
+
+    <div class="w-full bg-slate-800 border border-slate-700 rounded-sm px-1 py-[2px] text-xs text-slate-400" text="padding, margin, box">
+      <div class="w-full flex flex-row gap-1 items-start text-xs text-indigo-100">
+        <div class="bg-indigo-700 p-0" text="p0"></div>
+        <div class="bg-indigo-700 p-1" text="p1"></div>
+        <div class="bg-indigo-700 px-2 py-1" text="px"></div>
+        <div class="bg-indigo-700 pt-2 pr-1 pb-0 pl-1" text="pt"></div>
+      </div>
+      <div class="w-full bg-slate-700">
+        <div class="w-6 h-2 bg-indigo-300 m-1"></div>
+      </div>
+      <div class="w-full flex flex-row gap-1">
+        <div class="w-8 h-3 p-1 bg-indigo-700 box-border"></div>
+        <div class="w-8 h-3 p-1 bg-indigo-500 box-content"></div>
+      </div>
+    </div>
+
+    <div class="w-full bg-slate-800 border border-slate-700 rounded-sm px-1 py-[2px] text-xs text-slate-400" text="borders">
+      <div class="w-full flex flex-row gap-1 items-center">
+        <div class="w-4 h-4 border border-slate-400"></div>
+        <div class="w-4 h-4 border-2 border-sky-400"></div>
+        <div class="w-4 h-4 border-4 border-emerald-400"></div>
+        <div class="w-4 h-4 border-t-2 border-b-2 border-amber-400"></div>
+        <div class="w-4 h-4 border-l-4 border-rose-400"></div>
+        <div class="w-4 h-4 border-2 border-[#ffffff]"></div>
+      </div>
+    </div>
+
+    <div class="w-full bg-slate-800 border border-slate-700 rounded-sm px-1 py-[2px] text-xs text-slate-400" text="radius, chamfered">
+      <div class="w-full flex flex-row gap-1 items-center">
+        <div class="w-4 h-4 bg-teal-500 rounded-none"></div>
+        <div class="w-4 h-4 bg-teal-500 rounded-sm"></div>
+        <div class="w-4 h-4 bg-teal-500 rounded"></div>
+        <div class="w-4 h-4 bg-teal-500 rounded-md"></div>
+        <div class="w-4 h-4 bg-teal-500 rounded-lg"></div>
+        <div class="w-4 h-4 bg-teal-500 rounded-full"></div>
+      </div>
+    </div>
+
+    <div class="w-full bg-slate-800 border border-slate-700 rounded-sm px-1 py-[2px] text-xs text-slate-400" text="justify-content">
+      <div class="w-full h-2 flex flex-row justify-start bg-slate-700">
+        <div class="w-2 h-2 bg-lime-400"></div>
+        <div class="w-2 h-2 bg-lime-600"></div>
+      </div>
+      <div class="w-full h-2 flex flex-row justify-center bg-slate-600">
+        <div class="w-2 h-2 bg-lime-400"></div>
+        <div class="w-2 h-2 bg-lime-600"></div>
+      </div>
+      <div class="w-full h-2 flex flex-row justify-end bg-slate-700">
+        <div class="w-2 h-2 bg-lime-400"></div>
+        <div class="w-2 h-2 bg-lime-600"></div>
+      </div>
+      <div class="w-full h-2 flex flex-row justify-between bg-slate-600">
+        <div class="w-2 h-2 bg-lime-400"></div>
+        <div class="w-2 h-2 bg-lime-600"></div>
+      </div>
+      <div class="w-full h-2 flex flex-row justify-evenly bg-slate-700">
+        <div class="w-2 h-2 bg-lime-400"></div>
+        <div class="w-2 h-2 bg-lime-600"></div>
+      </div>
+      <div class="w-full h-2 flex flex-row justify-around bg-slate-600">
+        <div class="w-2 h-2 bg-lime-400"></div>
+        <div class="w-2 h-2 bg-lime-600"></div>
+      </div>
+    </div>
+
+    <div class="w-full bg-slate-800 border border-slate-700 rounded-sm px-1 py-[2px] text-xs text-slate-400" text="align-items, direction">
+      <div class="w-full flex flex-row gap-1 items-start">
+        <div class="w-6 h-6 flex flex-row items-start gap-1 bg-slate-700">
+          <div class="w-2 h-2 bg-fuchsia-400"></div>
+          <div class="w-2 h-4 bg-fuchsia-600"></div>
+        </div>
+        <div class="w-6 h-6 flex flex-row items-center gap-1 bg-slate-700">
+          <div class="w-2 h-2 bg-fuchsia-400"></div>
+          <div class="w-2 h-4 bg-fuchsia-600"></div>
+        </div>
+        <div class="w-6 h-6 flex flex-row items-end gap-1 bg-slate-700">
+          <div class="w-2 h-2 bg-fuchsia-400"></div>
+          <div class="w-2 h-4 bg-fuchsia-600"></div>
+        </div>
+        <div class="w-6 h-6 flex flex-col gap-1 bg-slate-700 p-1">
+          <div class="w-4 h-1 bg-cyan-300"></div>
+          <div class="w-4 h-1 bg-cyan-500"></div>
+        </div>
+        <div class="w-6 h-6 flex flex-row-reverse gap-1 bg-slate-700 p-1">
+          <div class="w-2 h-2 bg-orange-300"></div>
+          <div class="w-2 h-2 bg-orange-500"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="flex-1 h-full flex flex-col gap-1">
+
+    <div class="w-full bg-slate-800 border border-slate-700 rounded-sm px-1 py-[2px] text-xs text-slate-400" text="element defaults">
+      <div class="w-full text-xs text-slate-200" text="a div is block, on its own line"></div>
+      <div class="w-full text-xs text-emerald-300">
+        <span text="a span"></span>
+        <span text="is inline"></span>
+        <span text="with no class at all"></span>
+      </div>
+      <div class="w-full text-xs text-slate-500" text="ctml holds the inherited values"></div>
+    </div>
+
+    <div class="w-full bg-slate-800 border border-slate-700 rounded-sm px-1 py-[2px] text-xs text-slate-400" text="background gradients">
+      <div class="w-full h-3 bg-gradient-to-r from-sky-400 to-fuchsia-500"></div>
+      <div class="w-full h-3 mt-1 bg-gradient-to-l from-emerald-400 to-slate-900"></div>
+      <div class="w-full h-4 mt-1 bg-gradient-to-b from-amber-300 via-rose-500 to-indigo-700"></div>
+      <div class="w-full h-3 mt-1 bg-gradient-to-t from-slate-900 to-cyan-300"></div>
+      <div class="w-full flex flex-row gap-1 mt-1">
+        <div class="w-6 h-4 bg-gradient-to-r from-white to-white/0"></div>
+        <div class="w-6 h-4 bg-gradient-to-tr from-violet-600 to-amber-300"></div>
+        <div class="w-6 h-4 bg-linear-[30deg] from-rose-500 to-sky-400"></div>
+        <span class="text-xs text-slate-500" text="corners, 30deg"></span>
+      </div>
+      <div class="w-full flex flex-row gap-1 mt-1">
+        <div class="w-6 h-6 bg-radial from-amber-200 to-slate-900 rounded-full"></div>
+        <div class="w-6 h-6 bg-conic from-sky-400 via-fuchsia-500 to-sky-400 rounded-full"></div>
+        <div class="w-6 h-6 bg-linear-to-r from-lime-300 from-40% to-indigo-600 rounded"></div>
+        <span class="text-xs text-slate-500" text="radial, conic, from-40%"></span>
+      </div>
+    </div>
+
+    <div class="w-full bg-slate-800 border border-slate-700 rounded-sm px-1 py-[2px] text-xs text-slate-400" text="text gradients">
+      <div class="w-full text-gradient-to-r text-from-amber-300 text-to-sky-400" text="warm into cold"></div>
+      <div class="w-full text-gradient-to-r text-from-lime-300 text-via-emerald-400 text-to-teal-600" text="three stops"></div>
+      <div class="w-full text-lg text-gradient-to-l text-from-rose-400 text-to-indigo-400" text="scaled up"></div>
+      <div class="w-full text-lg font-bold bg-clip-text bg-linear-to-r from-amber-200 to-rose-500" text="bg-clip-text"></div>
+      <div class="w-full text-xs bg-clip-text bg-conic from-sky-300 via-lime-300 to-sky-300" text="a conic one, clipped to the glyphs"></div>
+    </div>
+
+    <div class="w-full bg-slate-800 border border-slate-700 rounded-sm px-1 py-[2px] text-xs text-slate-400" text="z-index">
+      <div class="relative w-full h-6 bg-slate-700">
+        <div class="absolute top-0 left-0 w-8 h-4 bg-sky-500 z-30"></div>
+        <div class="absolute top-1 left-4 w-8 h-4 bg-rose-500 z-20"></div>
+        <div class="absolute top-2 left-8 w-8 h-4 bg-amber-400 z-10"></div>
+      </div>
+      <div class="w-full text-xs text-slate-500" text="first in the file, still on top"></div>
+    </div>
+
+    <div class="w-full bg-slate-800 border border-slate-700 rounded-sm px-1 py-[2px] text-xs text-slate-400" text="overflow and scrolling">
+      <div class="w-full flex flex-row gap-1 items-start">
+        <div class="w-8 h-6 bg-slate-700 overflow-y-auto scrollbar-thin scrollbar-thumb-sky-400">
+          <div class="w-full h-3 bg-sky-900"></div>
+          <div class="w-full h-3 bg-sky-700 mt-1"></div>
+          <div class="w-full h-3 bg-sky-500 mt-1"></div>
+          <div class="w-full h-3 bg-sky-300 mt-1"></div>
+        </div>
+        <div class="w-8 h-6 bg-slate-700 overflow-y-scroll scrollbar-hidden">
+          <div class="w-full h-3 bg-rose-900"></div>
+          <div class="w-full h-3 bg-rose-700 mt-1"></div>
+          <div class="w-full h-3 bg-rose-500 mt-1"></div>
+          <div class="w-full h-3 bg-rose-300 mt-1"></div>
+        </div>
+        <div class="w-8 h-6 bg-slate-700 overflow-y-hidden overflow-x-auto scrollbar-gutter-stable scrollbar-thumb-emerald-400">
+          <div class="w-[80px] h-2 bg-gradient-to-r from-emerald-400 to-fuchsia-500"></div>
+          <div class="w-[80px] h-2 mt-1 bg-gradient-to-l from-amber-300 to-sky-500"></div>
+        </div>
+      </div>
+      <div class="w-1/2 mt-1 bg-slate-700 overflow-hidden whitespace-nowrap text-xs text-slate-300" text="overflow-hidden just cuts this one off"></div>
+      <div class="w-1/2 truncate text-xs text-slate-300" text="truncate puts dots on the end instead"></div>
+      <div class="w-full text-xs text-slate-500" text="wheel over a box, or drag its bar"></div>
+      <div class="w-full flex flex-row gap-1 items-start mt-1">
+        <div class="w-8 h-6 bg-slate-700 overflow-y-auto scroll-glide overscroll-contain scrollbar-thin scrollbar-thumb-violet-400" id="slider">
+          <div class="w-full h-3 bg-violet-900"></div>
+          <div class="w-full h-3 bg-violet-700 mt-1"></div>
+          <div class="w-full h-3 bg-violet-500 mt-1"></div>
+          <div class="w-full h-3 bg-violet-300 mt-1"></div>
+        </div>
+        <div class="w-8 h-6 bg-slate-700 overflow-y-auto scrollbar-gutter-both-edges scrollbar-thumb-amber-400">
+          <div class="w-full h-3 bg-amber-900"></div>
+          <div class="w-full h-3 bg-amber-700 mt-1"></div>
+          <div class="w-full h-3 bg-amber-500 mt-1"></div>
+        </div>
+        <span class="text-xs text-slate-500" text="glide, both edges"></span>
+      </div>
+      <div class="w-full text-xs text-slate-500" text="a bar takes its room, so nothing runs under it"></div>
+      <div class="w-full text-xs text-slate-500" text="tab walks the ring on, arrows and page keys scroll what has it"></div>
+    </div>
+
+    <div class="w-full bg-slate-800 border border-slate-700 rounded-sm px-1 py-[2px] text-xs text-slate-400" text="images">
+      <div class="w-full flex flex-row gap-1 items-start">
+        <img src="minecraft:textures/item/diamond.png" class="w-4 h-4"></img>
+        <img src="minecraft:textures/item/emerald.png" class="w-6 h-6"></img>
+        <img src="minecraft:textures/block/grass_block_side.png" class="w-8 h-4 object-cover rounded-sm"></img>
+        <img src="minecraft:textures/block/stone.png" class="w-4 h-8 object-contain bg-slate-700"></img>
+        <span class="text-xs text-slate-500" text="cover, contain"></span>
+      </div>
+      <div class="w-full flex flex-row gap-1 items-center mt-1">
+        <img src="minecraft:textures/item/apple.png" class="h-6"></img>
+        <span class="text-xs text-slate-500" text="a height alone keeps its shape"></span>
+      </div>
+      <div class="w-full h-6 mt-1 bg-[url(minecraft:textures/block/dirt.png)] bg-repeat border border-slate-600 rounded-sm"></div>
+      <div class="w-full text-xs text-slate-500" text="and the same picture as a tiled background"></div>
+      <div class="w-full h-8 mt-1 bg-[url(minecraft:textures/block/diamond_ore.png)] bg-cover bg-center rounded"></div>
+      <div class="w-full text-xs text-slate-500" text="bg-cover, bg-center, under a rounded box"></div>
+    </div>
+
+    <div class="w-full bg-slate-800 border border-slate-700 rounded-sm px-1 py-[2px] text-xs text-slate-400" text="focus and the keyboard">
+      <div class="w-full flex flex-row gap-1 items-start">
+        <div class="w-8 h-6 bg-slate-700 rounded-sm ring-2 ring-sky-400 ring-offset-1" tabindex=1>
+          <div class="w-full text-center text-xs text-slate-300" text="1st"></div>
+        </div>
+        <div class="w-8 h-6 bg-slate-700 rounded-sm ring ring-emerald-400" tabindex=2>
+          <div class="w-full text-center text-xs text-slate-300" text="2nd"></div>
+        </div>
+        <div class="w-8 h-6 bg-slate-700 overflow-y-auto scrollbar-thin scrollbar-thumb-rose-400">
+          <div class="w-full h-3 bg-rose-900"></div>
+          <div class="w-full h-3 bg-rose-700 mt-1"></div>
+          <div class="w-full h-3 bg-rose-500 mt-1"></div>
+        </div>
+      </div>
+      <div class="w-full text-xs text-slate-500" text="tab round them, shift tab back; a scroll box is a stop too"></div>
+      <div class="w-full h-6 mt-1 bg-slate-700 rounded-sm" tabindex=0>
+        <div class="w-full text-xs text-slate-400 px-[2px]" text="press the text, the box takes the ring"></div>
+      </div>
+    </div>
+
+    <div class="w-full bg-slate-800 border border-slate-700 rounded-sm px-1 py-[2px] text-xs text-slate-400" text="draggable">
+      <div class="w-full h-8 bg-slate-700 p-1">
+        <div class="w-4 h-4 bg-amber-400 rounded-sm" draggable></div>
+      </div>
+      <div class="w-full h-8 bg-slate-700 p-1 mt-1 flex flex-row justify-end">
+        <div class="w-4 h-4 bg-gradient-to-r from-cyan-300 to-blue-600" draggable></div>
+      </div>
+      <div class="w-full text-xs text-slate-500" text="drag inside the parent box"></div>
+    </div>
+
+  </div>
+
+  <div class="flex-1 h-full flex flex-col gap-1">
+
+    <div class="w-full bg-slate-800 border border-slate-700 rounded-sm px-1 py-[2px] text-xs text-slate-400" text="grow, shrink, basis">
+      <div class="w-full h-2 flex flex-row gap-1">
+        <div class="h-2 flex-1 bg-sky-500"></div>
+        <div class="h-2 grow-2 bg-sky-700"></div>
+        <div class="h-2 w-4 shrink-0 bg-sky-300"></div>
+      </div>
+      <div class="w-full h-2 mt-1 flex flex-row gap-1">
+        <div class="h-2 basis-1/2 bg-cyan-500"></div>
+        <div class="h-2 basis-1/4 bg-cyan-700"></div>
+      </div>
+      <div class="w-full text-xs text-slate-500" text="two parts, three parts, fixed"></div>
+    </div>
+
+    <div class="w-full bg-slate-800 border border-slate-700 rounded-sm px-1 py-[2px] text-xs text-slate-400" text="wrap, order, self">
+      <div class="w-full flex flex-row flex-wrap gap-1">
+        <div class="w-16 h-2 bg-emerald-400"></div>
+        <div class="w-16 h-2 bg-emerald-600"></div>
+        <div class="w-16 h-2 bg-emerald-800"></div>
+      </div>
+      <div class="w-full flex flex-row gap-1 mt-1 text-xs">
+        <span class="order-last text-rose-300" text="third"></span>
+        <span class="text-rose-400" text="second"></span>
+        <span class="order-first text-rose-500" text="first"></span>
+      </div>
+      <div class="w-full h-4 mt-1 flex flex-row gap-1 items-start bg-slate-700">
+        <div class="w-2 h-2 bg-violet-300"></div>
+        <div class="w-2 h-2 self-center bg-violet-500"></div>
+        <div class="w-2 h-2 self-end bg-violet-700"></div>
+        <div class="w-2 self-stretch bg-violet-900"></div>
+      </div>
+    </div>
+
+    <div class="w-full bg-slate-800 border border-slate-700 rounded-sm px-1 py-[2px] text-xs text-slate-400" text="baselines and inline flow">
+      <div class="w-full flex flex-row gap-1 items-baseline">
+        <span class="text-2xl text-amber-300" text="Aa"></span>
+        <span class="text-xs text-amber-500" text="sits on the same line"></span>
+      </div>
+      <div class="w-full text-xs text-slate-200">text <span class="text-sky-300" text="in a span"></span> and text after it, all on the one flow and wrapping together</div>
+      <div class="w-full text-xs text-slate-300">a <span class="inline-block w-2 h-2 bg-rose-400 align-middle"></span> middle <span class="inline-block w-2 h-2 bg-sky-400 align-top"></span> top</div>
+    </div>
+
+    <div class="w-full bg-slate-800 border border-slate-700 rounded-sm px-1 py-[2px] text-xs text-slate-400" text="tables">
+      <table class="w-full border-collapse text-xs">
+        <caption class="text-slate-500 text-xs" text="colspan, rowspan, thead"></caption>
+        <thead>
+          <tr class="bg-slate-700 text-slate-200">
+            <th class="border border-slate-600 px-[2px]" text="a"></th>
+            <th class="border border-slate-600 px-[2px]" text="b"></th>
+            <th class="border border-slate-600 px-[2px]" text="c"></th>
+          </tr>
+        </thead>
+        <tbody class="text-slate-300">
+          <tr>
+            <td class="border border-slate-600 px-[2px]" colspan=2 text="two wide"></td>
+            <td class="border border-slate-600 px-[2px]" rowspan=2 text="tall"></td>
+          </tr>
+          <tr>
+            <td class="border border-slate-600 px-[2px]" text="one"></td>
+            <td class="border border-slate-600 px-[2px]" text="two"></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="w-full bg-slate-800 border border-slate-700 rounded-sm px-1 py-[2px] text-xs text-slate-400" text="markdown: text">
+      <p class="w-full text-xs text-slate-200">plain, <b text="bold"></b>, <em text="slanted"></em>, <s text="struck"></s>, <u text="underlined"></u> and <code text="code"></code><br>and a second line after a br</p>
+      <hr class="w-full border-slate-600">
+      <blockquote class="w-full text-xs text-slate-300 border-slate-500" text="a quoted line, set in behind a rule"></blockquote>
+      <pre class="w-full text-xs text-emerald-300" text="  pre   keeps   its   spacing"></pre>
+    </div>
+
+    <div class="w-full bg-slate-800 border border-slate-700 rounded-sm px-1 py-[2px] text-xs text-slate-400" text="markdown: headings">
+      <h4 class="w-full text-sky-300" text="h4, bold and bigger"></h4>
+      <h5 class="w-full text-sky-300" text="h5, a little smaller"></h5>
+      <h6 class="w-full text-sky-300" text="h6, the smallest of them"></h6>
+    </div>
+
+    <div class="w-full bg-slate-800 border border-slate-700 rounded-sm px-1 py-[2px] text-xs text-slate-400" text="markdown: lists">
+      <div class="w-full flex flex-row gap-1 items-start">
+        <ul class="flex-1 text-xs text-slate-200">
+          <li text="a bulleted item"></li>
+          <li text="and another"></li>
+          <li class="list-circle" text="list-circle"></li>
+          <li class="list-square" text="list-square"></li>
+        </ul>
+        <ol class="flex-1 text-xs text-slate-200">
+          <li text="one"></li>
+          <li text="two"></li>
+          <li value=7 text="value=7"></li>
+          <li text="carries on"></li>
+        </ol>
+      </div>
+      <div class="w-full flex flex-row gap-1 items-start mt-1">
+        <ol class="flex-1 text-xs text-slate-200 list-upper-roman">
+          <li text="roman"></li>
+          <li text="numerals"></li>
+          <li text="here"></li>
+        </ol>
+        <ol class="flex-1 text-xs text-slate-200 list-lower-alpha" start=3 reversed>
+          <li text="counting"></li>
+          <li text="down"></li>
+          <li text="in letters"></li>
+        </ol>
+      </div>
+      <ul class="w-full mt-1 text-xs text-slate-200">
+        <li text="a list inside a list">
+          <ol class="list-lower-roman">
+            <li text="nested"></li>
+            <li text="and numbered"></li>
+          </ol>
+        </li>
+        <li class="list-inside" text="list-inside puts the marker in the text"></li>
+      </ul>
+    </div>
+
+    <div class="w-full bg-slate-800 border border-slate-700 rounded-sm px-1 py-[2px] text-xs text-slate-400" text="sticky and margins">
+      <div class="w-full h-8 bg-slate-700 overflow-y-auto scrollbar-thin scrollbar-thumb-amber-400">
+        <div class="w-full h-2 sticky top-0 bg-amber-500"></div>
+        <div class="w-full h-6 bg-slate-600"></div>
+        <div class="w-full h-6 bg-slate-500"></div>
+        <div class="w-full h-6 bg-slate-600"></div>
+      </div>
+      <div class="w-full bg-slate-700 mt-1">
+        <div class="w-6 h-1 bg-lime-300 mb-2"></div>
+        <div class="w-6 h-1 bg-lime-500 mt-1"></div>
+      </div>
+      <div class="w-full text-xs text-slate-500" text="margins collapse, header holds"></div>
+    </div>
+
+    <div class="w-full bg-slate-800 border border-slate-700 rounded-sm px-1 py-[2px] text-xs text-slate-400" text="buttons and callbacks">
+      <button class="px-1 py-[2px] rounded-sm bg-sky-600 border border-sky-400 text-slate-100 text-xs" callback="togglePanel" text="hide the panel"></button>
+      <div id="callback-panel" class="w-full mt-1 px-1 py-[2px] rounded-sm bg-emerald-900 border border-emerald-600 text-emerald-200 text-xs" text="the panel the button toggles">
+        <div class="w-full text-xs text-emerald-400" text="the callback swaps this box's class property"></div>
+      </div>
+      <div class="w-full text-xs text-slate-500 mt-1" text="press it, or tab to it and hit enter"></div>
+    </div>
+
+  </div>
+
+</ctml>

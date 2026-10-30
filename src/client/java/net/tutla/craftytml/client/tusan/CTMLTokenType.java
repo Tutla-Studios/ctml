@@ -73,6 +73,8 @@ public enum CTMLTokenType implements TokenType {
     H5_CLOSING,
     H6,
     H6_CLOSING,
+    BUTTON,
+    BUTTON_CLOSING,
 
     CLASS,
     TEXT,

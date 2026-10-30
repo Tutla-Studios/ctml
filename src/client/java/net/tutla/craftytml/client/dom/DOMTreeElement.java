@@ -117,6 +117,15 @@ public class DOMTreeElement extends DOMTreeNode {
 
     public int getTabIndex() { return element.getTabIndex(); }
 
+    /** The element's id: the one the script gave it, or one made up the first time it is asked for. */
+    public String getId() { return element.getId(); }
+
+    /** The callback the element names, or null where it names none. */
+    public String getCallback() { return element.getCallback(); }
+
+    /** Whether a press on it counts as an input rather than a plain click, which a button does. */
+    public boolean firesInput() { return element.firesInput(); }
+
     public DOMTreeElement getScrollAnchor() { return element.getScrollAnchor(); }
 
     public int getScrollAnchorX() { return element.getScrollAnchorX(); }

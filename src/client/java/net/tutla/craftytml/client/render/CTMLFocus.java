@@ -89,13 +89,23 @@ public final class CTMLFocus {
      * Null where nothing under the cursor can be focused at all, which leaves the focus where it was.
      */
     public static DOMTreeElement at(CTMLLayout.Box root, double x, double y){
-        List<CTMLLayout.Box> under = new ArrayList<>();
-        if (root == null || !hit(root, x, y, under)) return null;
+        List<CTMLLayout.Box> under = path(root, x, y);
 
         for (int i = under.size() - 1; i >= 0; i--) {
             if (focusable(under.get(i))) return under.get(i).element();
         }
         return null;
+    }
+
+    /**
+     * Every box under the cursor, outermost first, ending at the innermost one the cursor is actually
+     * over. Empty where the cursor is over nothing at all. What a press lands on is worked out from
+     * this, both for the focus and for the callbacks.
+     */
+    public static List<CTMLLayout.Box> path(CTMLLayout.Box root, double x, double y){
+        List<CTMLLayout.Box> under = new ArrayList<>();
+        if (root == null || !hit(root, x, y, under)) return List.of();
+        return under;
     }
 
     /**

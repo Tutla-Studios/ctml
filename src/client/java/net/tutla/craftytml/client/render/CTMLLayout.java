@@ -3413,9 +3413,31 @@ public final class CTMLLayout {
         return element.getProperty("text") instanceof Text t && t.hasValue() ? t.getStringValue() : null;
     }
 
+    /**
+     * How wide the text is on one line, measured the way the flow is about to measure it: a run at a
+     * time, with a space between the words. Every run is rounded to whole pixels as it is laid out, so
+     * measuring the whole string in one go can come out a pixel short of its pieces, and text given
+     * exactly the room this asked for would wrap anyway.
+     */
     private int textWidth(String text, ElementStyle style){
         if (text == null || text.isBlank()) return 0;
-        return runWidth(text.strip(), style, fontScale(style));
+        float scale = fontScale(style);
+
+        // pre keeps the spacing it was written with and breaks only where it says to, so each of those
+        // lines is one run, the way addText makes them
+        if (style.get(ElementStyle.WHITE_SPACE) == ElementStyle.WhiteSpace.PRE) {
+            int widest = 0;
+            for (String line : text.split("\n", -1)) widest = Math.max(widest, runWidth(line, style, scale));
+            return widest;
+        }
+
+        int width = 0;
+        int gaps = -1;
+        for (String word : text.strip().split("\\s+")) {
+            width += runWidth(word, style, scale);
+            gaps++;
+        }
+        return width + Math.max(0, gaps) * runWidth(" ", style, scale);
     }
 
     private int longestWord(String text, ElementStyle style){

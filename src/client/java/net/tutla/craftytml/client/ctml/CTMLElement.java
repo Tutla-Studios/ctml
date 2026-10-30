@@ -1,7 +1,9 @@
 package net.tutla.craftytml.client.ctml;
 
+import net.tutla.craftytml.client.ctml.property.Callback;
 import net.tutla.craftytml.client.ctml.property.ClassName;
 import net.tutla.craftytml.client.ctml.property.Draggable;
+import net.tutla.craftytml.client.ctml.property.ID;
 import net.tutla.craftytml.client.ctml.property.ScrollInto;
 import net.tutla.craftytml.client.ctml.property.ScrollX;
 import net.tutla.craftytml.client.ctml.property.ScrollY;
@@ -13,12 +15,20 @@ import net.tutla.craftytml.client.tusan.CTMLTokenType;
 import net.tutla.tums.tusan.TusanContext;
 
 import java.lang.reflect.InvocationTargetException;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public abstract class CTMLElement {
     public final String name;
     public final CTMLElementProperties propertyList; //wierd naming convention cuz properties would eb for an instance not like the shi itself iywim
     private ElementStyle style = ElementStyle.UNSET; //not final like the property list cuz every style set swaps the whole thing out
+    private ElementStyle classStyle = ElementStyle.UNSET; //what the class property last read as, under the styles set by hand
     private ElementStyle computed; //style over the element's defaults, kept until something changes it
+
+    //every id in play, so one made up here can never land on one a script wrote
+    private static final Set<String> TAKEN_IDS = ConcurrentHashMap.newKeySet();
+    private static final AtomicInteger MINTED = new AtomicInteger();
 
     private DOMTreeNode node; //the dom node this element sits in, for marking a change on up the tree
 
@@ -73,6 +83,7 @@ public abstract class CTMLElement {
         changed();
 
         ElementProperty property = propertyList.propertyFromName(name);
+        if (property instanceof ID id && id.hasValue()) TAKEN_IDS.add(id.getStringValue());
         if (property instanceof ClassName classes && classes.hasValue()){
             applyClassStyles(classes.getStringValue(), ctx); // the ctx is what lets a bad class point at itself
         }
@@ -123,18 +134,23 @@ public abstract class CTMLElement {
                     : "UnusableValue", message, ctx);
         }
 
-        setStyle(style.inherit(parsed.build()));
+        // the class property says everything the classes have to say, so reading it again replaces what
+        // it said before rather than piling onto it: a script that takes "hidden" off the list means it
+        // to go. Styles set by hand are a layer of their own and sit on top of this, the way css has them
+        classStyle = parsed.build();
+        computed = null;
+        changed();
     }
 
     /** Everything set on the element, with its own defaults underneath for whatever is left. */
     public ElementStyle getStyle(){
-        if (computed == null) computed = style.inherit(defaultStyle());
+        if (computed == null) computed = style.inherit(classStyle).inherit(defaultStyle());
         return computed;
     }
 
     /** Only what was actually set on this element, so defaults don't get mistaken for author styles. */
     public ElementStyle getOwnStyle(){
-        return style;
+        return style.inherit(classStyle);
     }
 
     public void setStyle(ElementStyle style){
@@ -156,9 +172,53 @@ public abstract class CTMLElement {
      * says nothing can still be focused if it scrolls, which is the one thing the keyboard can do to it.
      */
     public int getTabIndex(){
-        return propertyList.propertyFromName("tabindex") instanceof TabIndex index
-                ? index.getIndex()
+        int index = propertyList.propertyFromName("tabindex") instanceof TabIndex tabindex
+                ? tabindex.getIndex()
                 : TabIndex.UNSET;
+        return index == TabIndex.UNSET ? defaultTabIndex() : index;
+    }
+
+    /**
+     * Where the element sits in the tab order when the script says nothing, which for everything but a
+     * button is nowhere. A browser has the same idea: a div is not tabbable and a button always is.
+     */
+    public int defaultTabIndex(){
+        return TabIndex.UNSET;
+    }
+
+    /** Whether a press on it is an input rather than a plain click. True for the things a user operates. */
+    public boolean firesInput(){
+        return false;
+    }
+
+    /**
+     * The id on the element: the one the script gave it, or one made up here the first time it is asked
+     * for. Made up ids are handed out in order and never land on one a script wrote, so every element in
+     * a tree can be named whether or not anyone bothered to name it.
+     */
+    public String getId(){
+        if (propertyList.propertyFromName("id") instanceof ID id) {
+            if (id.hasValue()) return id.getStringValue();
+            String made = mint(name);
+            propertyList.updateProperty("id", made, null); // not through updateProperty: an id moves nothing
+            return made;
+        }
+        return null;
+    }
+
+    private static String mint(String tag){
+        String made;
+        do {
+            made = tag + "-" + MINTED.incrementAndGet();
+        } while (!TAKEN_IDS.add(made));
+        return made;
+    }
+
+    /** The callback named on the element, or null where it names none. */
+    public String getCallback(){
+        return propertyList.propertyFromName("callback") instanceof Callback callback && callback.hasValue()
+                ? callback.getStringValue()
+                : null;
     }
 
     public boolean isDraggable(){

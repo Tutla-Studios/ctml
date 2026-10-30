@@ -11,8 +11,7 @@ import net.tutla.craftytml.client.dom.DOMTreeElement;
 import net.tutla.craftytml.client.dom.DOMTreeNode;
 
 public class CTMLScreen extends Screen {
-    /** Sdl numbers the mouse buttons from one, so left is 1 and not 0 the way glfw had it. */
-    private static final int LEFT_BUTTON = 1;
+    private static final int LEFT_BUTTON = CTMLEvents.MouseButton.LEFT;
 
     private final DOMTreeElement domTreeHeadElement;
     private final DOMContext domCtx;
@@ -39,6 +38,9 @@ public class CTMLScreen extends Screen {
 
     /** Set when the focus has just moved, so the newly focused box is brought into view once. */
     private boolean reveal;
+
+    /** What the cursor was last over that names a callback, so entering a new one is told about once. */
+    private DOMTreeElement hovered;
 
     /** Watches the cursor while something is held, so a release that never arrives cannot be waited on. */
     private final CTMLDrag.Watch watch = new CTMLDrag.Watch();
@@ -102,6 +104,13 @@ public class CTMLScreen extends Screen {
         // cursor for good, so a cursor drawn away from where the drag last saw it lets go instead
         if (holding() && watch.lost(mouseX, mouseY)) release();
 
+        // the cursor moving onto something that wants to hear about it, which is told once on the way in
+        DOMTreeElement over = CTMLEvents.at(layout, domCtx, mouseX, mouseY);
+        if (over != hovered) {
+            hovered = over;
+            CTMLEvents.hover(domCtx, over);
+        }
+
         CTMLRenderer.paint(layout, graphics, focus);
     }
 
@@ -122,6 +131,12 @@ public class CTMLScreen extends Screen {
                 watch.saw(event.x(), event.y());
                 return true;
             }
+        }
+
+        // whatever under the cursor names a callback hears about the press, which is what a button is for
+        if (CTMLEvents.click(layout, domCtx, event.button(), event.x(), event.y())) return true;
+
+        if (event.button() == LEFT_BUTTON) {
             grip = CTMLDrag.grab(layout, event.x(), event.y());
             if (grip != null) {
                 watch.saw(event.x(), event.y());
@@ -150,6 +165,7 @@ public class CTMLScreen extends Screen {
         }
         if (grip == null) return super.mouseDragged(event, deltaX, deltaY);
         grip.follow(event.x(), event.y());
+        CTMLEvents.drag(domCtx, grip.element());
         return true;
     }
 
@@ -201,6 +217,9 @@ public class CTMLScreen extends Screen {
             return true;
         }
 
+        // enter and space operate whatever has the focus, the way they press a button in a browser
+        if (event.isSelection() && CTMLEvents.input(domCtx, focus, event.input())) return true;
+
         CTMLScroll.Nudge nudge = nudgeFor(event);
         if (nudge != null && CTMLScroll.key(layout, focus, nudge)) return true;
         return super.keyPressed(event);
@@ -220,20 +239,22 @@ public class CTMLScreen extends Screen {
         };
     }
 
-    /** Puts back whatever the user last did to this screen's elements, by their ids. */
     @Override
     protected void init() {
         super.init();
         release(); // a resize rebuilds the screen, and nothing held across it can be trusted
         reveal = false;
-        CTMLState.restore(getTitle().getString(), domTreeHeadElement);
+        hovered = null;
     }
 
-    /** And remembers it on the way out, which is the only place it can be written down. */
+    /**
+     * Nothing is kept about where the user left the screen's boxes. The context will remember it and
+     * put it back, by rememberState and restoreState, but only for a host that asks: a screen closing
+     * is not reason enough to decide a scroll position is worth keeping.
+     */
     @Override
     public void removed() {
         release(); // the screen is going away mid drag, so the release will never arrive
-        CTMLState.remember(getTitle().getString(), domTreeHeadElement);
         super.removed();
     }
 

@@ -64,15 +64,16 @@ STYLE SYSTEM  (ctml/ElementStyle.java, ctml/style/*)
 - WARN: the text initial values only exist on <ctml>, since a default on every element would block
   the parent's value from ever reaching a child, so an element laid out with no ctml root above
   it has no colour or font size to fall back on bar the renderer's own constants.
-- SUGGESTION: css color keywords (cornflowerblue, rebeccapurple) are not supported; only the tailwind
-  palette, where a bare family name (text-green) falls back to that family's 500 shade
-  and [#hex]. A stop whose colour nothing knows is left out, so the gradient comes up one stop
-  short and is not drawn at all.
 - SUGGESTION: no box-shadow, outline, cursor, font-family, transform, transition or animation. With no
   font-family there is nothing monospaced to put <code> and <pre> in, so they keep the spacing they
   were written with and leave the look to the classes on them.
 - SUGGESTION: there is no way to set defaults from a script, and no per element reset: a new element
   has to override defaultStyle() in java.
+- SUGGESTION: an element's styles are two layers, the class property under whatever was set by hand,
+  and reading the class property again replaces everything the classes said before it rather than
+  piling onto it, which is what lets a callback show a box it had hidden. There is no classList, but
+  the property holds the list the element was written with and reads back as it stands, so adding or
+  taking away one class is an edit to that string: nothing is lost by having to write it back whole.
 - SUGGESTION: gradient colour interpolation modifiers (bg-linear-to-r/oklch, /srgb-linear) are not
   read, and every ramp is mixed channel by channel in plain srgb.
 - SUGGESTION: a from- / via- / to- class with no shape class before it assumes bg-linear-to-r, and
@@ -88,15 +89,16 @@ SCREEN AND REGISTRY  (render/CTMLScreen.java, render/UIRegistry.java, CraftytmlC
   frames. A release lost while the cursor then never moves again is still held, until it moves or
   anything at all is pressed; nothing moves in the meantime, so it costs nothing but the grip.
 - WARN: no hot reload: editing a .ctml file needs a game restart.
-- WARN: CTMLScreen routes dragging, scrolling, the scrolling keys and tab, and the press side of the
-  first two only answers the left button. No click handlers (the callback property is registered and
-  never called), no hover, no narration.
-- WARN: no widget elements. ctml, div, span, img, the table tags and the markdown set (h1 to h6, p,
-  ul, ol, li, blockquote, pre, code, hr, br, b, strong, i, em, s, del, u, ins) are all there is: no
-  button, no text input, no scrollable list widget, and no <a>, since nothing routes a click yet.
-  An img has no alt text and nothing to say while its texture loads.
-- SUGGESTION: the button numbers in mouseClicked / mouseDragged / mouseReleased are sdl's: left is 1,
-  middle 2, right 3, not glfw's 0 / 1 / 2. MouseHandler's isLeftPressed / isRightPressed are no use
-  on a screen at all, since minecraft only keeps them up to date while no screen is open.
-- SUGGESTION: hit testing ignores border-radius (the corners of a rounded box are live) and a box faded
-  by an ancestor's opacity rather than its own.
+- WARN: the events that reach a callback are the three mouse buttons, INPUT from a press or from enter
+  or space on a focused button, HOVER as the cursor comes onto an element, and DRAG while a draggable
+  one is moved. HOVER is only told about the way in, never the way out; nothing is told about a
+  release, a wheel, a key other than enter and space, or an element being scrolled.
+- WARN: no text input or scrollable list widget, and no <a>: a link has nowhere to go. Everything else
+  is ctml, div, span, img, button, the table tags and the markdown set (h1 to h6, p, ul, ol, li,
+  blockquote, pre, code, hr, br, b, strong, i, em, s, del, u, ins). An img has no alt text and nothing
+  to say while its texture loads, and a button is a box that can be pressed: it is not disabled by
+  anything, has no pressed or hovered look of its own, and nothing in the parser can style it per
+  state anyway.
+- SUGGESTION: every element ends up with an id, its own or one handed out in order the first time it is
+  asked for, and getElementById walks the tree each time it is called rather than keeping a map: a
+  tree that changes shape can never hand back something stale, at the cost of a walk per lookup.

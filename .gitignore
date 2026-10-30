@@ -30,7 +30,8 @@ bin/
 
 # fabric
 
-run/
+/run/*
+!/run/ctml/
 libs
 logs
 tools

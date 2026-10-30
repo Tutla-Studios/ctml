@@ -9,6 +9,8 @@ import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.PackType;
 import net.minecraft.server.packs.resources.PreparableReloadListener;
+import net.tutla.craftytml.client.ctml.ElementStyle;
+import net.tutla.craftytml.client.dom.CTMLCallback;
 import net.tutla.craftytml.client.dom.DOMTreeElement;
 import net.tutla.craftytml.client.render.CTMLScreen;
 import net.tutla.craftytml.client.render.CTMLTextures;
@@ -23,6 +25,8 @@ import net.tutla.tums.tusan.lang.Tusan;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
@@ -45,11 +49,7 @@ public class CraftytmlClient implements ClientModInitializer {
         openFirstUIOnMainMenu();
     }
 
-    /**
-     * A background image is measured once and the size kept, since nothing on the gui side will say how
-     * big a texture is. A resource reload can swap the image for one a different size, so the sizes are
-     * dropped whenever the packs are read again.
-     */
+
     public static void forgetTextureSizesOnReload(){
         ResourceLoader.get(PackType.CLIENT_RESOURCES).registerReloadListener(
                 Identifier.fromNamespaceAndPath("craftytml", "texture-sizes"),
@@ -75,8 +75,34 @@ public class CraftytmlClient implements ClientModInitializer {
 
             openedFirstUI = true;
             DOMContext ctx = new DOMContext(first.getValue());
+            registerDemoCallbacks(ctx);
             client.execute(() -> client.setScreenAndShow(new CTMLScreen(first.getKey(), first.getValue(), screen, ctx)));
         });
+    }
+
+    private static void registerDemoCallbacks(DOMContext ctx){
+        ctx.putCallBack("togglePanel", callback -> {
+            if (!callback.isPress()) return; // hovering the button is not pressing it
+
+            DOMTreeElement panel = callback.getCtx().getElementById("callback-panel");
+            if (panel == null) return;
+
+            boolean showing = panel.getStyleValue(ElementStyle.DISPLAY) != ElementStyle.Display.NONE;
+            panel.property("class", classes(panel, "hidden", showing), null);
+            callback.getElement().property("text", showing ? "show the panel" : "hide the panel", null);
+        });
+    }
+
+    private static String classes(DOMTreeElement element, String className, boolean add){
+        Object written = element.getPropertyValue("class");
+        List<String> list = new ArrayList<>();
+        if (written != null) {
+            for (String each : written.toString().strip().split("\\s+")) {
+                if (!each.isEmpty() && !each.equals(className)) list.add(each);
+            }
+        }
+        if (add) list.add(className);
+        return String.join(" ", list);
     }
 
     public void resolveCTMLDir(){

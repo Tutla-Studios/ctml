@@ -8,8 +8,10 @@ import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.TextColor;
 import net.minecraft.util.FormattedCharSequence;
 import net.tutla.craftytml.client.ctml.ElementStyle;
+import net.tutla.craftytml.client.ctml.element.Img;
 import net.tutla.craftytml.client.ctml.style.BackgroundImage;
 import net.tutla.craftytml.client.ctml.style.Gradient;
+import net.tutla.craftytml.client.ctml.style.Length;
 import net.tutla.craftytml.client.dom.DOMTreeElement;
 
 import java.util.ArrayList;
@@ -19,6 +21,13 @@ import java.util.List;
 public class CTMLRenderer {
     private static final int DEFAULT_TEXT_COLOR = 0xFFFFFFFF;
     private static final int DEFAULT_BORDER_COLOR = 0xFFFFFFFF;
+
+    /** What the focus ring comes as when nothing dresses it: a thin sky blue line, like tailwind's. */
+    private static final int DEFAULT_RING_WIDTH = 1;
+    private static final int DEFAULT_RING_COLOR = 0xFF38BDF8;
+
+    /** Where a picture sits in its box when nothing says: the middle, which is css's own default. */
+    private static final Length CENTRED = Length.percent(50);
 
     /** The four sides, in the order every border array is written in. */
     private static final int TOP = 0, RIGHT = 1, BOTTOM = 2, LEFT = 3;
@@ -48,9 +57,14 @@ public class CTMLRenderer {
 
     /** Draws a tree that has already been laid out, which is every frame's half of the work. */
     public static void paint(CTMLLayout.Box root, GuiGraphicsExtractor graphics){
+        paint(root, graphics, null);
+    }
+
+    /** The same, with a ring drawn round whatever element has the keyboard. */
+    public static void paint(CTMLLayout.Box root, GuiGraphicsExtractor graphics, DOMTreeElement focus){
         if (root == null) return;
         paintContext(root, graphics, Minecraft.getInstance().font, null,
-                root.style().get(ElementStyle.OPACITY, 1.0f));
+                root.style().get(ElementStyle.OPACITY, 1.0f), focus);
     }
 
     // ---- stacking contexts ----
@@ -84,7 +98,7 @@ public class CTMLRenderer {
      * once instead of each parent sorting its own children.
      */
     private static void paintContext(CTMLLayout.Box box, GuiGraphicsExtractor graphics, Font font,
-                                     Rect clip, float alpha){
+                                     Rect clip, float alpha, DOMTreeElement focus){
         if (alpha <= 0.0f || (clip != null && clip.isEmpty())) return;
 
         List<Layer> layers = new ArrayList<>();
@@ -100,10 +114,31 @@ public class CTMLRenderer {
         for (int i = 0; i < layers.size(); i++) {
             Layer layer = layers.get(i);
             if (i > 0 && startsContext(layer.box())) {
-                paintContext(layer.box(), graphics, font, layer.clip(), layer.alpha());
+                paintContext(layer.box(), graphics, font, layer.clip(), layer.alpha(), focus);
             } else {
                 paintSelf(layer, graphics, font, covered(opaque, i));
             }
+        }
+
+        // the bars come after everything this context drew, so nothing inside the box can be drawn over
+        // its own bar, and outside its own clip so a thumb sitting in its gutter is not cut off by the
+        // very box it belongs to. Only the box a context starts can have bars: every box that scrolls
+        // clips, and every box that clips starts one.
+        boolean clipped = push(graphics, clip);
+        if (box.style().get(ElementStyle.VISIBILITY) != ElementStyle.Visibility.HIDDEN) {
+            scrollbars(box, graphics, alpha);
+        }
+        if (clipped) graphics.disableScissor();
+
+        // and the ring last of all, so what has the keyboard is not hidden by what is inside it. A box
+        // that starts a context of its own draws its ring there, so it is not drawn twice
+        if (focus == null) return;
+        for (int i = 0; i < layers.size(); i++) {
+            Layer layer = layers.get(i);
+            if (layer.box().element() != focus || (i > 0 && startsContext(layer.box()))) continue;
+            boolean held = push(graphics, layer.clip());
+            focusRing(layer.box(), graphics, layer.alpha());
+            if (held) graphics.disableScissor();
         }
     }
 
@@ -249,9 +284,7 @@ public class CTMLRenderer {
             graphics.disableScissor();
         }
 
-        // the bars go on last so nothing inside the box can cover them, and outside its own clip so a
-        // thumb sitting in its gutter is not cut off by the very box it belongs to
-        scrollbars(box, graphics, alpha);
+        picture(box, graphics, alpha);
         if (clipped) graphics.disableScissor();
     }
 
@@ -490,6 +523,100 @@ public class CTMLRenderer {
                 at = Math.max(at, span[1]);
             }
             if (at < band[2]) graphics.fill(at, from, band[2], to, color);
+        }
+    }
+
+    /**
+     * The picture an <img> shows, drawn through the very same path a background image takes: object-fit
+     * and object-position say the same things background-size and background-position do, so they are
+     * turned into one of those and handed over. It is content, so it is cut to the content box, rounded
+     * corners and all.
+     */
+    private static void picture(CTMLLayout.Box box, GuiGraphicsExtractor graphics, float alpha){
+        if (!(box.element().getElement() instanceof Img element)) return;
+
+        String source = element.source();
+        CTMLTextures.Texture texture = CTMLTextures.of(source);
+        if (texture == null) return;
+
+        int width = box.contentWidth();
+        int height = box.contentHeight();
+        if (width <= 0 || height <= 0) return;
+
+        ElementStyle style = box.style();
+        BackgroundImage drawn = fitted(BackgroundImage.of(source), style, texture, width, height)
+                .withPosition(style.get(ElementStyle.OBJECT_POSITION_X, CENTRED),
+                        style.get(ElementStyle.OBJECT_POSITION_Y, CENTRED))
+                .withRepeat(BackgroundImage.Repeat.NO_REPEAT);
+
+        int radius = Math.max(0, style.get(ElementStyle.BORDER_RADIUS, 0) - (box.contentX() - box.x()));
+        graphics.enableScissor(box.contentX(), box.contentY(), box.contentX() + width, box.contentY() + height);
+        image(graphics, drawn, box.contentX(), box.contentY(), width, height, radius, alpha);
+        graphics.disableScissor();
+    }
+
+    /** object-fit, as the background-size that means the same thing. */
+    private static BackgroundImage fitted(BackgroundImage image, ElementStyle style,
+                                          CTMLTextures.Texture texture, int width, int height){
+        ElementStyle.ObjectFit fit = style.get(ElementStyle.OBJECT_FIT, ElementStyle.ObjectFit.FILL);
+        boolean bigger = texture.isMeasured() && (texture.width() > width || texture.height() > height);
+        return switch (fit) {
+            case FILL -> image.withSize(Length.FULL, Length.FULL); // stretched to the box, shape and all
+            case CONTAIN -> image.withFit(BackgroundImage.Fit.CONTAIN);
+            case COVER -> image.withFit(BackgroundImage.Fit.COVER);
+            case NONE -> image.withFit(BackgroundImage.Fit.AUTO);
+            // the smaller of its own size and one that fits, so a small picture is left alone
+            case SCALE_DOWN -> image.withFit(bigger ? BackgroundImage.Fit.CONTAIN : BackgroundImage.Fit.AUTO);
+        };
+    }
+
+    // ---- the focus ring ----
+
+    /**
+     * The ring round whatever has the keyboard, which is the only thing that says where the keys are
+     * going. It sits outside the border box, offset where the style asks, and follows the box's corners.
+     */
+    private static void focusRing(CTMLLayout.Box box, GuiGraphicsExtractor graphics, float alpha){
+        ElementStyle style = box.style();
+        int thick = style.get(ElementStyle.RING_WIDTH, DEFAULT_RING_WIDTH);
+        if (thick <= 0) return;
+
+        int offset = Math.max(0, style.get(ElementStyle.RING_OFFSET, 0));
+        int color = fade(style.get(ElementStyle.RING_COLOR, DEFAULT_RING_COLOR), alpha);
+        int grow = offset + thick;
+        int radius = style.get(ElementStyle.BORDER_RADIUS, 0);
+
+        outline(graphics, box.x() - grow, box.y() - grow, box.width() + grow * 2, box.height() + grow * 2,
+                radius > 0 ? radius + grow : 0, thick, color);
+    }
+
+    /**
+     * A rounded frame of one colour: the rows of the outer shape with the inner one taken out of them,
+     * measured the way the background's rows are so the two agree to the pixel.
+     */
+    private static void outline(GuiGraphicsExtractor graphics, int x, int y, int width, int height,
+                                int radius, int thick, int color){
+        if (width <= 0 || height <= 0 || thick <= 0 || (color >>> 24) == 0) return;
+
+        int holeX = x + thick;
+        int holeTop = y + thick;
+        int holeRight = x + width - thick;
+        int holeBottom = y + height - thick;
+        boolean hole = holeRight > holeX && holeBottom > holeTop;
+        int holeRadius = hole
+                ? Math.clamp(radius - thick, 0, Math.min(holeRight - holeX, holeBottom - holeTop) / 2)
+                : 0;
+
+        for (int[] band : bands(x, y, width, height, radius)) {
+            for (int[] rows : split(band[1], band[3], holeTop, holeBottom)) {
+                if (hole && rows[0] >= holeTop && rows[1] <= holeBottom) {
+                    int gap = inset(holeTop, holeBottom, holeRadius, rows[0], rows[1]);
+                    graphics.fill(band[0], rows[0], Math.min(holeX + gap, band[2]), rows[1], color);
+                    graphics.fill(Math.max(holeRight - gap, band[0]), rows[0], band[2], rows[1], color);
+                    continue;
+                }
+                graphics.fill(band[0], rows[0], band[2], rows[1], color);
+            }
         }
     }
 

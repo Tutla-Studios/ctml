@@ -16,13 +16,17 @@ RENDERER / PAINT  (render/CTMLRenderer.java)
   subtree off screen and fade the result, so two translucent children of a faded box, or two under a
   rounded or translucent background, do still show through one another.
 - SUGGESTION: a background image is one layer, and how big it is comes from the size read off the front
-  of the png. Anything else a texture can be, an atlas sprite among them, has no size to cover or
-  contain with and is stretched over the whole box instead. No background-origin, no
+  of the png, which an <img> is sized from as well. Anything else a texture can be, an atlas sprite
+  among them, has no size to cover or contain with: a background is stretched over the whole box
+  instead, and an img with no width or height of its own comes out empty. No background-origin, no
   background-attachment, no repeat-space or repeat-round, and a rounded box draws its tiles once per
   row of its corners rather than once.
 
 LAYOUT  (render/CTMLLayout.java)
 --------------------------------
+- SUGGESTION: a bar takes its room out of the content, so a box that turns out to need one is laid out
+  a second time with the room kept. Once only: if keeping the room then makes the other axis overflow,
+  that axis's bar floats over the content rather than asking for a third pass.
 - WARN: a table collapses its borders by sliding the cells onto one another by the width of the first
   border it finds, so a table whose cells carry different border widths has them overlap by the
   wrong amount. There is no border-spacing, no col or colgroup, and no visible-row collapsing.
@@ -35,18 +39,18 @@ LAYOUT  (render/CTMLLayout.java)
   as whole children allow and a child taller than its share makes its column taller.
 
 
-OVERFLOW AND SCROLLING  (render/CTMLScroll.java)
-------------------------------------------------
-- WARN: the keyboard reaches scroll containers and nothing else. There is no focus to speak of: the
-  keys go to whatever was last pressed on or wheeled over, nothing draws a focus ring, and tab
-  moves through nothing.
-- SUGGESTION: scroll anchoring holds the first child showing through the scrollport, and only on the
-  y axis. Something resizing inside that child still moves what is under the eye, and a container
-  whose children are all one box has nothing to hold on to.
-- SUGGESTION: scrollIntoView brings a box in from the nearest edge in one pass, so a box inside two
-  scroll containers at once is brought the rest of the way on the frame after.
-- SUGGESTION: scroll-smooth slides the wheel and the keys as well as the scrolls a script asks for.
-  Css only promises the last of those.
+OVERFLOW AND SCROLLING  (render/CTMLScroll.java, render/CTMLFocus.java)
+-----------------------------------------------------------------------
+- SUGGESTION: scrollIntoView brings a box in from the nearest edge, which is the only alignment there
+  is: no block or inline alignment to ask for, and no scroll-margin or scroll-padding to hold the box
+  clear of the edge it is brought to.
+- SUGGESTION: a scroll of its own picks the anchor afresh, so a resize that lands on the same frame as
+  a scroll is not corrected. Css suppresses anchoring around the user's own scrolls as well, but it
+  names the cases; this picks a new anchor and waits for the frame after.
+- SUGGESTION: tab walks the ring through everything that can take it in one order, and there is no way
+  to hold it inside a part of the screen: no focus trap, and no arrow key walking within a group.
+  A ring is drawn by ring-*, so styling what has the keyboard any other way needs a focus: variant,
+  which the parser has none of.
 
 
 STYLE SYSTEM  (ctml/ElementStyle.java, ctml/style/*)
@@ -78,11 +82,11 @@ SCREEN AND REGISTRY  (render/CTMLScreen.java, render/UIRegistry.java, CraftytmlC
   frames. A release lost while the cursor then never moves again is still held, until it moves or
   anything at all is pressed; nothing moves in the meantime, so it costs nothing but the grip.
 - WARN: no hot reload: editing a .ctml file needs a game restart.
-- WARN: CTMLScreen routes dragging, scrolling and the scrolling keys, and the press side of the first
-  two only answers the left button. No click handlers (the callback property is registered and never
-  called), no hover, no narration.
-- WARN: no widget elements: ctml, div, span and the table tags are all there is. No button, input,
-  img, list.
+- WARN: CTMLScreen routes dragging, scrolling, the scrolling keys and tab, and the press side of the
+  first two only answers the left button. No click handlers (the callback property is registered and
+  never called), no hover, no narration.
+- WARN: no widget elements: ctml, div, span, img and the table tags are all there is. No button,
+  input or list, and an img has no alt text and nothing to say while its texture loads.
 - SUGGESTION: the button numbers in mouseClicked / mouseDragged / mouseReleased are sdl's: left is 1,
   middle 2, right 3, not glfw's 0 / 1 / 2. MouseHandler's isLeftPressed / isRightPressed are no use
   on a screen at all, since minecraft only keeps them up to date while no screen is open.

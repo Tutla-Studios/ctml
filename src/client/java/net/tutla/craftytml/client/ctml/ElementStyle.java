@@ -154,6 +154,19 @@ public final class ElementStyle {
     /** Whether the content on show is held still when something above it changes size. */
     public static final Key<OverflowAnchor> OVERFLOW_ANCHOR = key("overflow-anchor", OverflowAnchor.class);
 
+    // replaced content: a picture in a box that is not the shape the picture is
+    /** How a picture is fitted into the box it was given. */
+    public static final Key<ObjectFit> OBJECT_FIT = key("object-fit", ObjectFit.class);
+    /** And where in that box it sits, as a share of the room left over, like background-position. */
+    public static final Key<Length> OBJECT_POSITION_X = key("object-position-x", Length.class);
+    public static final Key<Length> OBJECT_POSITION_Y = key("object-position-y", Length.class);
+
+    // the ring drawn around whatever has the keyboard
+    public static final Key<Integer> RING_WIDTH = key("ring-width", Integer.class);
+    public static final Key<Integer> RING_COLOR = key("ring-color", Integer.class);
+    /** How far outside the box the ring sits, so it can be held clear of the border. */
+    public static final Key<Integer> RING_OFFSET = key("ring-offset", Integer.class);
+
     // misc
     public static final Key<Visibility> VISIBILITY = key("visibility", Visibility.class);
     public static final Key<Float> OPACITY = key("opacity", Float.class);
@@ -242,12 +255,24 @@ public final class ElementStyle {
     public enum ScrollbarGutter { AUTO, STABLE, BOTH_EDGES }
     /** AUTO hands a wheel it cannot use outwards; CONTAIN and NONE keep it, so the page behind stays put. */
     public enum Overscroll { AUTO, CONTAIN, NONE }
-    public enum ScrollBehavior { AUTO, SMOOTH }
+    /**
+     * AUTO lands at once. SMOOTH slides the scrolls a script or the ui itself asks for, which is all
+     * css promises; GLIDE slides those and the wheel and the keys as well, which a ui that is looked at
+     * rather than read is easier to follow with.
+     */
+    public enum ScrollBehavior { AUTO, SMOOTH, GLIDE }
     /** AUTO holds the content on show still when something above it resizes; NONE lets it slide. */
     public enum OverflowAnchor { AUTO, NONE }
     /** Where a background stops. TEXT is css's background-clip: text, which clips it to the glyphs. */
     public enum BackgroundClip { BORDER_BOX, PADDING_BOX, CONTENT_BOX, TEXT }
     public enum Visibility { VISIBLE, HIDDEN }
+
+    /**
+     * What a picture does with a box that is not its shape: FILL stretches to it, CONTAIN fits inside it
+     * whole, COVER fills it and loses the overhang, NONE keeps the picture's own size, and SCALE_DOWN is
+     * the smaller of NONE and CONTAIN, so a small picture is left alone and a big one brought in.
+     */
+    public enum ObjectFit { FILL, CONTAIN, COVER, NONE, SCALE_DOWN }
 
     private final Object[] values;
     private int hash; // worked out once: these get used as map keys and nothing ever changes underneath

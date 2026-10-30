@@ -24,6 +24,7 @@ public class ElementRegistry {
         register(new TableRow());
         register(new TableHeaderCell());
         register(new TableCell());
+        register(new Img());
     }
 
     public static void register(CTMLElement element){

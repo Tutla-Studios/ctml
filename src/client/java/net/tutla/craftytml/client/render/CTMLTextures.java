@@ -11,7 +11,9 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * The textures a background image can name, and how big each one is.
+ * The one place an image name turns into a texture and a size. Both the things that draw a picture go
+ * through it: the background of a box and the <img> element, so they agree about what a name means,
+ * what happens to one nothing holds, and how often the packs are asked.
  *
  * <p>A background has to know the image's own size before it can cover a box with it or tile it, and
  * nothing on the gui side will say: a texture is handed to the gpu by name and never measured. So the
@@ -33,7 +35,21 @@ public final class CTMLTextures {
 
     private static final Map<String, Texture> KNOWN = new HashMap<>();
 
+    /** How a size is found, so a test or another host can answer without a running game. */
+    public interface Sizes {
+        /** The { width, height } of an image, or null where nothing holds it. */
+        int[] sizeOf(Identifier id);
+    }
+
+    private static Sizes sizes = CTMLTextures::fromPacks;
+
     private CTMLTextures(){}
+
+    /** Swaps out where sizes come from, and forgets the ones found the old way. */
+    public static void sizedBy(Sizes lookup){
+        sizes = lookup == null ? CTMLTextures::fromPacks : lookup;
+        forget();
+    }
 
     /**
      * The texture an image name stands for, or null where the name is not one an identifier can be
@@ -48,7 +64,7 @@ public final class CTMLTextures {
         Identifier id = Identifier.tryParse(source.strip());
         if (id == null) return null;
 
-        int[] size = measure(id);
+        int[] size = sizes.sizeOf(id);
         Texture texture = new Texture(id, size == null ? 0 : size[0], size == null ? 0 : size[1]);
         KNOWN.put(source, texture);
         return texture;
@@ -59,7 +75,8 @@ public final class CTMLTextures {
         KNOWN.clear();
     }
 
-    private static int[] measure(Identifier id){
+    /** The size off the png in whatever pack holds it, which is where it comes from in a running game. */
+    private static int[] fromPacks(Identifier id){
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft == null || minecraft.getResourceManager() == null) return null;
 

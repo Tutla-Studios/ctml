@@ -31,10 +31,13 @@ public class CTMLScreen extends Screen {
     private CTMLScroll.Grip bar;
 
     /**
-     * The scroll container the keyboard talks to: whatever the user last pressed on or last turned the
-     * wheel over. There is no focus ring in ctml yet, so this is all the focus there is.
+     * What the keyboard is talking to: whatever was last pressed on, or whatever tab was last walked to.
+     * A ring is drawn round it, and the keys that scroll go to it and then outwards from it.
      */
-    private DOMTreeElement scrollFocus;
+    private DOMTreeElement focus;
+
+    /** Set when the focus has just moved, so the newly focused box is brought into view once. */
+    private boolean reveal;
 
     /** Watches the cursor while something is held, so a release that never arrives cannot be waited on. */
     private final CTMLDrag.Watch watch = new CTMLDrag.Watch();
@@ -77,13 +80,16 @@ public class CTMLScreen extends Screen {
         if (layout == null || current != revision || width != laidOutWidth || height != laidOutHeight) {
             layout = CTMLRenderer.layout(domTreeHeadElement, width, height);
 
-            // what a script asked to be brought into view, and holding still whatever a resize above it
-            // would otherwise have pushed out from under the user's eye. Both move a scroll offset, so
-            // the tree is laid out once more and this frame draws where things end up rather than the
-            // frame after it
-            if (CTMLScroll.intoViewPending(layout) | CTMLScroll.anchor(layout)) {
-                layout = CTMLRenderer.layout(domTreeHeadElement, width, height);
+            // what a script asked to be brought into view, whatever tab has just walked to, and holding
+            // still whatever a resize above it would otherwise have pushed out from under the user's
+            // eye. All of them move a scroll offset, so the tree is laid out once more and this frame
+            // draws where things end up rather than the frame after it
+            boolean moved = CTMLScroll.intoViewPending(layout) | CTMLScroll.anchor(layout);
+            if (reveal) {
+                reveal = false;
+                moved |= focus != null && CTMLScroll.intoView(layout, focus);
             }
+            if (moved) layout = CTMLRenderer.layout(domTreeHeadElement, width, height);
 
             laidOutWidth = width;
             laidOutHeight = height;
@@ -95,7 +101,7 @@ public class CTMLScreen extends Screen {
         // cursor for good, so a cursor drawn away from where the drag last saw it lets go instead
         if (holding() && watch.lost(mouseX, mouseY)) release();
 
-        CTMLRenderer.paint(layout, graphics);
+        CTMLRenderer.paint(layout, graphics, focus);
     }
 
     /** Takes hold of whatever draggable box the press landed on, and swallows the click if it found one. */
@@ -104,13 +110,14 @@ public class CTMLScreen extends Screen {
         release(); // a press means whatever was held before is long since let go, heard of or not
 
         if (event.button() == LEFT_BUTTON) {
-            // a press hands the keyboard to whatever scroll container it landed in
-            DOMTreeElement pressed = CTMLScroll.focusAt(layout, event.x(), event.y());
-            if (pressed != null) scrollFocus = pressed;
+            // a press hands the keyboard to whatever it landed on, or to the nearest box above it that
+            // can take it. Nothing focusable under the cursor leaves the focus where it was
+            DOMTreeElement pressed = CTMLFocus.at(layout, event.x(), event.y());
+            if (pressed != null) focus = pressed;
 
             bar = CTMLScroll.grab(layout, event.x(), event.y()); // the bars are drawn over everything in their box
             if (bar != null) {
-                scrollFocus = bar.element();
+                focus = bar.element();
                 watch.saw(event.x(), event.y());
                 return true;
             }
@@ -165,25 +172,36 @@ public class CTMLScreen extends Screen {
         bar = null;
     }
 
-    /** The wheel goes to the innermost scrollable box under the cursor, and outwards from there. */
+    /**
+     * The wheel goes to the innermost scrollable box under the cursor, and outwards from there. It
+     * leaves the focus alone: what the keys talk to is not meant to wander off under the cursor.
+     */
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
-        DOMTreeElement under = CTMLScroll.focusAt(layout, mouseX, mouseY);
-        if (under != null) scrollFocus = under; // and leaves the keyboard pointing at the same box
         if (CTMLScroll.wheel(layout, mouseX, mouseY, scrollX, scrollY)) return true;
         return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
     }
 
     /**
-     * The arrows, page up and down and home and end scroll whatever the user last pressed on or
-     * turned the wheel over, falling out to the box around it once that one has nothing left to give.
-     * With nothing pressed yet the outermost scroll container takes them, which is the nearest thing
-     * ctml has to a browser scrolling the page.
+     * Tab walks the focus through everything that can take it and back round to the start, and shift
+     * walks it the other way. Whatever it lands on is brought into view, the way a browser does it.
+     *
+     * <p>The arrows, page up and down and home and end scroll whatever has the focus, falling out to
+     * the box around it once that one has nothing left to give. With nothing focused yet the outermost
+     * scroll container takes them, which is the nearest thing ctml has to a browser scrolling the page.
      */
     @Override
     public boolean keyPressed(KeyEvent event) {
+        if (event.isCycleFocus()) { // tab, which is what minecraft calls walking the focus on
+            DOMTreeElement next = CTMLFocus.next(layout, focus, event.hasShiftDown());
+            if (next == null) return super.keyPressed(event);
+            focus = next;
+            reveal = true;
+            return true;
+        }
+
         CTMLScroll.Nudge nudge = nudgeFor(event);
-        if (nudge != null && CTMLScroll.key(layout, scrollFocus, nudge)) return true;
+        if (nudge != null && CTMLScroll.key(layout, focus, nudge)) return true;
         return super.keyPressed(event);
     }
 
@@ -206,6 +224,7 @@ public class CTMLScreen extends Screen {
     protected void init() {
         super.init();
         release(); // a resize rebuilds the screen, and nothing held across it can be trusted
+        reveal = false;
         CTMLState.restore(getTitle().getString(), domTreeHeadElement);
     }
 

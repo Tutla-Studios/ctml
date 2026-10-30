@@ -245,6 +245,8 @@ public final class TailwindParser {
         // whether a scroll lands at once or slides there
         keyword("scroll-auto", s -> s.set(ElementStyle.SCROLL_BEHAVIOR, ElementStyle.ScrollBehavior.AUTO));
         keyword("scroll-smooth", s -> s.set(ElementStyle.SCROLL_BEHAVIOR, ElementStyle.ScrollBehavior.SMOOTH));
+        // and ctml's own, which slides the wheel and the keys too. Css only promises the scrolls asked for
+        keyword("scroll-glide", s -> s.set(ElementStyle.SCROLL_BEHAVIOR, ElementStyle.ScrollBehavior.GLIDE));
 
         // whether what is on show is held still when something above it resizes
         keyword("overflow-anchor-auto", s -> s.set(ElementStyle.OVERFLOW_ANCHOR, ElementStyle.OverflowAnchor.AUTO));
@@ -420,6 +422,41 @@ public final class TailwindParser {
         position("right-top", 100, 0);
         position("left-bottom", 0, 100);
         position("right-bottom", 100, 100);
+        // a picture in a box that is not its shape, which is css's object-fit and object-position
+        keyword("object-fill", s -> s.set(ElementStyle.OBJECT_FIT, ElementStyle.ObjectFit.FILL));
+        keyword("object-contain", s -> s.set(ElementStyle.OBJECT_FIT, ElementStyle.ObjectFit.CONTAIN));
+        keyword("object-cover", s -> s.set(ElementStyle.OBJECT_FIT, ElementStyle.ObjectFit.COVER));
+        keyword("object-none", s -> s.set(ElementStyle.OBJECT_FIT, ElementStyle.ObjectFit.NONE));
+        keyword("object-scale-down", s -> s.set(ElementStyle.OBJECT_FIT, ElementStyle.ObjectFit.SCALE_DOWN));
+        object("center", 50, 50);
+        object("left", 0, 50);
+        object("right", 100, 50);
+        object("top", 50, 0);
+        object("bottom", 50, 100);
+        object("top-left", 0, 0);
+        object("top-right", 100, 0);
+        object("bottom-left", 0, 100);
+        object("bottom-right", 100, 100);
+        object("left-top", 0, 0);
+        object("right-top", 100, 0);
+        object("left-bottom", 0, 100);
+        object("right-bottom", 100, 100);
+        valued("object-position", (s, v) -> {
+            Length[] pair = lengths(v);
+            if (pair == null) refuse(ElementStyle.OBJECT_POSITION_X.cssName);
+            else s.set(ElementStyle.OBJECT_POSITION_X, pair[0]).set(ElementStyle.OBJECT_POSITION_Y, pair[1]);
+        });
+
+        // the ring drawn round whatever has the keyboard
+        keyword("ring", s -> s.set(ElementStyle.RING_WIDTH, 1));
+        keyword("ring-none", s -> s.set(ElementStyle.RING_WIDTH, 0));
+        valued("ring-offset", (s, v) -> set(s, ElementStyle.RING_OFFSET, number(v)));
+        valued("ring", (s, v) -> {
+            Integer width = number(v);
+            if (width != null) s.set(ElementStyle.RING_WIDTH, width);
+            else set(s, ElementStyle.RING_COLOR, TailwindColors.parse(v));
+        });
+
         valued("bg-position", (s, v) -> {
             Length[] pair = lengths(v);
             if (pair != null) image(s, i -> i.withPosition(pair[0], pair[1]));
@@ -550,6 +587,12 @@ public final class TailwindParser {
     /** Along the x axis "screen" means the viewport's width rather than its height. */
     private static Valued horizontal(Valued setter){
         return (style, value) -> setter.apply(style, value.equals("screen") ? "svw" : value);
+    }
+
+    /** The same places, for a picture inside its box: object-center, object-top-left and the rest. */
+    private static void object(String name, int x, int y){
+        keyword("object-" + name, s -> s.set(ElementStyle.OBJECT_POSITION_X, Length.percent(x))
+                .set(ElementStyle.OBJECT_POSITION_Y, Length.percent(y)));
     }
 
     /** One of the places a background image can sit, as the share of the box its own share lines up with. */

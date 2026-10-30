@@ -5,6 +5,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 import net.minecraft.util.FormattedCharSequence;
 import net.tutla.craftytml.client.ctml.ElementStyle;
+import net.tutla.craftytml.client.ctml.element.Img;
 import net.tutla.craftytml.client.ctml.property.Text;
 import net.tutla.craftytml.client.ctml.style.Length;
 import net.tutla.craftytml.client.ctml.style.Track;
@@ -177,11 +178,12 @@ public final class CTMLLayout {
 
     /**
      * Everything the layout of an element depends on bar where it was put: the style it inherits, the
-     * room it was given, the size it was told to be and the viewport behind the vw and vh units.
+     * room it was given, the size it was told to be, the viewport behind the vw and vh units, and the
+     * room kept for its bars, which tells the two passes of a box that scrolls apart.
      */
     private record CacheKey(ElementStyle parentStyle, int cbWidth, int cbHeight, int forcedWidth,
                             int forcedHeight, boolean topMarginTaken, boolean root,
-                            int viewWidth, int viewHeight) {}
+                            int viewWidth, int viewHeight, Gutters gutters) {}
 
     private record Cached(int x, int y, Box box) {}
 
@@ -319,11 +321,21 @@ public final class CTMLLayout {
      */
     private Box layout(DOMTreeElement element, ElementStyle parentStyle, int x, int y, int cbWidth, int cbHeight,
                        boolean root, int forcedWidth, int forcedHeight, boolean topMarginTaken, Bands bands){
+        return layout(element, parentStyle, x, y, cbWidth, cbHeight, root, forcedWidth, forcedHeight,
+                topMarginTaken, bands, null);
+    }
+
+    /**
+     * forced is the room to keep for the bars, which is only ever handed in by the second pass below.
+     */
+    private Box layout(DOMTreeElement element, ElementStyle parentStyle, int x, int y, int cbWidth, int cbHeight,
+                       boolean root, int forcedWidth, int forcedHeight, boolean topMarginTaken, Bands bands,
+                       Gutters forced){
         // nothing inside has changed and it is being asked the same question as last time, so the answer
         // is the one from last time, moved to wherever it goes now. A box with floats around it is left
         // out of this: where its lines may go depends on where the box itself ended up.
         CacheKey key = new CacheKey(parentStyle, cbWidth, cbHeight, forcedWidth, forcedHeight,
-                topMarginTaken, root, viewWidth, viewHeight);
+                topMarginTaken, root, viewWidth, viewHeight, forced);
         Boxes reusable = bands.isEmpty()
                 ? REUSABLE.computeIfAbsent(element, e -> new Boxes()).at(element.subtreeRevision())
                 : null;
@@ -361,8 +373,8 @@ public final class CTMLLayout {
         // the room kept for the bars comes out of the content, and it is kept for as long as the axis
         // could show one rather than only while one is actually there, so nothing has to be laid out
         // twice and nothing jumps sideways the moment the content grows past the box.
-        int gutterRight = CTMLScroll.gutterFor(style, overflowY);
-        int gutterBottom = CTMLScroll.gutterFor(style, overflowX);
+        int gutterRight = forced != null ? forced.right() : CTMLScroll.gutterFor(style, overflowY);
+        int gutterBottom = forced != null ? forced.bottom() : CTMLScroll.gutterFor(style, overflowX);
         int gutterLeft = CTMLScroll.bothEdges(style) ? gutterRight : 0;
         int gutterTop = CTMLScroll.bothEdges(style) ? gutterBottom : 0;
 
@@ -395,14 +407,21 @@ public final class CTMLLayout {
         };
         int baseline = flow.baseline();
 
+        // a picture has no content to be as tall as, so an auto height keeps the shape it came in at
+        // whatever width it ended up: naming one of the two is naming both, the way css does it
+        int[] picture = pictureSize(element);
+        int used = picture != null && picture[0] > 0
+                ? Math.round(innerWidth * picture[1] / (float) picture[0])
+                : flow.height();
+
         int contentHeight = forcedHeight != UNFORCED
                 ? Math.max(0, forcedHeight - frame.vertical())
-                : contentHeight(style, cbWidth, cbHeight, flow.height() + gutterTop + gutterBottom);
+                : contentHeight(style, cbWidth, cbHeight, used + gutterTop + gutterBottom);
         int innerHeight = Math.max(0, contentHeight - gutterTop - gutterBottom);
 
         // a block container lines its content up inside a taller box with align-content, which is what
         // centres lines of text in a box the way nothing else can: flex and grid align their own.
-        int lead = aligns(display, columns) ? spread(1, innerHeight - flow.height(),
+        int lead = aligns(display, columns) && picture == null ? spread(1, innerHeight - flow.height(),
                 style.get(ElementStyle.ALIGN_CONTENT, ElementStyle.AlignContent.START))[0] : 0;
         if (lead > 0) {
             for (int i = 0; i < lines.size(); i++) {
@@ -503,11 +522,49 @@ public final class CTMLLayout {
                 contentX, contentY, innerWidth, innerHeight, offsetX, offsetY, port, boxBaseline, lines, children),
                 offsetX, offsetY);
 
+        // a bar takes its room out of the content rather than floating over it, and whether there is one
+        // at all is only known once the content has been laid out. So a box that turns out to want a bar
+        // it kept no room for is laid out once more with the room kept. Once only: the second pass keeps
+        // what the first asked for, whatever it then finds, so nothing can go back and forth.
+        if (forced == null) {
+            Gutters needed = classic(box, style, gutterRight, gutterBottom);
+            if (needed != null) {
+                return layout(element, parentStyle, x, y, cbWidth, cbHeight, root, forcedWidth, forcedHeight,
+                        topMarginTaken, bands, needed);
+            }
+        }
+
         if (reusable != null) reusable.entries.put(key, new Cached(x, y, box));
         return box;
     }
 
+    /** The room kept for the bars inside a box, when it is not what the box was laid out with. */
+    private record Gutters(int right, int bottom) {}
+
+    /**
+     * The room a box turns out to need for its bars, or null where it already kept it. Only a bar that is
+     * really there asks for any, so an axis that merely could scroll keeps none, and hidden bars keep
+     * none at all: that is the one case where the content does reach the full width of the box.
+     */
+    private static Gutters classic(Box box, ElementStyle style, int right, int bottom){
+        int thick = CTMLScroll.thickness(style);
+        int wantRight = right == 0 && CTMLScroll.showsVerticalBar(box) ? thick : right;
+        int wantBottom = bottom == 0 && CTMLScroll.showsHorizontalBar(box) ? thick : bottom;
+        return wantRight == right && wantBottom == bottom ? null : new Gutters(wantRight, wantBottom);
+    }
+
     // ---- width and height ----
+
+    /**
+     * The size a replaced element comes with, { width, height }, or null for everything else. Only a
+     * picture has one, and only once something holds the texture it names: an image nothing holds has
+     * no size to be, so a box with no width or height of its own comes out empty rather than guessing.
+     */
+    static int[] pictureSize(DOMTreeElement element){
+        if (!(element.getElement() instanceof Img picture)) return null;
+        CTMLTextures.Texture texture = CTMLTextures.of(picture.source());
+        return texture != null && texture.isMeasured() ? new int[]{ texture.width(), texture.height() } : null;
+    }
 
     private int contentWidth(DOMTreeElement element, ElementStyle style, int cbWidth, int available){
         Length width = style.get(ElementStyle.WIDTH);
@@ -522,6 +579,18 @@ public final class CTMLLayout {
                 case MAX_CONTENT -> maxContent(element, style, cbWidth);
                 default -> shrinkToFit(element, style, cbWidth, available); // fit-content
             };
+        } else if (pictureSize(element) != null) {
+            // a picture comes out its own size, or, where it was given a height and no width, whatever
+            // width keeps the shape it came in: naming one of the two is naming both
+            int[] picture = pictureSize(element);
+            Length tall = style.get(ElementStyle.HEIGHT);
+            if (tall != null && tall.isDefinite() && !tall.isPercent() && picture[1] > 0) {
+                int inner = tall.resolve(0, viewWidth, viewHeight, 0)
+                        - (isBorderBox(style) ? frame(style, cbWidth).vertical() : 0);
+                resolved = Math.round(Math.max(0, inner) * picture[0] / (float) picture[1]);
+            } else {
+                resolved = picture[0];
+            }
         } else if (isInlineLevel(style)) { // inline-ish boxes are only as wide as they need to be
             resolved = shrinkToFit(element, style, cbWidth, available);
         } else {
@@ -569,9 +638,14 @@ public final class CTMLLayout {
         Intrinsic result;
 
         Length width = style.get(ElementStyle.WIDTH);
+        int[] picture = pictureSize(element);
         if (width != null && width.isDefinite() && !width.isPercent()) {
             int size = width.resolve(basis, viewWidth, viewHeight, 0);
             if (!isBorderBox(style)) size += frame.horizontal();
+            result = new Intrinsic(size, size);
+        } else if (picture != null) {
+            // a picture is as wide as it is: there is nothing inside it that could wrap and give way
+            int size = picture[0] + frame.horizontal();
             result = new Intrinsic(size, size);
         } else if (style.get(ElementStyle.DISPLAY) == ElementStyle.Display.FLEX) {
             result = flexIntrinsic(element, style, basis, frame);

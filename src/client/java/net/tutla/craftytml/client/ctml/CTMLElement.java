@@ -5,6 +5,7 @@ import net.tutla.craftytml.client.ctml.property.Draggable;
 import net.tutla.craftytml.client.ctml.property.ScrollInto;
 import net.tutla.craftytml.client.ctml.property.ScrollX;
 import net.tutla.craftytml.client.ctml.property.ScrollY;
+import net.tutla.craftytml.client.ctml.property.TabIndex;
 import net.tutla.craftytml.client.ctml.style.TailwindParser;
 import net.tutla.craftytml.client.dom.DOMTreeElement;
 import net.tutla.craftytml.client.dom.DOMTreeNode;
@@ -35,8 +36,9 @@ public abstract class CTMLElement {
     private float scrollShareY = -1;
     private long scrollView = 0; //the viewport the pixels above were measured in
 
-    private DOMTreeElement scrollAnchor; //the child the scroll is held against while something above it resizes
-    private int scrollAnchorOffset;
+    private DOMTreeElement scrollAnchor; //the box the scroll is held against while something above it resizes
+    private int scrollAnchorX; //and where in the scrollport that box was showing, on each axis
+    private int scrollAnchorY;
 
     private String scrollInto; //an id a script asked to be brought into view, until whatever lays out takes it
 
@@ -75,8 +77,8 @@ public abstract class CTMLElement {
             applyClassStyles(classes.getStringValue(), ctx); // the ctx is what lets a bad class point at itself
         }
         // the three a script sets to scroll the element, which is the only lever a script has
-        if (property instanceof ScrollX x && x.hasValue()) setScrollOffset(x.getPixels(), scrollY);
-        if (property instanceof ScrollY y && y.hasValue()) setScrollOffset(scrollX, y.getPixels());
+        if (property instanceof ScrollX x && x.hasValue()) scrollFromScript(x.getPixels(), scrollTargetY);
+        if (property instanceof ScrollY y && y.hasValue()) scrollFromScript(scrollTargetX, y.getPixels());
         if (property instanceof ScrollInto into && into.hasValue()) scrollInto = into.getStringValue();
     }
 
@@ -149,6 +151,16 @@ public abstract class CTMLElement {
         setStyle(style.toBuilder().set(cssName, value).build());
     }
 
+    /**
+     * Where the element comes in the tab order, or TabIndex.UNSET where it says nothing. Something that
+     * says nothing can still be focused if it scrolls, which is the one thing the keyboard can do to it.
+     */
+    public int getTabIndex(){
+        return propertyList.propertyFromName("tabindex") instanceof TabIndex index
+                ? index.getIndex()
+                : TabIndex.UNSET;
+    }
+
     public boolean isDraggable(){
         return propertyList.propertyFromName("draggable") instanceof Draggable draggable && draggable.isOn();
     }
@@ -207,6 +219,19 @@ public abstract class CTMLElement {
      * It lands there at once and forgets any share that was remembered, since pixels are all a script
      * or a scrollbar has to go on. Layout works a share back out from it once it knows the room it had.
      */
+    /**
+     * A scroll a script asked for, which slides where the style says to: css lets scroll-behavior have
+     * its say over the scrolls that are asked for, whatever it does about the wheel and the keys.
+     */
+    public void scrollFromScript(int scrollX, int scrollY){
+        if (getStyle().get(ElementStyle.SCROLL_BEHAVIOR, ElementStyle.ScrollBehavior.AUTO)
+                == ElementStyle.ScrollBehavior.AUTO) {
+            setScrollOffset(scrollX, scrollY);
+        } else {
+            slideScrollTo(scrollX, scrollY);
+        }
+    }
+
     public void setScrollOffset(int scrollX, int scrollY){
         scrollShareX = -1;
         scrollShareY = -1;
@@ -297,11 +322,14 @@ public abstract class CTMLElement {
 
     /** The child the scroll is being held against, and where in the content it sat when it was picked. */
     public DOMTreeElement getScrollAnchor(){ return scrollAnchor; }
-    public int getScrollAnchorOffset(){ return scrollAnchorOffset; }
+    public int getScrollAnchorX(){ return scrollAnchorX; }
+    public int getScrollAnchorY(){ return scrollAnchorY; }
 
-    public void setScrollAnchor(DOMTreeElement anchor, int offset){
+    /** The box whatever is on show is held against, and where in the scrollport it was showing. */
+    public void setScrollAnchor(DOMTreeElement anchor, int x, int y){
         scrollAnchor = anchor;
-        scrollAnchorOffset = offset;
+        scrollAnchorX = x;
+        scrollAnchorY = y;
     }
 
     /** An id a script asked to be brought into view. Taken rather than read, since it only happens once. */

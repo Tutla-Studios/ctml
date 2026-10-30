@@ -77,13 +77,17 @@ public final class CTMLScroll {
     }
 
     /**
-     * Whether a scroll slides rather than landing at once. Css only promises this for the scrolls a
-     * script or the page itself asks for; ctml gives the wheel and the keys the same, since a game ui
-     * is looked at rather than read and a jump of a dozen pixels is hard to follow.
+     * Whether a scroll slides rather than landing at once. scroll-smooth means what css means by it:
+     * the scrolls that are asked for slide and the wheel and the keys land where they are put, since
+     * that is all css promises and anything else makes the wheel feel like it is lagging. scroll-glide
+     * is ctml's own, for a ui that is looked at rather than read: it slides those two as well.
      */
-    public static boolean slides(ElementStyle style){
-        return style.get(ElementStyle.SCROLL_BEHAVIOR, ElementStyle.ScrollBehavior.AUTO)
-                == ElementStyle.ScrollBehavior.SMOOTH;
+    public static boolean slides(ElementStyle style, boolean asked){
+        return switch (style.get(ElementStyle.SCROLL_BEHAVIOR, ElementStyle.ScrollBehavior.AUTO)) {
+            case AUTO -> false;
+            case SMOOTH -> asked;
+            case GLIDE -> true;
+        };
     }
 
     /** Whether what is on show is held still when something above it changes size. */
@@ -357,7 +361,7 @@ public final class CTMLScroll {
         CTMLLayout.Port port = box.port();
         scrollTo(box,
                 Math.clamp(target(box, false) + dx, 0, port.maxScrollX()),
-                Math.clamp(target(box, true) + dy, 0, port.maxScrollY()));
+                Math.clamp(target(box, true) + dy, 0, port.maxScrollY()), false);
     }
 
     /**
@@ -368,9 +372,12 @@ public final class CTMLScroll {
         return vertical ? box.element().getScrollTargetY() : box.element().getScrollTargetX();
     }
 
-    /** Puts a box's content at an offset, sliding there if the box asked to slide. */
-    public static void scrollTo(CTMLLayout.Box box, int scrollX, int scrollY){
-        if (slides(box.style())) box.element().slideScrollTo(scrollX, scrollY);
+    /**
+     * Puts a box's content at an offset, sliding there if the box asked to slide. asked is true for a
+     * scroll the ui or a script went looking for, which is the only kind css slides.
+     */
+    public static void scrollTo(CTMLLayout.Box box, int scrollX, int scrollY, boolean asked){
+        if (slides(box.style(), asked)) box.element().slideScrollTo(scrollX, scrollY);
         else box.element().setScrollOffset(scrollX, scrollY);
     }
 
@@ -430,24 +437,8 @@ public final class CTMLScroll {
 
         int scroll = Math.clamp(want, 0, max);
         if (scroll == at) return false;
-        scrollTo(box, vertical ? port.scrollX() : scroll, vertical ? scroll : port.scrollY());
+        scrollTo(box, vertical ? port.scrollX() : scroll, vertical ? scroll : port.scrollY(), false);
         return true;
-    }
-
-    /** The innermost scroll container the cursor is over, which is what a press hands the keyboard to. */
-    public static DOMTreeElement focusAt(CTMLLayout.Box root, double mouseX, double mouseY){
-        if (root == null || !shown(root) || clipsAway(root, mouseX, mouseY)) return null;
-
-        List<CTMLLayout.Box> children = CTMLRenderer.paintOrder(root.children());
-        for (int i = children.size() - 1; i >= 0; i--) {
-            DOMTreeElement found = focusAt(children.get(i), mouseX, mouseY);
-            if (found != null) return found;
-        }
-
-        boolean scrollable = root.userScrollsX() || root.userScrollsY();
-        return scrollable && within(mouseX, mouseY, root.x(), root.y(), root.right(), root.bottom())
-                ? root.element()
-                : null;
     }
 
     /** The outermost box that can be scrolled at all, which stands in for the page itself. */
@@ -490,10 +481,14 @@ public final class CTMLScroll {
 
     /**
      * Holds what is on show still when something above it changes size, which is css's scroll anchoring.
-     * Each scroll container picks the first child showing through its scrollport and remembers where in
-     * the content that child sat; next time round, anything that moved it is taken off the scroll offset
+     * Each scroll container picks the deepest box showing through its scrollport and remembers where in
+     * the scrollport that box sat; next time round, anything that moved it is taken off the scroll offset
      * instead of moving under the user's eye. True when an offset was corrected, so whatever called can
      * lay out again and draw the held position rather than next frame's.
+     *
+     * <p>The deepest one is what css picks too, and it is what makes a resize inside the anchor hold
+     * still as well: holding the child itself only ever held the top of the child. It is also the answer
+     * for a container whose content is all one box, which has no child of its own worth holding.
      */
     public static boolean anchor(CTMLLayout.Box box){
         boolean moved = false;
@@ -507,78 +502,132 @@ public final class CTMLScroll {
     private static boolean hold(CTMLLayout.Box box){
         DOMTreeElement element = box.element();
         CTMLLayout.Port port = box.port();
-        if (port.maxScrollY() <= 0 || !anchors(box.style())) {
-            element.setScrollAnchor(null, 0);
+        if ((port.maxScrollX() <= 0 && port.maxScrollY() <= 0) || !anchors(box.style())) {
+            element.setScrollAnchor(null, 0, 0);
             return false;
         }
 
-        // the child picked last time, as long as it is still one of this box's children. A scroll of its
-        // own picks a new one, since what the user then looks at is somewhere else entirely
+        // the box picked last time, as long as it is still somewhere under this one. A scroll of its own
+        // picks a new one, since what the user then looks at is somewhere else entirely
         DOMTreeElement held = element.getScrollAnchor();
-        CTMLLayout.Box anchor = held == null ? null : childFor(box, held);
+        CTMLLayout.Box anchor = held == null ? null : boxFor(box, held);
         if (anchor == null) {
-            CTMLLayout.Box picked = anchorChild(box, port);
+            CTMLLayout.Box picked = anchorBox(box, port);
             element.setScrollAnchor(picked == null ? null : picked.element(),
-                    picked == null ? 0 : showsAt(picked, port));
+                    picked == null ? 0 : showsAtX(picked, port),
+                    picked == null ? 0 : showsAtY(picked, port));
             return false;
         }
 
-        // where the child shows through the scrollport, which is what must not move
-        int was = element.getScrollAnchorOffset();
-        int drift = showsAt(anchor, port) - was;
-        if (drift == 0 || port.scrollY() == 0) return false;
+        // where the box shows through the scrollport, which is what must not move. At the very start of
+        // an axis nothing is held: something growing above the content is meant to push it down
+        int wasX = element.getScrollAnchorX();
+        int wasY = element.getScrollAnchorY();
+        int driftX = port.scrollX() == 0 ? 0 : showsAtX(anchor, port) - wasX;
+        int driftY = port.scrollY() == 0 ? 0 : showsAtY(anchor, port) - wasY;
+        if (driftX == 0 && driftY == 0) return false;
 
-        int scroll = Math.clamp(port.scrollY() + drift, 0, port.maxScrollY());
-        if (scroll == port.scrollY()) return false;
+        int scrollX = Math.clamp(port.scrollX() + driftX, 0, port.maxScrollX());
+        int scrollY = Math.clamp(port.scrollY() + driftY, 0, port.maxScrollY());
+        if (scrollX == port.scrollX() && scrollY == port.scrollY()) return false;
 
-        element.setScrollOffset(port.scrollX(), scroll); // at once: this is a correction, not a scroll
-        element.setScrollAnchor(anchor.element(), was); // and the child is still meant to show there
+        element.setScrollOffset(scrollX, scrollY); // at once: this is a correction, not a scroll
+        element.setScrollAnchor(anchor.element(), wasX, wasY); // and it is still meant to show there
         return true;
     }
 
-    /** How far below the top of the scrollport a child is drawn. */
-    private static int showsAt(CTMLLayout.Box child, CTMLLayout.Port port){
-        return child.flowY() - port.y();
+    /** How far past the near edge of the scrollport a box is drawn, before the scroll moved it. */
+    private static int showsAtY(CTMLLayout.Box box, CTMLLayout.Port port){
+        return box.flowY() - port.y();
     }
 
-    private static CTMLLayout.Box childFor(CTMLLayout.Box box, DOMTreeElement element){
-        for (CTMLLayout.Box child : box.children()) if (child.element() == element) return child;
+    private static int showsAtX(CTMLLayout.Box box, CTMLLayout.Port port){
+        return box.flowX() - port.x();
+    }
+
+    /** The box somewhere under this one that holds an element, or null where none does. */
+    private static CTMLLayout.Box boxFor(CTMLLayout.Box box, DOMTreeElement element){
+        List<CTMLLayout.Box> path = path(box, element);
+        return path.size() < 2 ? null : path.getLast();
+    }
+
+    /**
+     * The deepest box showing through the scrollport, found by taking the first child that reaches into
+     * it and then the first of its own, as far down as that goes.
+     */
+    private static CTMLLayout.Box anchorBox(CTMLLayout.Box box, CTMLLayout.Port port){
+        CTMLLayout.Box picked = anchorChild(box, port);
+        while (picked != null) {
+            CTMLLayout.Box deeper = anchorChild(picked, port);
+            if (deeper == null) return picked;
+            picked = deeper;
+        }
         return null;
     }
 
-    /** The first child showing through the scrollport, which is the one worth holding on to. */
+    /** The first child reaching into the scrollport, which is the one worth holding on to. */
     private static CTMLLayout.Box anchorChild(CTMLLayout.Box box, CTMLLayout.Port port){
         for (CTMLLayout.Box child : box.children()) {
-            if (child.isFixed() || child.offsetY() != 0) continue; // dragged, stuck or taken out of the flow
-            if (child.bottom() > port.y()) return child;
+            if (child.isFixed() || child.offsetX() != 0 || child.offsetY() != 0) continue; // out of the flow
+            if (child.bottom() > port.y() && child.right() > port.x()) return child;
         }
         return null;
     }
 
     /**
      * Scrolls every container above an element just far enough to bring it into view, which is css's
-     * scrollIntoView. Each one is worked out from where things are now, so a container that moves
-     * because one outside it scrolled is brought the rest of the way on the next frame.
+     * scrollIntoView. The containers are taken innermost first, and each one is told where the element
+     * has got to by the scrolls already worked out rather than where it sits now, so a box inside two
+     * of them is brought all the way in one pass instead of the rest of the way a frame later.
+     *
+     * <p>What an outer container has to show is the part of the element its inner one can show, so the
+     * element is cut down to each scrollport on the way out: an element taller than the box it is in
+     * leaves that box to be brought into view rather than the whole of the element.
      */
     public static boolean intoView(CTMLLayout.Box root, DOMTreeElement element){
         List<CTMLLayout.Box> path = path(root, element);
         if (path.size() < 2) return false;
 
         CTMLLayout.Box target = path.getLast();
+        int left = target.x();
+        int top = target.y();
+        int right = target.right();
+        int bottom = target.bottom();
+
         boolean moved = false;
-        for (int i = 0; i < path.size() - 1; i++) {
+        for (int i = path.size() - 2; i >= 0; i--) {
             CTMLLayout.Box box = path.get(i);
             CTMLLayout.Port port = box.port();
-            if (port.maxScrollX() <= 0 && port.maxScrollY() <= 0) continue;
+            if (port.maxScrollX() > 0 || port.maxScrollY() > 0) {
+                int dx = reveal(left, right, port.x(), port.right());
+                int dy = reveal(top, bottom, port.y(), port.bottom());
 
-            int dx = reveal(target.x(), target.right(), port.x(), port.right());
-            int dy = reveal(target.y(), target.bottom(), port.y(), port.bottom());
-            if (dx == 0 && dy == 0) continue;
+                int scrollX = Math.clamp(port.scrollX() + dx, 0, port.maxScrollX());
+                int scrollY = Math.clamp(port.scrollY() + dy, 0, port.maxScrollY());
+                if (scrollX != port.scrollX() || scrollY != port.scrollY()) {
+                    scrollTo(box, scrollX, scrollY, true);
+                    moved = true;
 
-            scrollTo(box,
-                    Math.clamp(port.scrollX() + dx, 0, port.maxScrollX()),
-                    Math.clamp(port.scrollY() + dy, 0, port.maxScrollY()));
-            moved = true;
+                    // the content moves by however far it really went, and the element with it
+                    int wentX = scrollX - port.scrollX();
+                    int wentY = scrollY - port.scrollY();
+                    left -= wentX;
+                    right -= wentX;
+                    top -= wentY;
+                    bottom -= wentY;
+                }
+            }
+
+            // and only as much of it as this box can show is left for the box around it to bring in
+            if (box.clipsX()) {
+                left = Math.max(left, port.x());
+                right = Math.min(right, port.right());
+            }
+            if (box.clipsY()) {
+                top = Math.max(top, port.y());
+                bottom = Math.min(bottom, port.bottom());
+            }
+            if (right <= left || bottom <= top) break; // nothing of it is on show at all
         }
         return moved;
     }

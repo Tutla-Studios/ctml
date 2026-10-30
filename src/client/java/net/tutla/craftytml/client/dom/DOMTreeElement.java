@@ -115,12 +115,20 @@ public class DOMTreeElement extends DOMTreeNode {
         element.setScrollShare(shareX, shareY);
     }
 
+    public int getTabIndex() { return element.getTabIndex(); }
+
     public DOMTreeElement getScrollAnchor() { return element.getScrollAnchor(); }
 
-    public int getScrollAnchorOffset() { return element.getScrollAnchorOffset(); }
+    public int getScrollAnchorX() { return element.getScrollAnchorX(); }
 
-    public void setScrollAnchor(DOMTreeElement anchor, int offset) {
-        element.setScrollAnchor(anchor, offset);
+    public int getScrollAnchorY() { return element.getScrollAnchorY(); }
+
+    public void setScrollAnchor(DOMTreeElement anchor, int x, int y) {
+        element.setScrollAnchor(anchor, x, y);
+    }
+
+    public void scrollFromScript(int scrollX, int scrollY) {
+        element.scrollFromScript(scrollX, scrollY);
     }
 
     /** An id a script asked to be brought into view, taken off the element as it is read. */

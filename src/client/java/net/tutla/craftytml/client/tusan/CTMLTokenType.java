@@ -25,6 +25,8 @@ public enum CTMLTokenType implements TokenType {
     TH_CLOSING,
     TD,
     TD_CLOSING,
+    IMG,
+    IMG_CLOSING,
 
     CLASS,
     TEXT,
@@ -35,5 +37,7 @@ public enum CTMLTokenType implements TokenType {
     ROWSPAN,
     SCROLLX,
     SCROLLY,
-    SCROLLINTO
+    SCROLLINTO,
+    SRC,
+    TABINDEX
 }

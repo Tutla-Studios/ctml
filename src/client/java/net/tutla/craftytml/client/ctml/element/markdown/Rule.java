@@ -6,7 +6,13 @@ import net.tutla.craftytml.client.ctml.ElementStyle;
 import net.tutla.craftytml.client.ctml.style.Length;
 import net.tutla.craftytml.client.tusan.CTMLTokenType;
 
-/** A line across the block, drawn as the top border of a box with no height. */
+/**
+ * A line across the block, drawn as the top border of a box with no height.
+ *
+ * @ctml.group layout
+ * @ctml.properties none
+ * @ctml.example <hr class="w-full border-slate-700">
+ */
 public class Rule extends CTMLElement {
     private static final ElementStyle OWN_DEFAULTS = DEFAULTS.toBuilder()
             .set(ElementStyle.DISPLAY, ElementStyle.Display.BLOCK)

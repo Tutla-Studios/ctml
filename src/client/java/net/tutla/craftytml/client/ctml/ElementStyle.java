@@ -73,18 +73,31 @@ public final class ElementStyle {
     public static final Key<Integer> BACKGROUND_COLOR = key("background-color", Integer.class);
     /** The image behind the box, with how big it is drawn, where it sits and whether it tiles. */
     public static final Key<BackgroundImage> BACKGROUND_IMAGE = key("background-image", BackgroundImage.class);
+    /**
+     * The ramp drawn behind the box, which css writes as a background-image and this keeps apart from
+     * the image so a box can carry both.
+     */
     public static final Key<Gradient> BACKGROUND_GRADIENT = key("background-gradient", Gradient.class);
     /** How far the background reaches, and TEXT for a background clipped to the glyphs of the text. */
     public static final Key<BackgroundClip> BACKGROUND_CLIP = key("background-clip", BackgroundClip.class);
 
     // text
     public static final Key<Integer> COLOR = key("color", Integer.class);
+    /** The same ramp, clipped to the glyphs of the text rather than drawn behind them. */
     public static final Key<Gradient> TEXT_GRADIENT = key("text-gradient", Gradient.class);
     public static final Key<Integer> FONT_SIZE = key("font-size", Integer.class);
+    /** Whether the text is bold, which is css's font-weight down to the two weights minecraft has. */
     public static final Key<Boolean> BOLD = key("bold", Boolean.class);
+    /** Whether the text leans, which is css's font-style. */
     public static final Key<Boolean> ITALIC = key("italic", Boolean.class);
+    /** A line under the text, which css writes as text-decoration. */
     public static final Key<Boolean> UNDERLINE = key("underline", Boolean.class);
+    /** A line through the text, the other half of css's text-decoration. */
     public static final Key<Boolean> STRIKETHROUGH = key("strikethrough", Boolean.class);
+    /**
+     * Whether the text is drawn with minecraft's own drop shadow behind it. On or off: there is no
+     * offset, blur or colour to set.
+     */
     public static final Key<Boolean> TEXT_SHADOW = key("text-shadow", Boolean.class);
     public static final Key<TextAlign> TEXT_ALIGN = key("text-align", TextAlign.class);
     public static final Key<Integer> LINE_HEIGHT = key("line-height", Integer.class);
@@ -104,9 +117,11 @@ public final class ElementStyle {
     public static final Key<GridFlow> GRID_AUTO_FLOW = key("grid-auto-flow", GridFlow.class);
     public static final Key<Integer> GRID_COLUMN_START = key("grid-column-start", Integer.class);
     public static final Key<Integer> GRID_COLUMN_END = key("grid-column-end", Integer.class);
+    /** How many columns the item takes up, which css spells as a span in grid-column. */
     public static final Key<Integer> GRID_COLUMN_SPAN = key("grid-column-span", Integer.class);
     public static final Key<Integer> GRID_ROW_START = key("grid-row-start", Integer.class);
     public static final Key<Integer> GRID_ROW_END = key("grid-row-end", Integer.class);
+    /** And how many rows, the same way. */
     public static final Key<Integer> GRID_ROW_SPAN = key("grid-row-span", Integer.class);
     public static final Key<AlignItems> JUSTIFY_ITEMS = key("justify-items", AlignItems.class);
     public static final Key<TableLayout> TABLE_LAYOUT = key("table-layout", TableLayout.class);
@@ -137,10 +152,15 @@ public final class ElementStyle {
     public static final Key<Overflow> OVERFLOW_Y = key("overflow-y", Overflow.class);
 
     // scrollbars: a ctml invention, loosely after css scrollbar-width / scrollbar-color / scrollbar-gutter
+    /** Whether the bars are drawn at all. The box still scrolls when they are not. */
     public static final Key<Boolean> SCROLLBAR_HIDDEN = key("scrollbar-hidden", Boolean.class);
+    /** How wide a bar is drawn, in gui pixels. Css only offers thin and auto. */
     public static final Key<Integer> SCROLLBAR_WIDTH = key("scrollbar-width", Integer.class);
+    /** The colour of the part that moves. */
     public static final Key<Integer> SCROLLBAR_THUMB_COLOR = key("scrollbar-thumb-color", Integer.class);
+    /** And of the groove behind it. Css sets the two together in scrollbar-color. */
     public static final Key<Integer> SCROLLBAR_TRACK_COLOR = key("scrollbar-track-color", Integer.class);
+    /** How round the ends of the thumb and the track are drawn. */
     public static final Key<Integer> SCROLLBAR_RADIUS = key("scrollbar-radius", Integer.class);
     /** Whether room is kept for the bars inside the box, on the far edge or on both of them. */
     public static final Key<ScrollbarGutter> SCROLLBAR_GUTTER = key("scrollbar-gutter", ScrollbarGutter.class);
@@ -161,8 +181,10 @@ public final class ElementStyle {
     public static final Key<Length> OBJECT_POSITION_X = key("object-position-x", Length.class);
     public static final Key<Length> OBJECT_POSITION_Y = key("object-position-y", Length.class);
 
-    // the ring drawn around whatever has the keyboard
+    // ring: the frame drawn around whatever has the keyboard
+    /** How thick the ring around whatever has the keyboard is drawn, after tailwind's ring-*. */
     public static final Key<Integer> RING_WIDTH = key("ring-width", Integer.class);
+    /** And what colour. Nothing is drawn where the width is zero. */
     public static final Key<Integer> RING_COLOR = key("ring-color", Integer.class);
     /** How far outside the box the ring sits, so it can be held clear of the border. */
     public static final Key<Integer> RING_OFFSET = key("ring-offset", Integer.class);

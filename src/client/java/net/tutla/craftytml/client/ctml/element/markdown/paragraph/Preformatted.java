@@ -6,7 +6,13 @@ import net.tutla.craftytml.client.ctml.ElementStyle;
 import net.tutla.craftytml.client.ctml.style.Length;
 import net.tutla.craftytml.client.tusan.CTMLTokenType;
 
-/** A block that keeps the spacing and the line breaks it was written with. */
+/**
+ * A block that keeps the spacing and the line breaks it was written with.
+ *
+ * @ctml.group text
+ * @ctml.properties none
+ * @ctml.example <pre class="text-xs">one\n  two</pre>
+ */
 public class Preformatted extends CTMLElement {
     private static final ElementStyle OWN_DEFAULTS = DEFAULTS.toBuilder()
             .set(ElementStyle.DISPLAY, ElementStyle.Display.BLOCK)

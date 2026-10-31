@@ -4,7 +4,12 @@ import net.tutla.craftytml.client.ctml.ElementProperty;
 import net.tutla.craftytml.client.ctml.ElementPropertyType;
 import net.tutla.craftytml.client.tusan.CTMLTokenType;
 
-/** What an ordered list counts from, which is one unless it says otherwise. */
+/**
+ * What an ordered list counts from, which is one unless it says otherwise.
+ *
+ * @ctml.on ol
+ * @ctml.example <ol start="5"></ol>
+ */
 public class Start extends ElementProperty {
     public Start(){
         super("start", ElementPropertyType.INTEGER, CTMLTokenType.START);

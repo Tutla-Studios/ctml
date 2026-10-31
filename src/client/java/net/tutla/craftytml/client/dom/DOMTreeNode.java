@@ -1,5 +1,13 @@
 package net.tutla.craftytml.client.dom;
 
+/**
+ * One node of a tree, which is either an element or a run of text. What every node has in common is
+ * where it sits: its parent, its root, how deep it is, and a revision that says when anything under
+ * it last changed.
+ *
+ * <p>The revision is one number for every tree in the game. Whatever draws a tree keeps the number it
+ * last laid out at and compares, so a frame where nothing moved costs no layout at all.
+ */
 public abstract class DOMTreeNode {
     DOMTreeElement parent;
 

@@ -4,7 +4,12 @@ import net.tutla.craftytml.client.ctml.ElementProperty;
 import net.tutla.craftytml.client.ctml.ElementPropertyType;
 import net.tutla.craftytml.client.tusan.CTMLTokenType;
 
-/** How many columns of its table a cell takes up. It belongs to the cell, not to how it looks. */
+/**
+ * How many columns of its table a cell takes up. It belongs to the cell, not to how it looks.
+ *
+ * @ctml.on td, th
+ * @ctml.example <td colspan="2" text="both columns"></td>
+ */
 public class ColSpan extends ElementProperty {
     public ColSpan(){
         super("colspan", ElementPropertyType.INTEGER, CTMLTokenType.COLSPAN);

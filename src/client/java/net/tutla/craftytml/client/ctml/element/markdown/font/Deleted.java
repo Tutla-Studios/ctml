@@ -5,7 +5,13 @@ import net.tutla.craftytml.client.ctml.CTMLElementProperties;
 import net.tutla.craftytml.client.ctml.ElementStyle;
 import net.tutla.craftytml.client.tusan.CTMLTokenType;
 
-/** Struck through, for what was taken out. */
+/**
+ * Struck through, for what was taken out.
+ *
+ * @ctml.group text
+ * @ctml.properties none
+ * @ctml.example <del text="taken out"></del>
+ */
 public class Deleted extends CTMLElement {
     private static final ElementStyle OWN_DEFAULTS = DEFAULTS.toBuilder()
             .set(ElementStyle.DISPLAY, ElementStyle.Display.INLINE)

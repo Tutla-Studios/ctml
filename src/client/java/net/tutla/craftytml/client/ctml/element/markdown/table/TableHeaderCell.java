@@ -5,7 +5,13 @@ import net.tutla.craftytml.client.ctml.CTMLElementProperties;
 import net.tutla.craftytml.client.ctml.ElementStyle;
 import net.tutla.craftytml.client.tusan.CTMLTokenType;
 
-/** A heading cell: a cell that comes bold and centred, the way html has it. */
+/**
+ * A heading cell: a cell that comes bold and centred, the way html has it.
+ *
+ * @ctml.group table
+ * @ctml.properties colspan, rowspan
+ * @ctml.example <th class="px-1 py-[2px]" text="item"></th>
+ */
 public class TableHeaderCell extends CTMLElement {
     private static final ElementStyle HEADING_DEFAULTS = DEFAULTS.toBuilder()
             .set(ElementStyle.DISPLAY, ElementStyle.Display.TABLE_CELL)

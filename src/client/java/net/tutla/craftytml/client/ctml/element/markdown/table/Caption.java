@@ -5,7 +5,13 @@ import net.tutla.craftytml.client.ctml.CTMLElementProperties;
 import net.tutla.craftytml.client.ctml.ElementStyle;
 import net.tutla.craftytml.client.tusan.CTMLTokenType;
 
-/** A table's caption: a line of its own above the table, or below it with caption-bottom. */
+/**
+ * A table's caption: a line of its own above the table, or below it with caption-bottom.
+ *
+ * @ctml.group table
+ * @ctml.properties none
+ * @ctml.example <caption class="text-xs text-slate-400" text="drop rates"></caption>
+ */
 public class Caption extends CTMLElement {
     private static final ElementStyle CAPTION_DEFAULTS = DEFAULTS.toBuilder()
             .set(ElementStyle.DISPLAY, ElementStyle.Display.TABLE_CAPTION)

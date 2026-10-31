@@ -6,7 +6,13 @@ import net.tutla.craftytml.client.ctml.ElementStyle;
 import net.tutla.craftytml.client.ctml.style.Length;
 import net.tutla.craftytml.client.tusan.CTMLTokenType;
 
-/** A list whose items are marked with a shape. list-disc by default, like html. */
+/**
+ * A list whose items are marked with a shape. list-disc by default, like html.
+ *
+ * @ctml.group list
+ * @ctml.properties none
+ * @ctml.example <ul class="list-disc"></ul>
+ */
 public class UnorderedList extends CTMLElement {
     private static final ElementStyle OWN_DEFAULTS = DEFAULTS.toBuilder()
             .set(ElementStyle.DISPLAY, ElementStyle.Display.BLOCK)

@@ -12,6 +12,17 @@ import net.tutla.craftytml.client.dom.DOMTreeNode;
 
 import java.util.List;
 
+/**
+ * A tree as a screen. The mouse and the keyboard reach it, so callbacks fire, boxes drag, scrollbar
+ * thumbs can be grabbed, and the `hover:`, `focus:` and `active:` variants have something to answer.
+ *
+ * <p>Layout runs again only when something has moved: a style, a property, the tree, a drag or a
+ * scroll bumps the dom's revision, and a resize changes the screen. Every other frame draws the boxes
+ * that were already worked out.
+ *
+ * <p>The same tree drawn over the game instead is a {@link CTMLHud}, which hears nothing from the
+ * user and so fires no callbacks.
+ */
 public class CTMLScreen extends Screen {
     private static final int LEFT_BUTTON = CTMLEvents.MouseButton.LEFT;
 

@@ -5,7 +5,13 @@ import net.tutla.craftytml.client.ctml.CTMLElementProperties;
 import net.tutla.craftytml.client.ctml.ElementStyle;
 import net.tutla.craftytml.client.tusan.CTMLTokenType;
 
-/** Underlined, for what was put in. */
+/**
+ * Underlined, for what was put in.
+ *
+ * @ctml.group text
+ * @ctml.properties none
+ * @ctml.example <ins text="put in"></ins>
+ */
 public class Inserted extends CTMLElement {
     private static final ElementStyle OWN_DEFAULTS = DEFAULTS.toBuilder()
             .set(ElementStyle.DISPLAY, ElementStyle.Display.INLINE)

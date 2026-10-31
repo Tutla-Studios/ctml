@@ -7,6 +7,14 @@ import net.tutla.craftytml.client.ctml.style.Length;
 import net.tutla.craftytml.client.dom.DOMTreeElement;
 import net.tutla.craftytml.client.tusan.CTMLTokenType;
 
+/**
+ * The root of a tree: html and body in one. It fills the screen it is drawn in, and the text
+ * values everything below inherits bottom out here, so a tree always has something to inherit from.
+ *
+ * @ctml.group root
+ * @ctml.properties none
+ * @ctml.example <ctml class="w-full h-full bg-slate-900 text-slate-100"></ctml>
+ */
 public class CTML extends CTMLElement {
     /**
      * The document root, so this is html and body in one: it fills the screen, and the text values

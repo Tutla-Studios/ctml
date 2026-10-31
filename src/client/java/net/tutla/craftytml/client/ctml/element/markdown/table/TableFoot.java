@@ -5,7 +5,13 @@ import net.tutla.craftytml.client.ctml.CTMLElementProperties;
 import net.tutla.craftytml.client.ctml.ElementStyle;
 import net.tutla.craftytml.client.tusan.CTMLTokenType;
 
-/** The rows at the bottom of a table, whatever order they were written in. */
+/**
+ * The rows at the bottom of a table, whatever order they were written in.
+ *
+ * @ctml.group table
+ * @ctml.properties none
+ * @ctml.example <tfoot class="text-slate-400"></tfoot>
+ */
 public class TableFoot extends CTMLElement {
     private static final ElementStyle FOOT_DEFAULTS = DEFAULTS.toBuilder()
             .set(ElementStyle.DISPLAY, ElementStyle.Display.TABLE_FOOTER_GROUP)

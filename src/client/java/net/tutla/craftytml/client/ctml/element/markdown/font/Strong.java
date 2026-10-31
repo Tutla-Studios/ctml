@@ -5,7 +5,13 @@ import net.tutla.craftytml.client.ctml.CTMLElementProperties;
 import net.tutla.craftytml.client.ctml.ElementStyle;
 import net.tutla.craftytml.client.tusan.CTMLTokenType;
 
-/** Bold, for what matters in the text. */
+/**
+ * Bold, for what matters in the text.
+ *
+ * @ctml.group text
+ * @ctml.properties none
+ * @ctml.example <strong text="do not"></strong>
+ */
 public class Strong extends CTMLElement {
     private static final ElementStyle OWN_DEFAULTS = DEFAULTS.toBuilder()
             .set(ElementStyle.DISPLAY, ElementStyle.Display.INLINE)

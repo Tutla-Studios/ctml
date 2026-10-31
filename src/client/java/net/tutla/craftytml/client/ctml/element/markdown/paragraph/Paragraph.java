@@ -6,7 +6,13 @@ import net.tutla.craftytml.client.ctml.ElementStyle;
 import net.tutla.craftytml.client.ctml.style.Length;
 import net.tutla.craftytml.client.tusan.CTMLTokenType;
 
-/** A paragraph: a block with room above and below it. */
+/**
+ * A paragraph: a block with room above and below it.
+ *
+ * @ctml.group text
+ * @ctml.properties none
+ * @ctml.example <p class="text-xs text-slate-300">Every screen is a file.</p>
+ */
 public class Paragraph extends CTMLElement {
     private static final ElementStyle OWN_DEFAULTS = DEFAULTS.toBuilder()
             .set(ElementStyle.DISPLAY, ElementStyle.Display.BLOCK)

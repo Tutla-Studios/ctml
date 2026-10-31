@@ -5,7 +5,13 @@ import net.tutla.craftytml.client.ctml.CTMLElementProperties;
 import net.tutla.craftytml.client.ctml.ElementStyle;
 import net.tutla.craftytml.client.tusan.CTMLTokenType;
 
-/** A break in the middle of a line, which carries on underneath. */
+/**
+ * A break in the middle of a line, which carries on underneath.
+ *
+ * @ctml.group text
+ * @ctml.properties none
+ * @ctml.example first line<br>second line
+ */
 public class LineBreak extends CTMLElement {
     private static final ElementStyle OWN_DEFAULTS = DEFAULTS.toBuilder()
             .set(ElementStyle.DISPLAY, ElementStyle.Display.INLINE)

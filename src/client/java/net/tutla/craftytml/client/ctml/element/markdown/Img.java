@@ -12,6 +12,10 @@ import net.tutla.craftytml.client.tusan.CTMLTokenType;
  * object-fit says what happens when the box it ends up in is not the picture's shape.
  *
  * <p>It holds no children, and like every other element here it is still written with a closing tag.
+ *
+ * @ctml.group media
+ * @ctml.properties src
+ * @ctml.example <img src="minecraft:textures/block/stone.png" class="w-5 h-5 rounded-sm"></img>
  */
 public class Img extends CTMLElement {
     /** Inline, the way html has it, so a picture sits in a line of text rather than breaking it. */

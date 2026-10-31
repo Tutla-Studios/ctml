@@ -13,6 +13,15 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.stream.Stream;
 
+/**
+ * The door into ctml: it runs a .ctml file, or markup held in a string, and puts the tree that comes
+ * out of it in the {@link net.tutla.craftytml.client.render.UIRegistry} under a name.
+ *
+ * <p>Running a script is all this does. Nothing is shown by it: a tree becomes a screen or a hud only
+ * when a {@link net.tutla.craftytml.client.render.CTMLScreen} or
+ * {@link net.tutla.craftytml.client.render.CTMLHud} is built around it, and the same tree can be
+ * either. A script that fails is reported and skipped, so one bad file cannot stop the rest loading.
+ */
 public class CTMLAPI {
     private static final CTMLTusan tusan = CTMLTusan.tusan();
 

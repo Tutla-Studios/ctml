@@ -25,6 +25,7 @@ public enum Variant {
     HOVER("hover"),
     /** The element has the keyboard. focus-visible is the same thing here: a ctml focus is always shown. */
     FOCUS("focus"),
+    /** The same as focus, there being no ctml focus that is not drawn. */
     FOCUS_VISIBLE("focus-visible"),
     /** The element has the keyboard or something inside it does. */
     FOCUS_WITHIN("focus-within"),
@@ -47,10 +48,15 @@ public enum Variant {
     MAX_XXL("max-2xl", 1024, false),
 
     // where the element comes among the elements beside it, which is css's :first-child and friends
+    /** The element is the first of the ones beside it. */
     FIRST("first"),
+    /** The element is the last of them. */
     LAST("last"),
+    /** The element is the only one there, with nothing beside it. */
     ONLY("only"),
+    /** The element is an odd one counting from one, so the first, the third and so on. */
     ODD("odd"),
+    /** And an even one, so the second, the fourth and so on. */
     EVEN("even");
 
     /** Everything a variant can ask about one element, which the element answers for itself. */

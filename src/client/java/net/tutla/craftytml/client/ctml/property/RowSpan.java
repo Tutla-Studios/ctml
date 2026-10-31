@@ -4,7 +4,12 @@ import net.tutla.craftytml.client.ctml.ElementProperty;
 import net.tutla.craftytml.client.ctml.ElementPropertyType;
 import net.tutla.craftytml.client.tusan.CTMLTokenType;
 
-/** How many rows of its table a cell takes up, the rows under it making room for it. */
+/**
+ * How many rows of its table a cell takes up, the rows under it making room for it.
+ *
+ * @ctml.on td, th
+ * @ctml.example <td rowspan="3" text="three rows"></td>
+ */
 public class RowSpan extends ElementProperty {
     public RowSpan(){
         super("rowspan", ElementPropertyType.INTEGER, CTMLTokenType.ROWSPAN);

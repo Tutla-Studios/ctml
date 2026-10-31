@@ -5,7 +5,13 @@ import net.tutla.craftytml.client.ctml.CTMLElementProperties;
 import net.tutla.craftytml.client.ctml.ElementStyle;
 import net.tutla.craftytml.client.tusan.CTMLTokenType;
 
-/** The rows at the top of a table, whatever order they were written in. */
+/**
+ * The rows at the top of a table, whatever order they were written in.
+ *
+ * @ctml.group table
+ * @ctml.properties none
+ * @ctml.example <thead class="bg-slate-800"></thead>
+ */
 public class TableHead extends CTMLElement {
     private static final ElementStyle HEAD_DEFAULTS = DEFAULTS.toBuilder()
             .set(ElementStyle.DISPLAY, ElementStyle.Display.TABLE_HEADER_GROUP)

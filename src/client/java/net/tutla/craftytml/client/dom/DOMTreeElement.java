@@ -12,6 +12,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
+/**
+ * An element in the tree: the {@link net.tutla.craftytml.client.ctml.CTMLElement} it is, the
+ * properties written on it, the styles it carries and the children under it.
+ *
+ * <p>This is what a callback is handed and what {@link DOMContext#getElementById} finds. Setting a
+ * property or a style here marks the tree as changed on up to the root, so whatever is drawing it
+ * lays it out again on the next frame and nothing has to be told twice.
+ */
 public class DOMTreeElement extends DOMTreeNode {
     private final CTMLElement element;
     final List<DOMTreeNode> children = new ArrayList<>();

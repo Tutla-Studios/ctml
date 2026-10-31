@@ -8,8 +8,6 @@ import net.tutla.craftytml.client.dom.DOMTreeElement;
 import net.tutla.craftytml.client.render.CTMLHud;
 import net.tutla.craftytml.client.render.UIRegistry;
 
-import java.util.Map;
-
 public class DemoHUD {
     private static final String FPS_COUNTER_UI = "fpscounter.ctml";
 

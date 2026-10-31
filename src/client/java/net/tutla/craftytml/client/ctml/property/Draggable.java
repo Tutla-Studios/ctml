@@ -4,7 +4,12 @@ import net.tutla.craftytml.client.ctml.ElementProperty;
 import net.tutla.craftytml.client.ctml.ElementPropertyType;
 import net.tutla.craftytml.client.tusan.CTMLTokenType;
 
-/** Lets the element be dragged around inside its parent's content box. Just the name is enough: <div draggable>. */
+/**
+ * Lets the element be dragged around inside its parent's content box. Just the name is enough: <div draggable>.
+ *
+ * @ctml.on any element
+ * @ctml.example <div class="w-8 h-8 bg-sky-600" draggable></div>
+ */
 public class Draggable extends ElementProperty {
     public Draggable(){
         super("draggable", ElementPropertyType.BOOLEAN, CTMLTokenType.DRAGGABLE);

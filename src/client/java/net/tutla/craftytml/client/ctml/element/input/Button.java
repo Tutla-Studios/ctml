@@ -18,6 +18,10 @@ import net.tutla.craftytml.client.tusan.CTMLTokenType;
  * <p>It is inline-block and centres its text, which is what a browser's button does, and it is in the
  * tab order without having to say so: pressing it is the only thing it is for, so the keyboard can
  * always reach it.
+ *
+ * @ctml.group input
+ * @ctml.properties callback, tabindex
+ * @ctml.example <button class="px-2 py-1 bg-sky-600 rounded hover:bg-sky-500" callback="sayHi" text="press me"></button>
  */
 public class Button extends CTMLElement {
     private static final ElementStyle BUTTON_DEFAULTS = DEFAULTS.toBuilder()

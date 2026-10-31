@@ -1,0 +1,50 @@
+{
+    "github": "https://github.com/Tutla-Studios/ctml",
+    "modrinth": "https://modrinth.com/mod/ctml",
+    "website": "https://tutla.net",
+    "faq": {
+        "Do I need to write any java to make a screen?": "No. A .ctml file in your minecraft folder under ctml/ui is read at startup and becomes a tree. You need java only to show that tree, to put variables in it or to answer its callbacks.",
+        "Is a screen different from a hud?": "Not as a file. Nothing in the markup says which it is: building a CTMLScreen around the tree opens it as a screen, and building a CTMLHud draws the same tree over the game. A hud hears nothing from the user, so its callbacks never fire.",
+        "Which tailwind classes work?": "The ones listed in the classes reference, which is generated from the parser itself. A class nothing knows is handed back rather than quietly dropped, so your host can report a typo.",
+        "Why has my edit to a .ctml file not shown up?": "There is no hot reload yet. A changed file needs the game restarted.",
+        "Can I draw a ctml tree inside a gui I wrote myself?": "Yes. CTMLRenderer.layout gives you the boxes and CTMLRenderer.paint draws them, so a tree can go inside any screen you already have.",
+        "How do I check a layout without launching minecraft?": "The layout engine is arithmetic over a dom tree and needs no running game. The tools/headless folder in the repository lays trees out and prints the boxes."
+    },
+    "Introduction": "/ctml/",
+    "Getting started": "/ctml/getting-started",
+    "Tutorial": {
+        "Overview": "/ctml/tutorial",
+        "Your first screen": "/ctml/tutorial/first-screen",
+        "Styling": "/ctml/tutorial/styling",
+        "Variables": "/ctml/tutorial/variables",
+        "Callbacks": "/ctml/tutorial/callbacks",
+        "Huds": "/ctml/tutorial/huds",
+        "Scrolling": "/ctml/tutorial/scrolling",
+        "Driving it from java": "/ctml/tutorial/java"
+    },
+    "Reference": {
+        "Overview": "/ctml/reference",
+        "Elements": "/ctml/reference/elements",
+        "Properties": "/ctml/reference/properties",
+        "Styles": "/ctml/reference/styles",
+        "Classes": "/ctml/reference/classes",
+        "Variants": "/ctml/reference/variants",
+        "Colours": "/ctml/reference/colors",
+        "Java API": {
+            "Overview": "/ctml/reference/java",
+            "CTMLAPI": "/ctml/reference/java/ctmlapi",
+            "UIRegistry": "/ctml/reference/java/uiregistry",
+            "CTMLScreen": "/ctml/reference/java/ctmlscreen",
+            "CTMLHud": "/ctml/reference/java/ctmlhud",
+            "CTMLRenderer": "/ctml/reference/java/ctmlrenderer",
+            "DOMContext": "/ctml/reference/java/domcontext",
+            "DOMTreeElement": "/ctml/reference/java/domtreeelement",
+            "DOMTreeNode": "/ctml/reference/java/domtreenode",
+            "CTMLCallback": "/ctml/reference/java/ctmlcallback",
+            "CTMLElement": "/ctml/reference/java/ctmlelement",
+            "ElementStyle": "/ctml/reference/java/elementstyle",
+            "TailwindParser": "/ctml/reference/java/tailwindparser",
+            "CTMLDiagnostics": "/ctml/reference/java/ctmldiagnostics"
+        }
+    }
+}

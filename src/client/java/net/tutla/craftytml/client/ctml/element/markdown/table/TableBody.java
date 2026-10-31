@@ -5,7 +5,13 @@ import net.tutla.craftytml.client.ctml.CTMLElementProperties;
 import net.tutla.craftytml.client.ctml.ElementStyle;
 import net.tutla.craftytml.client.tusan.CTMLTokenType;
 
-/** The rows in the middle of a table, between the head and the foot. */
+/**
+ * The rows in the middle of a table, between the head and the foot.
+ *
+ * @ctml.group table
+ * @ctml.properties none
+ * @ctml.example <tbody></tbody>
+ */
 public class TableBody extends CTMLElement {
     private static final ElementStyle BODY_DEFAULTS = DEFAULTS.toBuilder()
             .set(ElementStyle.DISPLAY, ElementStyle.Display.TABLE_ROW_GROUP)

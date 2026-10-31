@@ -4,7 +4,12 @@ import net.tutla.craftytml.client.ctml.ElementProperty;
 import net.tutla.craftytml.client.ctml.ElementPropertyType;
 import net.tutla.craftytml.client.tusan.CTMLTokenType;
 
-/** The image an element shows, as the identifier a texture is held under: "craftytml:textures/gui/a.png". */
+/**
+ * The image an element shows, as the identifier a texture is held under: "craftytml:textures/gui/a.png".
+ *
+ * @ctml.on img
+ * @ctml.example src="minecraft:textures/item/diamond.png"
+ */
 public class Source extends ElementProperty {
     public Source(){
         super("src", ElementPropertyType.STRING, CTMLTokenType.SRC);

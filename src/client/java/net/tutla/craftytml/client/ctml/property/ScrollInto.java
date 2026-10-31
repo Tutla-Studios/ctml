@@ -7,6 +7,9 @@ import net.tutla.craftytml.client.tusan.CTMLTokenType;
 /**
  * The id of a descendant to bring into view, which is css's scrollIntoView. Set rather than read:
  * whatever lays the element out takes the value off it, scrolls there and leaves it empty again.
+ *
+ * @ctml.on any element that scrolls
+ * @ctml.example scrollinto="last-row"
  */
 public class ScrollInto extends ElementProperty {
     public ScrollInto(){

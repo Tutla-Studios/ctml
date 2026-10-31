@@ -5,7 +5,13 @@ import net.tutla.craftytml.client.ctml.CTMLElementProperties;
 import net.tutla.craftytml.client.ctml.ElementStyle;
 import net.tutla.craftytml.client.tusan.CTMLTokenType;
 
-/** A span of code. There is no font-family to switch to, so it keeps the spacing it was written with and leaves the look to the classes on it. */
+/**
+ * A span of code. There is no font-family to switch to, so it keeps the spacing it was written with and leaves the look to the classes on it.
+ *
+ * @ctml.group text
+ * @ctml.properties none
+ * @ctml.example <code class="bg-slate-800 px-1" text="w-full"></code>
+ */
 public class Code extends CTMLElement {
     private static final ElementStyle OWN_DEFAULTS = DEFAULTS.toBuilder()
             .set(ElementStyle.DISPLAY, ElementStyle.Display.INLINE)

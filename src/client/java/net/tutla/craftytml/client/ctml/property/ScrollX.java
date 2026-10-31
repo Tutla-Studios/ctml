@@ -4,7 +4,12 @@ import net.tutla.craftytml.client.ctml.ElementProperty;
 import net.tutla.craftytml.client.ctml.ElementPropertyType;
 import net.tutla.craftytml.client.tusan.CTMLTokenType;
 
-/** How far the content inside the element is scrolled sideways, which is how a script scrolls it. */
+/**
+ * How far the content inside the element is scrolled sideways, which is how a script scrolls it.
+ *
+ * @ctml.on any element that scrolls
+ * @ctml.example scrollx="40"
+ */
 public class ScrollX extends ElementProperty {
     public ScrollX(){
         super("scrollx", ElementPropertyType.INTEGER, CTMLTokenType.SCROLLX);

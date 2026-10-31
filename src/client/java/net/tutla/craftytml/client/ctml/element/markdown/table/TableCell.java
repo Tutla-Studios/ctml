@@ -5,7 +5,13 @@ import net.tutla.craftytml.client.ctml.CTMLElementProperties;
 import net.tutla.craftytml.client.ctml.ElementStyle;
 import net.tutla.craftytml.client.tusan.CTMLTokenType;
 
-/** One cell of a table. colspan and rowspan say how many of them it takes up. */
+/**
+ * One cell of a table. colspan and rowspan say how many of them it takes up.
+ *
+ * @ctml.group table
+ * @ctml.properties colspan, rowspan
+ * @ctml.example <td class="px-1 py-[2px]" colspan="2" text="diamond"></td>
+ */
 public class TableCell extends CTMLElement {
     private static final ElementStyle CELL_DEFAULTS = DEFAULTS.toBuilder()
             .set(ElementStyle.DISPLAY, ElementStyle.Display.TABLE_CELL)

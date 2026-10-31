@@ -5,7 +5,13 @@ import net.tutla.craftytml.client.ctml.CTMLElementProperties;
 import net.tutla.craftytml.client.ctml.ElementStyle;
 import net.tutla.craftytml.client.tusan.CTMLTokenType;
 
-/** Underlined, with nothing said about why. */
+/**
+ * Underlined, with nothing said about why.
+ *
+ * @ctml.group text
+ * @ctml.properties none
+ * @ctml.example <u text="underlined"></u>
+ */
 public class Underline extends CTMLElement {
     private static final ElementStyle OWN_DEFAULTS = DEFAULTS.toBuilder()
             .set(ElementStyle.DISPLAY, ElementStyle.Display.INLINE)

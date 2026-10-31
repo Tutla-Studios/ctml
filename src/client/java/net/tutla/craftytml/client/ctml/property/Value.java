@@ -4,7 +4,12 @@ import net.tutla.craftytml.client.ctml.ElementProperty;
 import net.tutla.craftytml.client.ctml.ElementPropertyType;
 import net.tutla.craftytml.client.tusan.CTMLTokenType;
 
-/** The number of one list item, which the items after it carry on from. */
+/**
+ * The number of one list item, which the items after it carry on from.
+ *
+ * @ctml.on li
+ * @ctml.example <li value="10">ten</li>
+ */
 public class Value extends ElementProperty {
     public Value(){
         super("value", ElementPropertyType.INTEGER, CTMLTokenType.VALUE);

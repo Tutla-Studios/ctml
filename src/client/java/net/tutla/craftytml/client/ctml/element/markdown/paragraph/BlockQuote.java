@@ -6,7 +6,13 @@ import net.tutla.craftytml.client.ctml.ElementStyle;
 import net.tutla.craftytml.client.ctml.style.Length;
 import net.tutla.craftytml.client.tusan.CTMLTokenType;
 
-/** A quoted block, set in from the text around it behind a line down its left. */
+/**
+ * A quoted block, set in from the text around it behind a line down its left.
+ *
+ * @ctml.group text
+ * @ctml.properties none
+ * @ctml.example <blockquote class="border-slate-600">one file, one screen</blockquote>
+ */
 public class BlockQuote extends CTMLElement {
     private static final ElementStyle OWN_DEFAULTS = DEFAULTS.toBuilder()
             .set(ElementStyle.DISPLAY, ElementStyle.Display.BLOCK)

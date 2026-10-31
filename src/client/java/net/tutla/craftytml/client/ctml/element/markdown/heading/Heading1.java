@@ -6,7 +6,13 @@ import net.tutla.craftytml.client.ctml.ElementStyle;
 import net.tutla.craftytml.client.ctml.style.Length;
 import net.tutla.craftytml.client.tusan.CTMLTokenType;
 
-/** A heading, the largest. Bold and bigger than the text around it, with room above and below. */
+/**
+ * A heading, the largest. Bold and bigger than the text around it, with room above and below.
+ *
+ * @ctml.group text
+ * @ctml.properties none
+ * @ctml.example <h1 text="CraftyTML"></h1>
+ */
 public class Heading1 extends CTMLElement {
     private static final ElementStyle OWN_DEFAULTS = DEFAULTS.toBuilder()
             .set(ElementStyle.DISPLAY, ElementStyle.Display.BLOCK)

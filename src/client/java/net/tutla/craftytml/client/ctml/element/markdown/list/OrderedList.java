@@ -6,7 +6,13 @@ import net.tutla.craftytml.client.ctml.ElementStyle;
 import net.tutla.craftytml.client.ctml.style.Length;
 import net.tutla.craftytml.client.tusan.CTMLTokenType;
 
-/** A list whose items are numbered. start says what to count from and reversed counts down. */
+/**
+ * A list whose items are numbered. start says what to count from and reversed counts down.
+ *
+ * @ctml.group list
+ * @ctml.properties start, reversed
+ * @ctml.example <ol class="list-decimal" start="3" reversed></ol>
+ */
 public class OrderedList extends CTMLElement {
     private static final ElementStyle OWN_DEFAULTS = DEFAULTS.toBuilder()
             .set(ElementStyle.DISPLAY, ElementStyle.Display.BLOCK)

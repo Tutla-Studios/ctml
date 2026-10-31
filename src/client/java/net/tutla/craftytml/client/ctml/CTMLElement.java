@@ -23,6 +23,19 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
+/**
+ * What one kind of element is: its tag, the properties it can carry, whether it holds children, and
+ * the styles it starts with before any class list touches it. One instance of each is registered in
+ * {@link net.tutla.craftytml.client.tusan.register.ElementRegistry}, and the parser makes a fresh one
+ * per element it reads.
+ *
+ * <p>An element's styles are three layers: the plain classes under every layer of classes whose
+ * variants are holding, under whatever was set by hand. Reading the class property again replaces
+ * everything the classes said before it, which is what lets a callback show a box it had hidden.
+ *
+ * <p>Adding an element of your own is a subclass that calls this constructor with its tag, and
+ * overrides {@link #defaultStyle} where it behaves differently from a plain div.
+ */
 public abstract class CTMLElement implements Variant.State {
     public final String name;
     public final CTMLElementProperties propertyList; //wierd naming convention cuz properties would eb for an instance not like the shi itself iywim

@@ -5,7 +5,13 @@ import net.tutla.craftytml.client.ctml.CTMLElementProperties;
 import net.tutla.craftytml.client.ctml.ElementStyle;
 import net.tutla.craftytml.client.tusan.CTMLTokenType;
 
-/** Struck through, for what no longer holds. */
+/**
+ * Struck through, for what no longer holds.
+ *
+ * @ctml.group text
+ * @ctml.properties none
+ * @ctml.example <s text="struck"></s>
+ */
 public class Strike extends CTMLElement {
     private static final ElementStyle OWN_DEFAULTS = DEFAULTS.toBuilder()
             .set(ElementStyle.DISPLAY, ElementStyle.Display.INLINE)

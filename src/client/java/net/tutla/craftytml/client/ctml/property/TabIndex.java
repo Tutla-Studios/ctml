@@ -8,6 +8,9 @@ import net.tutla.craftytml.client.tusan.CTMLTokenType;
  * Where the element comes in the tab order, the way html's tabindex does it: zero puts it in at its
  * place in the markup, a positive number puts it ahead of those in that number's order, and below
  * zero takes it out of the order while leaving it something a press can still focus.
+ *
+ * @ctml.on any element
+ * @ctml.example tabindex="-1"
  */
 public class TabIndex extends ElementProperty {
     /** What an element with nothing said about it gets, so "has one" and "is zero" are different things. */

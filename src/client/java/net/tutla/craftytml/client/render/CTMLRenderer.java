@@ -18,6 +18,14 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
+/**
+ * Lays a tree out into boxes and draws them. The two halves are public and separate on purpose: a
+ * host with a gui of its own can call {@link #layout} to get the boxes, do what it likes with them,
+ * and call {@link #paint} to draw them inside whatever it is already drawing.
+ *
+ * <p>Layout is arithmetic over a dom tree and needs no running game, which is what lets the whole
+ * engine be checked headless.
+ */
 public class CTMLRenderer {
     private static final int DEFAULT_TEXT_COLOR = 0xFFFFFFFF;
     private static final int DEFAULT_BORDER_COLOR = 0xFFFFFFFF;

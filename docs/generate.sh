@@ -22,6 +22,13 @@
 #
 # One missing tag stops the build and names the class, so the format cannot quietly rot.
 #
+# The wiki pulls this folder in through its github sync, which wants one file on its own side:
+#
+#   content/ctml/github.txt   containing   https://github.com/Tutla-Studios/ctml/tree/master/docs
+#
+# Mounted there, this folder's index.md is /ctml and sidebar.json is the project's sidebar, which is
+# why every link written here starts at BASE below. Change BASE if the mount ever moves.
+#
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

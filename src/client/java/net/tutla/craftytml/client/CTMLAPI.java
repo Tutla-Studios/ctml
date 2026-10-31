@@ -2,6 +2,7 @@ package net.tutla.craftytml.client;
 
 import net.tutla.craftytml.client.dom.DOMTreeElement;
 import net.tutla.craftytml.client.render.UIRegistry;
+import net.tutla.craftytml.client.tusan.CTMLTusan;
 import net.tutla.tums.Tums;
 import net.tutla.tums.tusan.MinecraftEnvironment;
 import net.tutla.tums.tusan.interpreter.Interpreter;
@@ -13,20 +14,39 @@ import java.nio.file.Path;
 import java.util.stream.Stream;
 
 public class CTMLAPI {
-    public static void runAllScripts(Path scriptsDir, Tusan tusan, MinecraftEnvironment environment){
+    private static final CTMLTusan tusan = CTMLTusan.tusan();
+
+    public static void runAllScripts(Path scriptsDir){
         try (Stream<Path> stream = Files.list(scriptsDir)) {
             stream.filter(Files::isRegularFile)
-                    .forEach((p) -> {
-                        runScript(p, tusan, environment);});
+                    .forEach(CTMLAPI::createUI);
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    public static void runScript(Path script, Tusan tusan, MinecraftEnvironment environment){
-        Interpreter interpreter = new Interpreter(tusan);
-        interpreter.setup(null,null,null, script, environment);
+    public static void createUI(Path script){
+        Interpreter interpreter = setupInterpreter(null, script);
+        runScript(script.getFileName().toString(), interpreter);
+    }
 
+    public static void createUI(String name, String script){
+        Interpreter interpreter = setupInterpreter(script, null);
+        runScript(name, interpreter);
+    }
+
+    private static Interpreter setupInterpreter(String script, Path scriptPath){
+        Interpreter interpreter = new Interpreter(tusan);
+        if (script != null){
+            interpreter.setup(null,null,script, null, MinecraftEnvironment.CLIENT);
+        } else {
+            interpreter.setup(null,null, null, scriptPath, MinecraftEnvironment.CLIENT);
+        }
+
+        return interpreter;
+    }
+
+    private static void runScript(String name, Interpreter interpreter){
         try{
             interpreter.compile(); // where every script in the dir gets executed
         } catch (Exception e){
@@ -36,7 +56,7 @@ public class CTMLAPI {
         Tums.getRegister().add(interpreter.data);
 
         if (interpreter.returned != null){
-            UIRegistry.register(script.getFileName().toString(), (DOMTreeElement) interpreter.returned);
+            UIRegistry.register(name, (DOMTreeElement) interpreter.returned);
         }
     }
 }

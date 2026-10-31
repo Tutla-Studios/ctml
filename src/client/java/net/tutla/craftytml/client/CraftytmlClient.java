@@ -22,14 +22,14 @@ public class CraftytmlClient implements ClientModInitializer {
     Path gameDir = FabricLoader.getInstance().getGameDir();
     Path ctmlDir = gameDir.resolve("ctml/ui");
 
-    private final CTMLTusan tusan = CTMLTusan.tusan();
+
 
     @Override
     public void onInitializeClient() {
         resolveCTMLDir();
         CTMLTusan.init();
 
-        CTMLAPI.runAllScripts(ctmlDir, tusan, MinecraftEnvironment.CLIENT); // run and register all client ones
+        CTMLAPI.runAllScripts(ctmlDir); // run and register all client ones
 
         forgetTextureSizesOnReload();
 

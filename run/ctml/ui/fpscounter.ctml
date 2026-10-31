@@ -1,0 +1,7 @@
+<ctml class="w-full h-full relative text-shadow">
+
+  <div class="absolute top-1 left-1 w-fit bg-slate-900/70 border border-slate-600 rounded px-1 py-[1px] flex flex-row gap-1 items-center">
+    <span class="text-xs text-slate-400" text="fps"></span>
+    <span class="text-xs font-bold ${fpsMood}" text="${fps}"></span>
+  </div>
+</ctml>

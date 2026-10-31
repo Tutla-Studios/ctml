@@ -1,0 +1,52 @@
+<ctml class="w-full h-full bg-slate-900 text-slate-100 text-shadow flex flex-col items-center justify-center p-2 overflow-y-auto">
+
+  <div class="w-full max-w-[260px] flex flex-col gap-2 items-center">
+
+    <div class="w-full flex flex-col items-center">
+      <div class="w-full text-2xl font-bold text-center"><span class="text-slate-600" text="<"></span><span class="text-emerald-400" text="ctml"></span><span class="text-slate-600" text=">"></span></div>
+      <div class="text-xs text-slate-400 text-center" text="minecraft interfaces, written as html"></div>
+    </div>
+
+    <hr class="w-full border-slate-700">
+
+    <p class="w-full text-xs text-slate-300 text-center">Every screen a file, every hud a file, every 20 lines of code one.</p>
+
+    <div id="images" class="w-full flex flex-row gap-1 justify-center items-center">
+      <img src="minecraft:textures/block/stone.png" class="w-5 h-5 rounded-sm"></img>
+      <img src="minecraft:textures/block/cobblestone.png" class="w-5 h-5 rounded-sm"></img>
+      <img src="minecraft:textures/block/iron_block.png" class="w-5 h-5 rounded-sm"></img>
+      <img src="minecraft:textures/block/lapis_block.png" class="w-5 h-5 rounded-sm"></img>
+      <img src="minecraft:textures/block/diamond_block.png" class="w-5 h-5 rounded-sm"></img>
+      <img src="minecraft:textures/block/emerald_block.png" class="w-5 h-5 rounded-sm"></img>
+      <img src="minecraft:textures/block/gold_block.png" class="w-5 h-5 rounded-sm"></img>
+      <img src="minecraft:textures/block/redstone_block.png" class="w-5 h-5 rounded-sm"></img>
+      <img src="minecraft:textures/block/obsidian.png" class="w-5 h-5 rounded-sm"></img>
+    </div>
+
+    <ul class="w-full list-none text-xs text-slate-300 flex flex-col gap-[2px]">
+      <li class="w-full"><b class="text-sky-300" text="flow, flex, grid "></b> and tables, floats and columns</li>
+      <li class="w-full"><b class="text-emerald-300" text="one file "></b> is one screen, or one hud</li>
+      <li class="w-full"><b class="text-amber-300" text="hover: dark: sm: "></b> variants, right on the class</li>
+    </ul>
+
+    <hr class="w-full border-slate-700">
+
+    <div class="w-full flex flex-row gap-1 justify-center">
+      <button class="flex-1 px-1 py-[2px] rounded-sm bg-sky-600 border border-sky-400 text-slate-100 text-xs text-center hover:bg-sky-500 active:bg-sky-700 focus:border-slate-100"
+              callback="openWiki" text="wiki"></button>
+      <button class="flex-1 px-1 py-[2px] rounded-sm bg-indigo-600 border border-indigo-400 text-slate-100 text-xs text-center hover:bg-indigo-500 active:bg-indigo-700 focus:border-slate-100"
+              callback="openDiscord" text="discord"></button>
+      <button class="flex-1 px-1 py-[2px] rounded-sm bg-emerald-600 border border-emerald-400 text-slate-900 text-xs text-center hover:bg-emerald-500 active:bg-emerald-700 focus:border-slate-100"
+              callback="openModrinth" text="modrinth"></button>
+    </div>
+
+    <button class="w-full px-1 py-[2px] rounded-sm bg-amber-500/10 border border-amber-500 text-amber-300 text-xs text-center hover:bg-amber-500/20 active:bg-amber-500/30 focus:border-slate-100"
+            callback="openDemo" text="open the full demo"></button>
+
+    <div class="w-full text-center text-xs ${linkMood}" text="${linkWord}"></div>
+
+    <div class="w-full text-lg font-bold text-center"><span class="text-slate-600" text="</"></span><span class="text-emerald-400" text="ctml"></span><span class="text-slate-600" text=">"></span></div>
+
+  </div>
+
+</ctml>

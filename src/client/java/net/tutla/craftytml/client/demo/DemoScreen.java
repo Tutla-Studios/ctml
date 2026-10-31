@@ -1,6 +1,7 @@
 package net.tutla.craftytml.client.demo;
 
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.tutla.craftytml.client.ctml.ElementStyle;
 import net.tutla.craftytml.client.dom.DOMContext;
@@ -10,7 +11,6 @@ import net.tutla.craftytml.client.render.UIRegistry;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 public class DemoScreen {
     private static boolean openedFirstUI = false;
@@ -20,15 +20,27 @@ public class DemoScreen {
         ScreenEvents.AFTER_INIT.register((client, screen, scaledWidth, scaledHeight) -> {
             if (openedFirstUI || !(screen instanceof TitleScreen)) return;
 
-            Map.Entry<String, DOMTreeElement> first = firstScreenUI();
-            if (first == null) return;
+            CTMLScreen demo = build(screen);
+            if (demo == null) return;
 
             openedFirstUI = true;
-            DOMContext ctx = new DOMContext(first.getValue());
-            registerDemoCallbacks(ctx);
-            registerCookieCounter(ctx);
-            client.execute(() -> client.setScreenAndShow(new CTMLScreen(first.getKey(), first.getValue(), screen, ctx)));
+            client.execute(() -> client.setScreenAndShow(demo));
         });
+    }
+
+    /**
+     * The full demo, with its callbacks and its counter on it, over whatever screen closing it should
+     * go back to. Null where the file is not in the ui folder, so whoever asked for it can leave the
+     * user where they are rather than showing an empty screen.
+     */
+    public static CTMLScreen build(Screen parent){
+        DOMTreeElement tree = UIRegistry.getUIFromName(DEMO_SCREEN_NAME);
+        if (tree == null) return null;
+
+        DOMContext ctx = new DOMContext(tree);
+        registerDemoCallbacks(ctx);
+        registerCookieCounter(ctx);
+        return new CTMLScreen(DEMO_SCREEN_NAME, tree, parent, ctx);
     }
 
     private static void registerDemoCallbacks(DOMContext ctx){
@@ -70,9 +82,5 @@ public class DemoScreen {
         }
         if (add) list.add(className);
         return String.join(" ", list);
-    }
-
-    private static Map.Entry<String, DOMTreeElement> firstScreenUI(){
-        return Map.entry(DEMO_SCREEN_NAME, UIRegistry.getUIFromName(DEMO_SCREEN_NAME));
     }
 }

@@ -16,7 +16,7 @@ public class CTMLTusan extends Tusan {
             //new LexerRule(CTMLTokenType.OPENING, "(<[a-zA-Z][a-zA-Z0-9-]*)\\b[^>]*(>)"),
 
             new LexerRule(PrebuiltTusanTokenType.STRING, "\"(?:[^\"\\\\]|\\\\.)*\"|'(?:[^'\\\\]|\\\\.)*'"),
-            new LexerRule(PrebuiltTusanTokenType.STRING, "[^<>\\s](?:[^<>]*[^<>\\s])?(?=[^<>]*<)"),
+            new LexerRule(PrebuiltTusanTokenType.STRING, "(?<=>\\s{0,99})[^<>\\s]++(?:\\s++[^<>\\s]++)*+"),
             new LexerRule(PrebuiltTusanTokenType.NUMBER, "\\d+(\\.\\d+)?"),
             new LexerRule(PrebuiltTusanTokenType.BOOL, WordedPattern.makeWordedPattern(List.of("true", "false")) ),
             new LexerRule(PrebuiltTusanTokenType.NOTHING, WordedPattern.makeOneWordPattern("nothing")),
@@ -52,7 +52,7 @@ public class CTMLTusan extends Tusan {
         }));
 
         PropertyRegistry.getRegister().forEach((property -> {
-            LEXER_RULES.add(new LexerRule(property.tokenType, "\\b"+property.name+"\\b(?=(?:\"[^\"]*\"|'[^']*'|[^<>])*>)").setGroup(CTMLTokenGroup.PROPERTY));
+            LEXER_RULES.add(new LexerRule(property.tokenType, "\\b"+property.name+"\\b(?=(?:\"[^\"]*\"|'[^']*'|[^<>\"'])*+>)").setGroup(CTMLTokenGroup.PROPERTY));
         }));
     }
 

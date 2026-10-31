@@ -4,6 +4,8 @@ A Minecraft Mod that lets you build Minecraft UI with HTML
 
 CraftyTML is a Fabric Minecraft Mod that lets you write screens and huds as markup/html instead of java. Elements are written like html, styled with tailwind-like classes, and powered by [Tusan](https://wiki.tutla.net/tusan) interpreter that powers [Tums](https://wiki.tutla.net/tums). Made for developers to avoid mixins, messy gui code and other gui issues.
 
+![intro screen](https://cdn.modrinth.com/data/y5uBAABM/images/904230d2ff6219d10e03adc17ba50cb2e8a73c7d.png)
+
 📖 **Full documentation @ [Tutla Wiki](https://wiki.tutla.net/ctml)**
 
 ## How to install (for Players)
@@ -32,8 +34,8 @@ To get started, follow these steps:
 ├── README.md
 ├── settings.gradle
 └── src
-    ├── client
-    └── main
+├── client
+└── main
 ```
 2.. Add the mod as a dependancy in `build.gradle` under the `dependencies` section.
 ```cpp
@@ -58,10 +60,10 @@ Create a new file with a `.ctml` extension in `[YOUR MINECRAFT FOLDER]/ctml/ui/`
 ```html
 <ctml class="w-full h-full flex flex-col items-center justify-center gap-2 bg-slate-900 text-slate-100">
 
-  <div class="text-2xl font-bold text-amber-400" text="Hello, World!"></div>
+    <div class="text-2xl font-bold text-amber-400" text="Hello, World!"></div>
 
-  <button class="px-2 py-1 bg-sky-600 rounded hover:bg-sky-500 active:bg-sky-700"
-          callback="sayHi" text="press me"></button>
+    <button class="px-2 py-1 bg-sky-600 rounded hover:bg-sky-500 active:bg-sky-700"
+            callback="sayHi" text="press me"></button>
 
 </ctml>
 ```
@@ -97,8 +99,8 @@ These are event listeners that let developers recieve events from elements in th
 
 ```java
 ctx.putCallBack("sayHi", callback -> {
-    if (!callback.isPress()) return;
-    callback.getCtx().getElementById("greeting").property("text", "hi!", null);
+        if (!callback.isPress()) return;
+        callback.getCtx().getElementById("greeting").property("text", "hi!", null);
 });
 ```
 
@@ -106,24 +108,23 @@ ctx.putCallBack("sayHi", callback -> {
 
 ```java
 // a tree out of the ui folder or from a written script, and the context its variables and callbacks live in
-CTMLAPI.createUI("myui.ctml", uiPath);
+CTMLAPI.createUI(uiPath);               // a file of your own, from anywhere
+CTMLAPI.createUI("myui.ctml", markup);  // or markup you wrote in java, under a name you pick
 DOMTreeElement tree = UIRegistry.getUIFromName("myui.ctml");
 DOMContext ctx = new DOMContext(tree);
-
-// or run a file of your own from anywhere: CTMLAPI.runScript(path, tusan, environment)
 
 // a variable: every ${cookies} in the markup says this, from the next frame on
 ctx.putVariable("cookies", 12);
 
 // a callback, by the name the markup wrote in its callback property
 ctx.putCallBack("sayHi", callback -> {
-    if (!callback.isPress()) return;
-    callback.getCtx().getElementById("greeting").property("text", "hi!", null);
+        if (!callback.isPress()) return;
+        callback.getCtx().getElementById("greeting").property("text", "hi!", null);
 });
 
 // and then either of the two ways to show it
-minecraft.setScreenAndShow(new CTMLScreen("myui", tree, parent, ctx));
-HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("mymod", "myui"), new CTMLHud(tree, ctx));
+        minecraft.setScreenAndShow(new CTMLScreen("myui", tree, parent, ctx));
+        HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("mymod", "myui"), new CTMLHud(tree, ctx));
 ```
 
 ## For Tusan developers

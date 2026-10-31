@@ -9,6 +9,7 @@ import net.minecraft.server.packs.PackType;
 import net.minecraft.server.packs.resources.PreparableReloadListener;
 import net.tutla.craftytml.client.demo.Demo;
 import net.tutla.craftytml.client.demo.DemoHUD;
+import net.tutla.craftytml.client.demo.DemoIntro;
 import net.tutla.craftytml.client.demo.DemoScreen;
 import net.tutla.craftytml.client.render.CTMLTextures;
 import net.tutla.craftytml.client.tusan.CTMLTusan;
@@ -34,7 +35,7 @@ public class CraftytmlClient implements ClientModInitializer {
         forgetTextureSizesOnReload();
 
         if (Demo.doDemo){
-            DemoScreen.openFirstUIOnMainMenu();
+            DemoIntro.openIntroOnMainMenu(); // swap for DemoScreen.openFirstUIOnMainMenu() to get the full demo
             DemoHUD.addFpsCounterHud();
         }
     }

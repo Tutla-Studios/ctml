@@ -8,6 +8,10 @@ Every line is a bug or a caveat that is still true of the code, labelled by how 
   SUGGESTION  a rough edge or a cost, fine as it stands
 
 
+real shit:
+- box shadows
+- animations
+
 RENDERER / PAINT  (render/CTMLRenderer.java)
 --------------------------------------------
 - SUGGESTION: opacity is drawn as a group rather than composited. Everything inside a faded box is drawn

@@ -89,9 +89,17 @@ The breakpoints are gui pixels rather than css pixels, since that is what ctml m
 around `md` and `lg`, so those are the two worth designing against. Every variant is listed in the
 [variants reference](/ctml/reference/variants).
 
+## Shadows
+
+`shadow-sm`, `shadow`, `shadow-md`, `shadow-lg`, `shadow-xl` and `shadow-2xl` lay a soft shadow
+behind a box, spreading 2, 3, 5, 8, 12 and 16 pixels past its edges. It sits a little lower than the
+box and follows its rounded corners. `shadow-black/50` sets its colour and `shadow-[10]` its size in
+pixels; `shadow-none` takes it away. The shadow is drawn under the whole box, so a box with a
+see-through background lets it show through.
+
 ## What a class list cannot do
 
-There is no `box-shadow`, `outline`, `cursor`, `font-family`, `transform`, `transition` or
+There is no `outline`, `cursor`, `font-family`, `transform`, `transition` or
 `animation`. With no font family there is nothing monospaced to put `<code>` and `<pre>` in, so they
 keep the spacing they were written with and leave the look to the classes on them.
 

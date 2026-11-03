@@ -2,7 +2,7 @@
 title: "Styles"
 summary: "Every style an element can carry, its value type, whether it is inherited and the classes that write it."
 created: "2026-11-01"
-updated: "2026-11-01"
+updated: "2026-11-04"
 isdoc: true
 ---
 
@@ -283,6 +283,21 @@ The frame drawn around whatever has the keyboard
 
 `ring-offset`
 : How far outside the box the ring sits, so it can be held clear of the border.
+
+## Shadow
+
+The soft darkness laid behind a box
+
+| Style | Value | Inherited | Set by |
+| --- | --- | --- | --- |
+| `box-shadow` | number | no | `shadow`, `shadow-*`, `shadow-2xl`, `shadow-lg`, `shadow-md`, `shadow-none`, `shadow-sm`, `shadow-xl` |
+| `shadow-color` | number | no | `shadow-*` |
+
+`box-shadow`
+: How far the shadow behind a box spreads past its edges, in pixels, after tailwind's shadow-sm to shadow-2xl. It sits a little lower than the box and fades out toward its rim; nothing is drawn where it is zero.
+
+`shadow-color`
+: And what colour, at its darkest. A shadow with none set is black at a third of full strength.
 
 ## Lists
 

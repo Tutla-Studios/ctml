@@ -483,6 +483,20 @@ public final class TailwindParser {
             else set(s, ElementStyle.RING_COLOR, TailwindColors.parse(v));
         });
 
+        // the shadow behind a box: a size, or a colour for it
+        keyword("shadow-sm", s -> s.set(ElementStyle.BOX_SHADOW, 2));
+        keyword("shadow", s -> s.set(ElementStyle.BOX_SHADOW, 3));
+        keyword("shadow-md", s -> s.set(ElementStyle.BOX_SHADOW, 5));
+        keyword("shadow-lg", s -> s.set(ElementStyle.BOX_SHADOW, 8));
+        keyword("shadow-xl", s -> s.set(ElementStyle.BOX_SHADOW, 12));
+        keyword("shadow-2xl", s -> s.set(ElementStyle.BOX_SHADOW, 16));
+        keyword("shadow-none", s -> s.set(ElementStyle.BOX_SHADOW, 0));
+        valued("shadow", (s, v) -> {
+            Integer size = v.startsWith("[") ? number(v) : null; // shadow-[10] is ten pixels
+            if (size != null) s.set(ElementStyle.BOX_SHADOW, size);
+            else set(s, ElementStyle.SHADOW_COLOR, TailwindColors.parse(v));
+        });
+
         valued("bg-position", (s, v) -> {
             Length[] pair = lengths(v);
             if (pair != null) image(s, i -> i.withPosition(pair[0], pair[1]));

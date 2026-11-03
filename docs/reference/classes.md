@@ -2,7 +2,7 @@
 title: "Classes"
 summary: "Every tailwind-like class CraftyTML reads, what value it takes and which style it writes."
 created: "2026-11-01"
-updated: "2026-11-01"
+updated: "2026-11-04"
 isdoc: true
 ---
 
@@ -481,6 +481,19 @@ value, as `text-[11px]`, `rounded-3` and `tracking-[2px]` do.
 | `ring-none` | no | `ring-width` |
 | `ring-offset-*` | yes | `ring-offset` |
 | `ring-*` | yes | `ring-width`, `ring-color` |
+
+## Shadow
+
+| Class | Takes a value | Writes |
+| --- | --- | --- |
+| `shadow-sm` | no | `box-shadow` |
+| `shadow` | no | `box-shadow` |
+| `shadow-md` | no | `box-shadow` |
+| `shadow-lg` | no | `box-shadow` |
+| `shadow-xl` | no | `box-shadow` |
+| `shadow-2xl` | no | `box-shadow` |
+| `shadow-none` | no | `box-shadow` |
+| `shadow-*` | yes | `box-shadow`, `shadow-color` |
 
 ## Lists
 

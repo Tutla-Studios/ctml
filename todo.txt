@@ -9,7 +9,6 @@ Every line is a bug or a caveat that is still true of the code, labelled by how 
 
 
 real shit:
-- box shadows
 - animations
 - inputs
 
@@ -77,7 +76,7 @@ STYLE SYSTEM  (ctml/ElementStyle.java, ctml/style/*)
 - SUGGESTION: dark: asks the nearest element at or above it that set a colour scheme with scheme-dark
   or scheme-light, and Media.dark() where none did. A scheme set behind a variant is not read when
   that question is being answered, so dark:scheme-light says nothing to the element under it.
-- SUGGESTION: no box-shadow, outline, cursor, font-family, transform, transition or animation. With no
+- SUGGESTION: no outline, cursor, font-family, transform, transition or animation. With no
   font-family there is nothing monospaced to put <code> and <pre> in, so they keep the spacing they
   were written with and leave the look to the classes on them.
 - SUGGESTION: there is no way to set defaults from a script, and no per element reset: a new element

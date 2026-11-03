@@ -210,26 +210,38 @@ members(){
 # ---------------------------------------------------------------------------- shared tables
 #
 # Writes a page: frontmatter, the generated marker, then whatever came in on stdin. A page that is
-# already there keeps its created date, so regenerating does not rewrite history.
+# already there keeps its created date, so regenerating does not rewrite history, and keeps its updated
+# date too for as long as nothing in it changed: only a page whose content differs gets today's.
 #
 emit(){
-    local rel="$1" title="$2" summary="$3" path="$OUT/$1" created
+    local rel="$1" title="$2" summary="$3" path="$OUT/$1" created updated
     mkdir -p "$(dirname "$path")"
     created="$TODAY"
-    [ -f "$path" ] && created="$(sed -n 's/^created: "\(.*\)"$/\1/p' "$path" | head -1)"
+    updated="$TODAY"
+    if [ -f "$path" ]; then
+        created="$(sed -n 's/^created: "\(.*\)"$/\1/p' "$path" | head -1)"
+        updated="$(sed -n 's/^updated: "\(.*\)"$/\1/p' "$path" | head -1)"
+    fi
     [ -z "$created" ] && created="$TODAY"
-    {
+    [ -z "$updated" ] && updated="$TODAY"
+    cat > "$WORK/body"
+    page(){
         printf -- '---\ntitle: "%s"\nsummary: "%s"\ncreated: "%s"\nupdated: "%s"\nisdoc: true\n---\n\n' \
-            "$title" "$summary" "$created" "$TODAY"
+            "$title" "$summary" "$created" "$1"
         printf '%s\n\n' "$MARKER"
-        cat
-    } > "$WORK/page"
+        cat "$WORK/body"
+    }
+    # the same page under its old updated date: if that is what is already there, nothing changed
+    page "$updated" > "$WORK/page"
+    if diff -q "$path" "$WORK/page" >/dev/null 2>&1; then
+        [ "$CHECK" = 1 ] || echo "  docs/$rel (unchanged)"
+        return
+    fi
     if [ "$CHECK" = 1 ]; then
-        if ! diff -q "$path" "$WORK/page" >/dev/null 2>&1; then
-            echo "out of date: docs/$rel" >&2
-            echo stale >> "$WORK/stale"
-        fi
+        echo "out of date: docs/$rel" >&2
+        echo stale >> "$WORK/stale"
     else
+        page "$TODAY" > "$WORK/page"
         mv "$WORK/page" "$path"
         echo "  docs/$rel"
     fi

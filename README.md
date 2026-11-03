@@ -81,7 +81,7 @@ A string anywhere in the markup can name a variable with `${name}`, and it is re
 | 🧱 **Elements** | `ctml`, `div`, `span`, `img`, `button`, the table tags (`table`, `thead`, `tbody`, `tfoot`, `caption`, `tr`, `th`, `td`) and the markdown set (`h1`–`h6`, `p`, `ul`, `ol`, `li`, `blockquote`, `pre`, `code`, `hr`, `br`, `b`, `strong`, `i`, `em`, `s`, `del`, `u`, `ins`) |
 | 🏷️ **Properties** | `class`, `text`, `id`, `callback`, `draggable`, `tabindex`, `src`, `colspan`, `rowspan`, `start`, `reversed`, `value`, `scrollx`, `scrolly`, `scrollinto` |
 | 🎨 **Layout** | block flow, inline text, flexbox, grid, floats, multi-column, tables, sticky and fixed, z-index |
-| 🖌️ **Paint** | colours and `/50` alphas, borders and radii, gradients, background images, opacity, text sizes, weights, alignment and shadow |
+| 🖌️ **Paint** | colours and `/50` alphas, borders and radii, gradients, background images, opacity, text sizes, weights, alignment, text shadow and box shadows |
 | 📜 **Overflow** | scrollports, scrollbars you can style, the wheel, the keys, smooth scrolling, scroll anchoring |
 | ✨ **Variants** | `hover:`, `focus:`, `focus-within:`, `active:`, `dark:`, `first:`, `last:`, `odd:`, `even:`, `only:` and the `sm:` to `2xl:` breakpoints |
 

@@ -33,6 +33,7 @@ public class CTMLRenderer {
     /** What the focus ring comes as when nothing dresses it: a thin sky blue line, like tailwind's. */
     private static final int DEFAULT_RING_WIDTH = 1;
     private static final int DEFAULT_RING_COLOR = 0xFF38BDF8;
+    private static final int DEFAULT_SHADOW_COLOR = 0x55000000;
 
     /** Where a picture sits in its box when nothing says: the middle, which is css's own default. */
     private static final Length CENTRED = Length.percent(50);
@@ -279,6 +280,7 @@ public class CTMLRenderer {
         float alpha = layer.alpha();
         boolean clipped = push(graphics, layer.clip());
 
+        shadow(box, graphics, alpha);
         background(box, graphics, alpha, covered);
         borders(box, graphics, alpha);
 
@@ -576,6 +578,33 @@ public class CTMLRenderer {
             // the smaller of its own size and one that fits, so a small picture is left alone
             case SCALE_DOWN -> image.withFit(bigger ? BackgroundImage.Fit.CONTAIN : BackgroundImage.Fit.AUTO);
         };
+    }
+
+    // ---- box shadow ----
+
+    /**
+     * The shadow behind a box: the box's own shape grown outward a pixel at a time, every ring of it a
+     * faint layer of the colour, so the layers pile up to the full colour at the box and thin out to
+     * nothing at the rim. It sits a little lower than the box, and follows the box's corners.
+     */
+    private static void shadow(CTMLLayout.Box box, GuiGraphicsExtractor graphics, float alpha){
+        ElementStyle style = box.style();
+        int size = Math.min(style.get(ElementStyle.BOX_SHADOW, 0), 64);
+        if (size <= 0) return;
+
+        int color = fade(style.get(ElementStyle.SHADOW_COLOR, DEFAULT_SHADOW_COLOR), alpha);
+        // each layer on its own is just enough that all of them together come to the colour's own alpha
+        double full = (color >>> 24) / 255.0;
+        int each = (int) Math.round(255 * (1 - Math.pow(1 - full, 1.0 / size)));
+        if (each <= 0) return;
+        int layer = (each << 24) | (color & 0xFFFFFF);
+
+        int drop = Math.max(1, size / 3);
+        int radius = style.get(ElementStyle.BORDER_RADIUS, 0);
+        for (int grow = size; grow >= 1; grow--) {
+            rounded(graphics, box.x() - grow, box.y() - grow + drop, box.width() + grow * 2,
+                    box.height() + grow * 2, radius > 0 ? radius + grow : 0, layer);
+        }
     }
 
     // ---- the focus ring ----

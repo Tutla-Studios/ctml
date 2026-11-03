@@ -2,7 +2,7 @@
 title: "ElementStyle"
 summary: "Every style an element can carry, named after the css property it comes from."
 created: "2026-11-01"
-updated: "2026-11-01"
+updated: "2026-11-04"
 isdoc: true
 ---
 
@@ -281,6 +281,14 @@ And what colour. Nothing is drawn where the width is zero.
 ### `public static final Key<Integer> RING_OFFSET = key("ring-offset", Integer.class)`
 
 How far outside the box the ring sits, so it can be held clear of the border.
+
+### `public static final Key<Integer> BOX_SHADOW = key("box-shadow", Integer.class)`
+
+How far the shadow behind a box spreads past its edges, in pixels, after tailwind's shadow-sm to shadow-2xl. It sits a little lower than the box and fades out toward its rim; nothing is drawn where it is zero.
+
+### `public static final Key<Integer> SHADOW_COLOR = key("shadow-color", Integer.class)`
+
+And what colour, at its darkest. A shadow with none set is black at a third of full strength.
 
 ### `public static final Key<ListStyle> LIST_STYLE_TYPE = key("list-style-type", ListStyle.class)`
 

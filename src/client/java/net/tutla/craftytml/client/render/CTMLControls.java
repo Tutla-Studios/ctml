@@ -83,6 +83,19 @@ public final class CTMLControls {
                 int size = Math.min(box.contentWidth(), box.contentHeight()) - 2;
                 CTMLRenderer.rounded(graphics, box.contentX() + 1, box.contentY() + 1, size, size, size / 2, color);
             }
+            case COLOR -> graphics.fill(box.contentX(), box.contentY(), box.contentRight(), box.contentBottom(),
+                    CTMLRenderer.fade(0xFF000000 | input.rgb(), faded));
+            case DATE -> {
+                int left = box.right() - 12;
+                int top = box.y() + box.height() / 2 - 4;
+                graphics.fill(left, top, left + 9, top + 9, color);
+                graphics.fill(left + 1, top + 3, left + 8, top + 8, CTMLRenderer.fade(0xFF111827, faded));
+                graphics.fill(left + 2, top + 4, left + 3, top + 5, color);
+                graphics.fill(left + 4, top + 4, left + 5, top + 5, color);
+                graphics.fill(left + 6, top + 4, left + 7, top + 5, color);
+                graphics.fill(left + 2, top + 6, left + 3, top + 7, color);
+                graphics.fill(left + 4, top + 6, left + 5, top + 7, color);
+            }
             case RANGE -> {
                 int middle = box.y() + box.height() / 2;
                 graphics.fill(box.x(), middle - 1, box.right(), middle + 1, CTMLRenderer.fade(TRACK, faded));
@@ -186,9 +199,9 @@ public final class CTMLControls {
         return root != null && open(root) != null;
     }
 
-    /** The open select under the root, or null: only one list is ever open at a time. */
+    /** The open select or picker under the root, or null: only one popup is ever open at a time. */
     private static CTMLLayout.Box open(CTMLLayout.Box box){
-        if (box.element().getElement() instanceof Select select && select.isOpen()) return box;
+        if (box.element().getElement() instanceof FormControl control && control.isOpen()) return box;
         for (CTMLLayout.Box child : box.children()) {
             CTMLLayout.Box found = open(child);
             if (found != null) return found;
@@ -209,6 +222,12 @@ public final class CTMLControls {
     static void paintPopup(CTMLLayout.Box root, GuiGraphicsExtractor graphics, Font font, int mouseX, int mouseY){
         CTMLLayout.Box box = open(root);
         if (box == null) return;
+        if (box.element().getElement() instanceof Input input) {
+            int[] where = CTMLPickers.area(box, input, graphics.guiWidth(), graphics.guiHeight());
+            if (input.kind() == Input.Kind.DATE) CTMLPickers.paintDate(input, where, font, graphics, mouseX, mouseY);
+            else CTMLPickers.paintColor(input, where, font, graphics, mouseX, mouseY);
+            return;
+        }
         Select select = (Select) box.element().getElement();
 
         int[] area = popup(box, select, font, graphics.guiHeight());
@@ -241,10 +260,19 @@ public final class CTMLControls {
      * point and a select opens its list or takes the choice pressed in it. A press anywhere while a list
      * is open closes it, and is let through to whatever is under it unless it landed on the list.
      */
-    public static boolean press(CTMLLayout.Box root, DOMContext ctx, Font font, int screenHeight, double x, double y,
-                                boolean shift){
+    public static boolean press(CTMLLayout.Box root, DOMContext ctx, Font font, int screenWidth, int screenHeight,
+                                double x, double y, boolean shift){
         if (root == null) return false;
         CTMLLayout.Box listed = open(root);
+        if (listed != null && listed.element().getElement() instanceof Input picker) {
+            int[] where = CTMLPickers.area(listed, picker, screenWidth, screenHeight);
+            boolean taken = picker.kind() == Input.Kind.DATE
+                    ? CTMLPickers.pressDate(picker, ctx, listed.element(), where, x, y)
+                    : CTMLPickers.pressColor(picker, ctx, listed.element(), where, x, y);
+            if (taken) return true;
+            picker.close();
+            return CTMLScroll.within(x, y, listed.x(), listed.y(), listed.right(), listed.bottom());
+        }
         if (listed != null) {
             Select select = (Select) listed.element().getElement();
             int[] area = popup(listed, select, font, screenHeight);
@@ -276,6 +304,7 @@ public final class CTMLControls {
                 case RANGE -> {
                     if (input.slideTo(share(box, x))) fire(ctx, box.element(), CTMLCallback.NO_KEY);
                 }
+                case DATE, COLOR -> input.openPicker();
                 case BUTTON, SUBMIT, RESET -> {
                     return false; // pressing it is an input of its own, which the click path already tells of
                 }
@@ -315,6 +344,20 @@ public final class CTMLControls {
         CTMLLayout.Box box = find(root, element);
         if (box == null || !(element.getElement() instanceof FormControl control)) return;
         control.moveTo(caretAt(box, font, control, x, y), true);
+    }
+
+    /** Something the cursor keeps steering while the button is held, which is what a drag in a picker is. */
+    public interface Hold {
+        void follow(double x, double y);
+    }
+
+    /** What a press at this spot would start dragging in the open colour picker, or null. */
+    public static Hold hold(CTMLLayout.Box root, DOMContext ctx, int screenWidth, int screenHeight, double x, double y){
+        CTMLLayout.Box listed = root == null ? null : open(root);
+        if (listed == null || !(listed.element().getElement() instanceof Input input)
+                || input.kind() != Input.Kind.COLOR) return null;
+        return CTMLPickers.holdColor(input, ctx, listed.element(),
+                CTMLPickers.area(listed, input, screenWidth, screenHeight), x, y);
     }
 
     /** The range under the cursor, which is the one a drag has to keep following, or null. */
@@ -440,6 +483,9 @@ public final class CTMLControls {
     /** Typing: a character goes into the text field that has the keyboard. */
     public static boolean type(DOMContext ctx, DOMTreeElement focus, int codePoint){
         if (focus == null || !(focus.getElement() instanceof FormControl control)) return false;
+        if (control instanceof Input color && color.kind() == Input.Kind.COLOR && color.isOpen()) {
+            return color.typeHex(codePoint); // the hex field of the open picker
+        }
         if (!control.isTextField() || control.isDisabled()) return false;
         if (control.insert(new String(Character.toChars(codePoint)))) fire(ctx, focus, codePoint);
         return true;
@@ -462,6 +508,8 @@ public final class CTMLControls {
                         && input.setChecked(!input.isChecked()) && told(ctx, focus, key);
                 case RADIO -> key == InputConstants.KEY_SPACE && tick(ctx, focus, input) && told(ctx, focus, key);
                 case RANGE -> range(ctx, focus, input, key);
+                case DATE -> CTMLPickers.dateKey(ctx, focus, input, key);
+                case COLOR -> CTMLPickers.colorKey(ctx, focus, input, key);
                 default -> false;
             };
         }
@@ -575,7 +623,7 @@ public final class CTMLControls {
     }
 
     /** Tells the callback the element names that it changed. */
-    private static void fire(DOMContext ctx, DOMTreeElement element, int key){
+    static void fire(DOMContext ctx, DOMTreeElement element, int key){
         if (ctx != null) ctx.fire(CTMLCallback.CallbackType.INPUT, element, key);
     }
 
@@ -587,6 +635,6 @@ public final class CTMLControls {
     /** Closes whatever list is open, for a screen that is being put away. */
     public static void closeAll(CTMLLayout.Box root){
         CTMLLayout.Box box = root == null ? null : open(root);
-        if (box != null) ((Select) box.element().getElement()).close();
+        if (box != null) ((FormControl) box.element().getElement()).close();
     }
 }

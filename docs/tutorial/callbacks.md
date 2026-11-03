@@ -193,7 +193,7 @@ button: pressing it sends the `INPUT` and its `value` is its label.
 ```
 
 What is there: `text`, `password`, `email`, `search`, `url`, `tel`, `number`, `checkbox`, `radio`,
-`range`, `hidden`, `button`, `submit` and `reset` for `type` (the last two are plain buttons), plus `textarea`, `select` and `option`. A type it does not
+`range`, `hidden`, `button`, `submit`, `reset`, `date` and `color` for `type` (the last two are plain buttons), plus `textarea`, `select` and `option`. A type it does not
 know is read as `text`, with a warning. Radio buttons share a group by `name`. A number takes digits,
 a minus and a point, and up and down step it. `required`, `minlength`, `maxlength`, `pattern`, `min` and `max` are checked by `isValid()` on the element, which a host can ask; nothing is refused on account of them. `autofocus`, `size`, `rows`, `cols`, and a `label` and `disabled` on an `<option>` all work. Every field starts as a small dark box you dress with
 classes.
@@ -204,8 +204,19 @@ Ctrl+C, X and V copy, cut and paste (a password field copies nothing), ctrl+Z un
 ctrl+shift+Z redoes, and typing or pasting replaces the selection. `selection-sky-500/50` colours the
 highlight, and a textarea's `details()` carries `selectionStart`, `selectionEnd` and `selectedText`.
 
+A `date` holds `yyyy-mm-dd` and shows it in a box. A press opens a calendar under it: arrows for the
+month and the year, a day to pick, and `today` and `clear` along the bottom. With the keyboard, enter opens
+it, the arrows walk days and weeks, page up and down walk months and enter picks; closed, up and down step
+the date and delete clears it. A `color` holds `#rrggbb` and shows a swatch. A press opens a picker with four
+ways to choose, switched by the tabs along its top: `wheel` (a hue ring with a saturation and brightness
+square inside), `box` (a saturation and brightness box over a hue bar), `bars` (sliders for red, green, blue,
+hue, saturation and brightness) and `swatch` (a grid of ready made colours). Everything but the swatches
+can be dragged, each change calls the callback, and hex typed while it is open is applied with enter. Left
+and right (or page up and down) switch tabs. Neither takes `min`, `max` or `step`, and both are read off the
+element as `value`, with `date()` and `rgb()` on `Input` for java.
+
 What is not: wrapping in a textarea (a long line scrolls sideways),
-`<label>`, forms and `submit`, and the types that need a picker (`color`, `date`, `time`, `file`).
+`<label>`, forms and `submit`, and the types that need a picker of their own (`time`, `month`, `week`, `datetime-local`, `file`).
 `min`, `max` and `step` are whole numbers. The rest of html's input attributes (`autocomplete`, `inputmode`, `accept`, `capture`, `alt`, `list`, `form`, `formaction`, `formenctype`, `formmethod`, `formtarget`, `formnovalidate`, `dirname`, `wrap`, `title`, `multiple`, `spellcheck`) are accepted and can be read back, but nothing acts on them. A `<select>` opens its list under itself and draws it over
 everything else; the list is not styled by classes.
 

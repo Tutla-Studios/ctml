@@ -572,6 +572,10 @@
         <input type="range" min=0 max=100 step=5 value=40 class="focus:ring" callback="inputChanged">
         <input type="button" class="text-xs text-slate-100 hover:bg-sky-600" value="button" callback="inputChanged">
       </div>
+      <div class="w-full mt-1 flex flex-row gap-1 items-center">
+        <input type="date" class="text-xs text-slate-100 focus:border-sky-400" value="2026-11-04" callback="inputChanged">
+        <input type="color" class="focus:border-sky-400" value="#38bdf8" callback="inputChanged">
+      </div>
       <select class="w-16 mt-1 text-xs text-slate-100 focus:border-sky-400" callback="inputChanged">
         <option value="apple" text="Apple"></option>
         <option value="bee" selected text="Bee"></option>
@@ -579,6 +583,7 @@
       </select>
       <div class="w-full mt-1 text-xs text-amber-200">${inputSays}</div>
       <div class="w-full text-xs text-slate-500" text="shift+arrows/drag/dbl-click select, ctrl+a c x v z y"></div>
+      <div class="w-full text-xs text-slate-500" text="date/color open a picker: click, drag, type hex"></div>
       <div class="w-full text-xs text-slate-500" text="up/down steps the number, space ticks, a drag slides"></div>
     </div>
 

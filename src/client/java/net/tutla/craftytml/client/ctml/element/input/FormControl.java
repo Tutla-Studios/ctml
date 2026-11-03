@@ -31,6 +31,7 @@ public abstract class FormControl extends CTMLElement {
     private int caret;
     private int anchor = -1; // the other end of the selection, or below zero where nothing is selected
     private boolean reveal;
+    private boolean open; // a list or a picker drawn under it, for the controls that have one
 
     /** What the text looked like at one moment, which is what undo and redo put back. */
     private record Snapshot(String value, int caret) {}
@@ -58,6 +59,21 @@ public abstract class FormControl extends CTMLElement {
                 .set(ElementStyle.PADDING_BOTTOM, Length.px(2))
                 .set(ElementStyle.PADDING_LEFT, Length.px(3))
                 .set(ElementStyle.PADDING_RIGHT, Length.px(3));
+    }
+
+    // ---- the list or picker under it ----
+
+    /** Whether the popup that belongs to it, a list of choices or a picker, is open. */
+    public boolean isOpen(){
+        return open;
+    }
+
+    protected void raise(){
+        open = true;
+    }
+
+    public void close(){
+        open = false;
     }
 
     // ---- state ----

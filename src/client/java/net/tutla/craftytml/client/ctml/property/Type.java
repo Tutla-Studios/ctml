@@ -5,7 +5,7 @@ import net.tutla.craftytml.client.ctml.ElementPropertyType;
 import net.tutla.craftytml.client.tusan.CTMLTokenType;
 
 /**
- * What kind of input an input is: text, password, email, search, url, tel, number, checkbox, radio, range, hidden, button, submit or reset. Submit and reset are buttons, there being no forms for them to send or clear. One it does not know is read as text.
+ * What kind of input an input is: text, password, email, search, url, tel, number, checkbox, radio, range, hidden, button, submit, reset, date or color. Submit and reset are buttons, there being no forms for them to send or clear. One it does not know is read as text.
  *
  * @ctml.on input
  * @ctml.example <input type="checkbox">

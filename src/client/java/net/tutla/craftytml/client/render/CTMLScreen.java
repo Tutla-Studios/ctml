@@ -8,6 +8,7 @@ import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.tutla.craftytml.client.ctml.element.input.FormControl;
+import net.tutla.craftytml.client.ctml.element.input.Input;
 import net.tutla.craftytml.client.dom.DOMContext;
 import net.tutla.craftytml.client.dom.DOMTreeElement;
 import net.tutla.craftytml.client.dom.DOMTreeNode;
@@ -47,6 +48,9 @@ public class CTMLScreen extends Screen {
 
     /** A range slider the user has hold of, which follows the cursor until the button is let go. */
     private DOMTreeElement slider;
+
+    /** Something in an open picker the button went down on, which follows the cursor until it is let go. */
+    private CTMLControls.Hold held;
 
     /** A text field the button went down on, whose selection follows the cursor until it is let go. */
     private DOMTreeElement selecting;
@@ -122,7 +126,8 @@ public class CTMLScreen extends Screen {
         states.cursor(under);
         states.keyboard(focus);
         wantText(focus != null && focus.getElement() instanceof FormControl field
-                && field.isTextField() && field.isEditable());
+                && ((field.isTextField() && field.isEditable())
+                    || (field instanceof Input color && color.kind() == Input.Kind.COLOR && color.isOpen())));
 
         CTMLLayout.Box was = layout;
         long current = DOMTreeNode.revision();
@@ -177,9 +182,13 @@ public class CTMLScreen extends Screen {
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
         release(); // a press means whatever was held before is long since let go, heard of or not
 
-        // an open list is what a press is meant for first, and the focus stays where it was
+        // an open list or picker is what a press is meant for first, and the focus stays where it was
         if (event.button() == LEFT_BUTTON && CTMLControls.listOpen(layout)
-                && CTMLControls.press(layout, domCtx, font, height, event.x(), event.y(), false)) {
+                && (held = CTMLControls.hold(layout, domCtx, width, height, event.x(), event.y())) != null) {
+            watch.saw(event.x(), event.y());
+        }
+        if (event.button() == LEFT_BUTTON && CTMLControls.listOpen(layout)
+                && CTMLControls.press(layout, domCtx, font, width, height, event.x(), event.y(), false)) {
             return true;
         }
 
@@ -204,7 +213,7 @@ public class CTMLScreen extends Screen {
         if (event.button() == LEFT_BUTTON) {
             slider = CTMLControls.slider(layout, event.x(), event.y());
             selecting = CTMLControls.field(layout, event.x(), event.y());
-            if (CTMLControls.press(layout, domCtx, font, height, event.x(), event.y(), event.hasShiftDown())) {
+            if (CTMLControls.press(layout, domCtx, font, width, height, event.x(), event.y(), event.hasShiftDown())) {
                 if (slider != null || selecting != null) watch.saw(event.x(), event.y());
                 return true;
             }
@@ -246,6 +255,10 @@ public class CTMLScreen extends Screen {
             CTMLControls.slide(layout, domCtx, slider, event.x());
             return true;
         }
+        if (held != null) {
+            held.follow(event.x(), event.y());
+            return true;
+        }
         if (selecting != null) {
             CTMLControls.extend(layout, font, selecting, event.x(), event.y());
             return true;
@@ -267,7 +280,7 @@ public class CTMLScreen extends Screen {
 
     /** Whether the user has hold of a box or of a scrollbar thumb. */
     private boolean holding() {
-        return grip != null || bar != null || slider != null || selecting != null;
+        return grip != null || bar != null || slider != null || selecting != null || held != null;
     }
 
     /** Lets go of whatever was held. Safe to call when nothing is. */
@@ -276,6 +289,7 @@ public class CTMLScreen extends Screen {
         bar = null;
         slider = null;
         selecting = null;
+        held = null;
         states.release(); // nothing is active once the button is up, held box or not
     }
 
@@ -302,6 +316,7 @@ public class CTMLScreen extends Screen {
         if (event.isCycleFocus()) { // tab, which is what minecraft calls walking the focus on
             DOMTreeElement next = CTMLFocus.next(layout, focus, event.hasShiftDown());
             if (next == null) return super.keyPressed(event);
+            CTMLControls.closeAll(layout); // a list or picker belongs to the control that opened it
             focus = next;
             reveal = true;
             return true;

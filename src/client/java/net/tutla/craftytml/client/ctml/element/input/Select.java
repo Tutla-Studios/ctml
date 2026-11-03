@@ -32,7 +32,6 @@ public class Select extends FormControl {
             .build();
 
     private int chosen = -1; // an index into the options, or below zero until it has been worked out
-    private boolean open;
     private int highlight;
 
     public Select(){
@@ -90,18 +89,10 @@ public class Select extends FormControl {
         return at < 0 ? " " : options().get(at).label();
     }
 
-    public boolean isOpen(){
-        return open;
-    }
-
     public void open(){
         if (!isEditable() || options().isEmpty()) return;
-        open = true;
+        raise();
         highlight = Math.max(0, selectedIndex());
-    }
-
-    public void close(){
-        open = false;
     }
 
     /** The choice the keyboard is on while the list is open. */

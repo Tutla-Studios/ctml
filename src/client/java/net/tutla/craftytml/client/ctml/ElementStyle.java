@@ -198,6 +198,14 @@ public final class ElementStyle {
     /** And what colour, at its darkest. A shadow with none set is black at a third of full strength. */
     public static final Key<Integer> SHADOW_COLOR = key("shadow-color", Integer.class);
 
+    // text field: how the caret and the hint of an input or a textarea look
+    /** The colour of the caret in a text field. It is the text colour where none is set. */
+    public static final Key<Integer> CARET_COLOR = key("caret-color", Integer.class);
+    /** The colour of the placeholder in a text field. It is the text colour, dimmed, where none is set. */
+    public static final Key<Integer> PLACEHOLDER_COLOR = key("placeholder-color", Integer.class);
+    /** The colour selected text is highlighted in. It is a translucent blue where none is set. */
+    public static final Key<Integer> SELECTION_COLOR = key("selection-color", Integer.class);
+
     // lists
     /** What a list item puts in front of itself, and whether that goes in the text or outside it. */
     public static final Key<ListStyle> LIST_STYLE_TYPE = key("list-style-type", ListStyle.class);

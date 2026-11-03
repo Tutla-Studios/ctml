@@ -290,6 +290,18 @@ How far the shadow behind a box spreads past its edges, in pixels, after tailwin
 
 And what colour, at its darkest. A shadow with none set is black at a third of full strength.
 
+### `public static final Key<Integer> CARET_COLOR = key("caret-color", Integer.class)`
+
+The colour of the caret in a text field. It is the text colour where none is set.
+
+### `public static final Key<Integer> PLACEHOLDER_COLOR = key("placeholder-color", Integer.class)`
+
+The colour of the placeholder in a text field. It is the text colour, dimmed, where none is set.
+
+### `public static final Key<Integer> SELECTION_COLOR = key("selection-color", Integer.class)`
+
+The colour selected text is highlighted in. It is a translucent blue where none is set.
+
 ### `public static final Key<ListStyle> LIST_STYLE_TYPE = key("list-style-type", ListStyle.class)`
 
 What a list item puts in front of itself, and whether that goes in the text or outside it.

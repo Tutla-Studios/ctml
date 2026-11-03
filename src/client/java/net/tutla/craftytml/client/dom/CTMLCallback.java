@@ -10,6 +10,11 @@ package net.tutla.craftytml.client.dom;
  * of them would fire when the cursor merely arrived, so anything that only wants a press asks
  * {@link #isPress}.
  *
+ * <p>The things a user fills in (an input, a textarea, a select) send an INPUT each time they change:
+ * every key typed into a text field, a tick, a choice, a step or a drag of a slider. The callback reads
+ * the new state off the element, from its value property or, for a checkbox or a radio button, its
+ * checked one. The keycode is the key that did it, or the character typed.
+ *
  * <p>Nothing is told about a release, a wheel, a key other than enter and space, or an element being
  * scrolled, and HOVER is only told about the way in, never the way out.
  */
@@ -21,7 +26,7 @@ public class CTMLCallback {
 
         HOVER,
 
-        INPUT, // inputs/buttons, buttons also fire for left click
+        INPUT, // buttons being pressed, and form controls changing
         DRAG
     }
 

@@ -2,7 +2,7 @@
 title: "Elements"
 summary: "Every element CraftyTML knows, with the properties it reads, the styles it starts with and an example of each."
 created: "2026-11-01"
-updated: "2026-11-01"
+updated: "2026-11-04"
 isdoc: true
 ---
 
@@ -628,5 +628,85 @@ It is inline-block and centres its text, which is what a browser's button does, 
 
 ```html
 <button class="px-2 py-1 bg-sky-600 rounded hover:bg-sky-500" callback="sayHi" text="press me"></button>
+```
+
+### `<input>`
+
+Something to fill in, which is whatever the type property says it is: a line of text (text, password, email, search, url or tel), a number, a checkbox, a radio button, a range slider, a button (button, submit or reset, none of which does more than a button does) or nothing at all (hidden). A type it does not know is read as text.
+
+What it holds is kept in its own properties, rewritten as the user changes it: value for the text, the number or the position of the slider, and checked for a checkbox or a radio button. A function the callback property names is called with a `CTMLCallback` of type INPUT each time the user changes one, and reads the new state off the element it is handed. A press on a button input calls it the same way.
+
+The text types are one line and scroll sideways to keep the caret in sight. They take typing, pasting, backspace, delete, the arrow keys, home and end, and selecting, copying, cutting and undoing: shift with the arrows, home and end, or a drag, or ctrl and A, selects; two quick presses select a word and three the whole line; ctrl with C, X and V copies, cuts and pastes (a password gives nothing away); ctrl with Z undoes, and ctrl with Y or shift Z redoes. Typing and pasting replace what is selected. A number takes only digits, a minus sign and a point, and the up and down keys step it. Ticking a radio button unticks the others with the same name.
+
+isValid says whether what it holds is acceptable: filled in where required, long enough, short enough, matching its pattern, and a number, email or url that reads as one. Nothing is refused on account of it, there being no forms. The attributes that only a form, a file picker or a keyboard on screen would read are accepted and kept but do nothing.
+
+They all start out as a small dark box and are dressed with classes like any other element. All of them are in the tab order unless disabled, except hidden, which takes up no room at all.
+
+| | |
+| --- | --- |
+| Written | `<input>`, with `</input>` allowed and not needed |
+| Holds children | no |
+| Own properties | `type`, `value`, `placeholder`, `checked`, `name`, `min`, `max`, `step`, `maxlength`, `minlength`, `size`, `pattern`, `required`, `autofocus`, `disabled`, `readonly`, `callback`, `tabindex` |
+| Starts with | `display: inline-block`, `width: MARK_SIZEpx`, `height: MARK_SIZEpx`, `background-color: field-background`, `border-width: 1`, `border-color: field-border`, `border-radius: MARK_SIZE / 2`, `display: inline-block`, `width: RANGE_LENGTHpx`, `height: MARK_SIZEpx`, `display: none`, `width: chars * 6 + 8px` |
+| Java class | `net.tutla.craftytml.client.ctml.element.input.Input` |
+
+```html
+<input type="text" class="w-32" placeholder="your name" callback="nameChanged">
+```
+
+### `<textarea>`
+
+A box of text that takes more than one line: enter starts a new line, and the up and down keys walk the caret between them. What it holds is the value property, written as the user types, and a function the callback property names is called with a `CTMLCallback` of type INPUT after every change.
+
+Lines are only ever broken where a new line was typed, never wrapped to fit: a longer one scrolls sideways, and the box scrolls up and down once it has more lines than it is tall.
+
+Everything about what it holds can be read back off the element, from a callback or anywhere else that has the tree: cast `getElement()` to a TextArea and ask for `details` to get the lot at once (the text, its length, lines, words, the caret and the row and column it is on, the longest line, what room is left under maxlength, and whether it is valid), or for any of them one at a time. It is dressed with classes like any other box, and caret-* and placeholder-* set the colour of its caret and its hint, and selection-* the highlight of what is selected. Ctrl with the left and right arrows, backspace and delete works a word at a time.
+
+Text can be selected with shift and the arrows, home and end, with ctrl and A, by dragging, with shift and a press, by two quick presses (a word) or three (a line). Ctrl with C, X and V copies, cuts and pastes, ctrl with Z undoes and ctrl with Y or shift Z redoes; typing, pasting and deleting replace what is selected. The same goes for every text input. The starting text is the value property, not text between the tags. Like every input it takes typing, pasting, backspace, delete, the arrow keys, home and end, and selecting, copying and undoing, below.
+
+| | |
+| --- | --- |
+| Written | `<textarea>`, with `</textarea>` allowed and not needed |
+| Holds children | no |
+| Own properties | `value`, `placeholder`, `maxlength`, `minlength`, `rows`, `cols`, `required`, `autofocus`, `disabled`, `readonly`, `callback`, `tabindex` |
+| Starts with | `height: lines * 10 + 6px`, `width: chars * 6 + 8px` |
+| Java class | `net.tutla.craftytml.client.ctml.element.input.TextArea` |
+
+```html
+<textarea class="w-40 h-12" placeholder="notes" callback="notesChanged"></textarea>
+```
+
+### `<select>`
+
+A list to choose one thing from, written as a select with an option for each choice. The box shows the choice it is on; a press opens the whole list under it, and a press on a choice there takes it. The up and down keys walk the choices without opening it.
+
+The value property is the value of the choice it is on, rewritten whenever the user chooses, and a function the callback property names is called with a `CTMLCallback` of type INPUT after each change. The list is drawn over everything else and is not styled by classes. A select starts on the option marked selected, or the one its own value names, or the first.
+
+| | |
+| --- | --- |
+| Written | `<select>` ... `</select>` |
+| Holds children | yes |
+| Own properties | `value`, `required`, `autofocus`, `disabled`, `callback`, `tabindex` |
+| Starts with | the common defaults only |
+| Java class | `net.tutla.craftytml.client.ctml.element.input.Select` |
+
+```html
+<select class="w-32" callback="pickedFruit"><option value="a" text="Apple"></option><option value="b" text="Bee"></option></select>
+```
+
+### `<option>`
+
+One choice in a select. It is never drawn where it is written: the select shows the one it is on, and lists them all when it is opened. Its words are the text property or the text between its tags, and what it stands for is the value property, which is the words again where it has none.
+
+| | |
+| --- | --- |
+| Written | `<option>` ... `</option>` |
+| Holds children | yes |
+| Own properties | `value`, `label`, `selected`, `disabled`, `text` |
+| Starts with | `display: none` |
+| Java class | `net.tutla.craftytml.client.ctml.element.input.Option` |
+
+```html
+<option value="b" text="Bee"></option>
 ```
 

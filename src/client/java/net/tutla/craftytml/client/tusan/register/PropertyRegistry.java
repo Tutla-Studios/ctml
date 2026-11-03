@@ -27,6 +27,42 @@ public class PropertyRegistry {
         register(new Start());
         register(new Reversed());
         register(new Value());
+        register(new Type());
+        register(new Placeholder());
+        register(new Checked());
+        register(new Name());
+        register(new Min());
+        register(new Max());
+        register(new Step());
+        register(new MaxLength());
+        register(new Disabled());
+        register(new ReadOnly());
+        register(new Selected());
+        register(new Required());
+        register(new Autofocus());
+        register(new MinLength());
+        register(new Pattern());
+        register(new Size());
+        register(new Rows());
+        register(new Cols());
+        register(new Label());
+        register(new Autocomplete());
+        register(new InputMode());
+        register(new Accept());
+        register(new Capture());
+        register(new Alt());
+        register(new ListId());
+        register(new Form());
+        register(new FormAction());
+        register(new FormEncType());
+        register(new FormMethod());
+        register(new FormTarget());
+        register(new DirName());
+        register(new Wrap());
+        register(new Title());
+        register(new Multiple());
+        register(new SpellCheck());
+        register(new FormNoValidate());
     }
 
     public static void register(ElementProperty property){

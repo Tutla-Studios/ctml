@@ -495,6 +495,14 @@ value, as `text-[11px]`, `rounded-3` and `tracking-[2px]` do.
 | `shadow-none` | no | `box-shadow` |
 | `shadow-*` | yes | `box-shadow`, `shadow-color` |
 
+## Text field
+
+| Class | Takes a value | Writes |
+| --- | --- | --- |
+| `caret-*` | yes | `caret-color` |
+| `placeholder-*` | yes | `placeholder-color` |
+| `selection-*` | yes | `selection-color` |
+
 ## Lists
 
 | Class | Takes a value | Writes |

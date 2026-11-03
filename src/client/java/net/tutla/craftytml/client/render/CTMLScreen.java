@@ -3,9 +3,11 @@ package net.tutla.craftytml.client.render;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
+import net.tutla.craftytml.client.ctml.element.input.FormControl;
 import net.tutla.craftytml.client.dom.DOMContext;
 import net.tutla.craftytml.client.dom.DOMTreeElement;
 import net.tutla.craftytml.client.dom.DOMTreeNode;
@@ -43,11 +45,24 @@ public class CTMLScreen extends Screen {
     /** A scrollbar thumb the user has hold of, which takes the press before any draggable box does. */
     private CTMLScroll.Grip bar;
 
+    /** A range slider the user has hold of, which follows the cursor until the button is let go. */
+    private DOMTreeElement slider;
+
+    /** A text field the button went down on, whose selection follows the cursor until it is let go. */
+    private DOMTreeElement selecting;
+
     /**
      * What the keyboard is talking to: whatever was last pressed on, or whatever tab was last walked to.
      * A ring is drawn round it, and the keys that scroll go to it and then outwards from it.
      */
     private DOMTreeElement focus;
+
+    /**
+     * Whether the window has been told the keyboard is for typing. Sdl hands over typed characters only
+     * once something asks for text input, which is what vanilla's own text boxes do when they are
+     * focused, so a text field that has the focus has to ask the same, and give it back after.
+     */
+    private boolean typing;
 
     /** Set when the focus has just moved, so the newly focused box is brought into view once. */
     private boolean reveal;
@@ -106,6 +121,8 @@ public class CTMLScreen extends Screen {
         List<CTMLLayout.Box> under = CTMLFocus.path(layout, mouseX, mouseY);
         states.cursor(under);
         states.keyboard(focus);
+        wantText(focus != null && focus.getElement() instanceof FormControl field
+                && field.isTextField() && field.isEditable());
 
         CTMLLayout.Box was = layout;
         long current = DOMTreeNode.revision();
@@ -120,6 +137,10 @@ public class CTMLScreen extends Screen {
             if (reveal) {
                 reveal = false;
                 moved |= focus != null && CTMLScroll.intoView(layout, focus);
+            }
+            // a text field that has just had its caret moved scrolls to keep it in sight
+            if (focus != null && focus.getElement() instanceof FormControl field && field.takeReveal()) {
+                moved |= CTMLControls.reveal(layout, focus, font);
             }
             if (moved) layout = CTMLRenderer.layout(domTreeHeadElement, width, height);
 
@@ -148,12 +169,19 @@ public class CTMLScreen extends Screen {
         }
 
         CTMLRenderer.paint(layout, graphics, focus);
+        CTMLControls.paintPopup(layout, graphics, font, mouseX, mouseY); // over everything, the way a list opens
     }
 
     /** Takes hold of whatever draggable box the press landed on, and swallows the click if it found one. */
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
         release(); // a press means whatever was held before is long since let go, heard of or not
+
+        // an open list is what a press is meant for first, and the focus stays where it was
+        if (event.button() == LEFT_BUTTON && CTMLControls.listOpen(layout)
+                && CTMLControls.press(layout, domCtx, font, height, event.x(), event.y(), false)) {
+            return true;
+        }
 
         if (event.button() == LEFT_BUTTON) {
             // everything the press landed in is active while it is held, the way css has it
@@ -170,6 +198,18 @@ public class CTMLScreen extends Screen {
                 watch.saw(event.x(), event.y());
                 return true;
             }
+        }
+
+        // the things a user fills in take the press themselves, so one change is told of once
+        if (event.button() == LEFT_BUTTON) {
+            slider = CTMLControls.slider(layout, event.x(), event.y());
+            selecting = CTMLControls.field(layout, event.x(), event.y());
+            if (CTMLControls.press(layout, domCtx, font, height, event.x(), event.y(), event.hasShiftDown())) {
+                if (slider != null || selecting != null) watch.saw(event.x(), event.y());
+                return true;
+            }
+            slider = null;
+            selecting = null;
         }
 
         // whatever under the cursor names a callback hears about the press, which is what a button is for
@@ -202,6 +242,14 @@ public class CTMLScreen extends Screen {
             bar.follow(event.x(), event.y());
             return true;
         }
+        if (slider != null) {
+            CTMLControls.slide(layout, domCtx, slider, event.x());
+            return true;
+        }
+        if (selecting != null) {
+            CTMLControls.extend(layout, font, selecting, event.x(), event.y());
+            return true;
+        }
         if (grip == null) return super.mouseDragged(event, deltaX, deltaY);
         grip.follow(event.x(), event.y());
         CTMLEvents.drag(domCtx, grip.element());
@@ -219,13 +267,15 @@ public class CTMLScreen extends Screen {
 
     /** Whether the user has hold of a box or of a scrollbar thumb. */
     private boolean holding() {
-        return grip != null || bar != null;
+        return grip != null || bar != null || slider != null || selecting != null;
     }
 
     /** Lets go of whatever was held. Safe to call when nothing is. */
     private void release() {
         grip = null;
         bar = null;
+        slider = null;
+        selecting = null;
         states.release(); // nothing is active once the button is up, held box or not
     }
 
@@ -257,12 +307,29 @@ public class CTMLScreen extends Screen {
             return true;
         }
 
+        // a control that has the keyboard hears its own keys first: the ones that edit, step or open it
+        if (CTMLControls.key(domCtx, focus, event)) return true;
+
         // enter and space operate whatever has the focus, the way they press a button in a browser
         if (event.isSelection() && CTMLEvents.input(domCtx, focus, event.input())) return true;
 
         CTMLScroll.Nudge nudge = nudgeFor(event);
         if (nudge != null && CTMLScroll.key(layout, focus, nudge)) return true;
         return super.keyPressed(event);
+    }
+
+    /** Starts or stops the window sending typed characters, only when that is a change. */
+    private void wantText(boolean wanted) {
+        if (wanted == typing || minecraft == null) return;
+        typing = wanted;
+        minecraft.textInputManager().onTextInputFocusChange(this, wanted);
+    }
+
+    /** Typing goes into the text field that has the keyboard. */
+    @Override
+    public boolean charTyped(CharacterEvent event) {
+        if (CTMLControls.type(domCtx, focus, event.codepoint())) return true;
+        return super.charTyped(event);
     }
 
     private static CTMLScroll.Nudge nudgeFor(KeyEvent event) {
@@ -283,7 +350,18 @@ public class CTMLScreen extends Screen {
     protected void init() {
         super.init();
         release(); // a resize rebuilds the screen, and nothing held across it can be trusted
+        CTMLControls.closeAll(layout);
         reveal = false;
+        // the first control that asked for the keyboard gets it, once: a resize leaves it where the user put it
+        if (focus == null) {
+            for (DOMTreeElement each : domTreeHeadElement.findByProperty("autofocus", true)) {
+                if (each.getElement() instanceof FormControl control && !control.isDisabled()) {
+                    focus = each;
+                    reveal = true;
+                    break;
+                }
+            }
+        }
         hovered = null;
         states.clear();
     }
@@ -296,6 +374,8 @@ public class CTMLScreen extends Screen {
     @Override
     public void removed() {
         release(); // the screen is going away mid drag, so the release will never arrive
+        wantText(false); // nothing is typing once the screen is gone, whoever is shown next
+        CTMLControls.closeAll(layout);
         states.clear(); // and nothing left on the tree should look hovered or focused the next time it is shown
         super.removed();
     }

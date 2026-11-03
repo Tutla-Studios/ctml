@@ -187,6 +187,9 @@ public class DOMTreeElement extends DOMTreeNode {
     /** A string with every ${variable} in it filled in from the context, the way the screen shows it. */
     public String resolve(String raw) { return element.resolve(raw); }
 
+    /** The words the element shows of its own: its text, or whatever a form control stands in for it. */
+    public String shownText() { return element.shownText(); }
+
     /** A string property as the screen shows it, or null where nothing set it. */
     public String getString(String name) { return element.getStringProperty(name); }
 

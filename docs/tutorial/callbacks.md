@@ -2,7 +2,7 @@
 title: "Callbacks"
 summary: "Name a function in the markup, register it on the context, and hear what the user does to an element."
 created: "2026-11-01"
-updated: "2026-11-01"
+updated: "2026-11-04"
 isdoc: true
 ---
 
@@ -39,7 +39,7 @@ What a callback can be told:
 | Type | When |
 | --- | --- |
 | `LEFT_CLICK`, `RIGHT_CLICK`, `MIDDLE_CLICK` | A mouse button went down on the element |
-| `INPUT` | A press on a button, or enter or space while it has the focus |
+| `INPUT` | A press on a button, or enter or space while it has the focus; or an input, textarea or select changing |
 | `HOVER` | The cursor has just come onto the element |
 | `DRAG` | A draggable element is being moved |
 
@@ -145,6 +145,69 @@ you write one with `hover:` and `active:` like on any other box.
 
 A `callback` works on any element, not only buttons. What a button adds is the `INPUT` type and
 keyboard reach.
+
+## Inputs
+
+`<input>`, `<textarea>` and `<select>` are the things a user fills in. They send an `INPUT` to the
+callback they name each time they change: every key typed into a text field, a tick, a chosen option,
+a step of a number, a drag of a slider. The callback does not get the new value handed to it; it reads
+it off the element, because the element keeps its state in its own properties:
+
+```java
+ctx.putCallBack("nameChanged", callback -> {
+    if (callback.getCallbackType() != CTMLCallback.CallbackType.INPUT) return; // not the cursor arriving
+
+    DOMTreeElement field = callback.getElement();
+    String typed = (String) field.getPropertyValue("value");   // text, number, slider or chosen option
+    Object ticked = field.getPropertyValue("checked");         // checkbox and radio: true, or null if not
+});
+```
+
+A textarea can say far more about itself. Cast its element and ask:
+
+```java
+if (field.getElement() instanceof TextArea area) {
+    TextArea.Details d = area.details(); // text, length, lines, words, caret, row, column,
+                                         // longestLine, remaining, empty, valid, disabled, readOnly
+    area.lines();  area.lineText(2);  area.wordCount();  area.row();  area.column();
+}
+```
+
+Rows and columns in `Details` count from one, and the single-value methods count from zero. `caret-sky-300` and
+`placeholder-slate-500` colour its caret and its hint, and ctrl with the arrows, backspace and delete works a word
+at a time.
+
+Writing the property from java does the same in the other direction: `field.property("value", "hi", null)`
+puts the text in the box. A press on one of these is taken by the control and is not also told to the
+callback as a click, so a change is heard once. A `<input type="button">` is the exception, being a
+button: pressing it sends the `INPUT` and its `value` is its label.
+
+```html
+<input type="text" placeholder="name" maxlength=16 callback="nameChanged">
+<input type="checkbox" checked callback="optionChanged">
+<input type="range" min=0 max=100 step=5 value=40 callback="volumeChanged">
+<select callback="fruitChanged">
+  <option value="a" text="Apple"></option>
+  <option value="b" selected text="Bee"></option>
+</select>
+```
+
+What is there: `text`, `password`, `email`, `search`, `url`, `tel`, `number`, `checkbox`, `radio`,
+`range`, `hidden`, `button`, `submit` and `reset` for `type` (the last two are plain buttons), plus `textarea`, `select` and `option`. A type it does not
+know is read as `text`, with a warning. Radio buttons share a group by `name`. A number takes digits,
+a minus and a point, and up and down step it. `required`, `minlength`, `maxlength`, `pattern`, `min` and `max` are checked by `isValid()` on the element, which a host can ask; nothing is refused on account of them. `autofocus`, `size`, `rows`, `cols`, and a `label` and `disabled` on an `<option>` all work. Every field starts as a small dark box you dress with
+classes.
+
+Text fields select and edit the way an editor does: shift with the arrows, home and end (and ctrl for
+words), or a drag, or shift and a press, or ctrl+A. Two quick presses select a word and three a line.
+Ctrl+C, X and V copy, cut and paste (a password field copies nothing), ctrl+Z undoes and ctrl+Y or
+ctrl+shift+Z redoes, and typing or pasting replaces the selection. `selection-sky-500/50` colours the
+highlight, and a textarea's `details()` carries `selectionStart`, `selectionEnd` and `selectedText`.
+
+What is not: wrapping in a textarea (a long line scrolls sideways),
+`<label>`, forms and `submit`, and the types that need a picker (`color`, `date`, `time`, `file`).
+`min`, `max` and `step` are whole numbers. The rest of html's input attributes (`autocomplete`, `inputmode`, `accept`, `capture`, `alt`, `list`, `form`, `formaction`, `formenctype`, `formmethod`, `formtarget`, `formnovalidate`, `dirname`, `wrap`, `title`, `multiple`, `spellcheck`) are accepted and can be read back, but nothing acts on them. A `<select>` opens its list under itself and draws it over
+everything else; the list is not styled by classes.
 
 ## No links
 

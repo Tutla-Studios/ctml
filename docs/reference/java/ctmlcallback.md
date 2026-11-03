@@ -2,7 +2,7 @@
 title: "CTMLCallback"
 summary: "What a callback is handed: which element it is about, what happened to it, and the context it lives in."
 created: "2026-11-01"
-updated: "2026-11-01"
+updated: "2026-11-04"
 isdoc: true
 ---
 
@@ -11,6 +11,8 @@ isdoc: true
 What a callback is handed: which element it is about, what happened to it, and the context it lives in.
 
 One name is one function, and that function hears about everything that happens to the element: the three mouse buttons, an INPUT from a press or from enter or space on a focused button, a HOVER as the cursor comes onto it, and a DRAG while a draggable one is moved. A function that acts on all of them would fire when the cursor merely arrived, so anything that only wants a press asks `isPress`.
+
+The things a user fills in (an input, a textarea, a select) send an INPUT each time they change: every key typed into a text field, a tick, a choice, a step or a drag of a slider. The callback reads the new state off the element, from its value property or, for a checkbox or a radio button, its checked one. The keycode is the key that did it, or the character typed.
 
 Nothing is told about a release, a wheel, a key other than enter and space, or an element being scrolled, and HOVER is only told about the way in, never the way out.
 

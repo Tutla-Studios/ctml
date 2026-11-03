@@ -2,7 +2,7 @@
 title: "DOMTreeElement"
 summary: "An element in the tree: the CTMLElement it is, the properties written on it, the styles it carries and the children under it."
 created: "2026-11-01"
-updated: "2026-11-01"
+updated: "2026-11-04"
 isdoc: true
 ---
 
@@ -127,6 +127,10 @@ Hands this context to the element and everything under it, so their strings can 
 ### `public String resolve(String raw) { return element.resolve(raw); }`
 
 A string with every ${variable} in it filled in from the context, the way the screen shows it.
+
+### `public String shownText() { return element.shownText(); }`
+
+The words the element shows of its own: its text, or whatever a form control stands in for it.
 
 ### `public String getString(String name) { return element.getStringProperty(name); }`
 

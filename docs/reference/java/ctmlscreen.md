@@ -2,7 +2,7 @@
 title: "CTMLScreen"
 summary: "A tree as a screen."
 created: "2026-11-01"
-updated: "2026-11-01"
+updated: "2026-11-04"
 isdoc: true
 ---
 
@@ -37,6 +37,8 @@ import net.tutla.craftytml.client.render.CTMLScreen;
 ### `public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY)`
 
 ### `public boolean keyPressed(KeyEvent event)`
+
+### `public boolean charTyped(CharacterEvent event)`
 
 ### `public void removed()`
 

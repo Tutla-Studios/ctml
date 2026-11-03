@@ -107,6 +107,7 @@ public abstract class CTMLElement implements Variant.State {
 
     public void updateProperty(String name, Object value, TusanContext ctx){
         propertyList.updateProperty(name, value, ctx);
+        computed = null; // an element whose defaults depend on a property, an input's type, has to ask again
         changed();
 
         ElementProperty property = propertyList.propertyFromName(name);
@@ -376,6 +377,20 @@ public abstract class CTMLElement implements Variant.State {
         return TabIndex.UNSET;
     }
 
+    /**
+     * The words the element shows of its own, as the screen shows them: the text property with its
+     * ${variables} filled in. The form controls say something else, what they hold or what they are
+     * asking for, and everything that lays text out asks here.
+     */
+    public String shownText(){
+        return getStringProperty("text");
+    }
+
+    /** The tree element this one sits in, or null where it has not been put in one yet. */
+    protected DOMTreeElement domElement(){
+        return node instanceof DOMTreeElement element ? element : null;
+    }
+
     /** Whether a press on it is an input rather than a plain click. True for the things a user operates. */
     public boolean firesInput(){
         return false;
@@ -500,7 +515,7 @@ public abstract class CTMLElement implements Variant.State {
     }
 
     /** Says that what layout came up with for this element is out of date, and for everything above it. */
-    private void changed(){
+    protected void changed(){
         if (node == null) DOMTreeNode.touch();
         else node.touched();
     }

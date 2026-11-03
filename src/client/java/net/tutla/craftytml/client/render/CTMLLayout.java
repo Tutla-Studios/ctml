@@ -3439,7 +3439,7 @@ public final class CTMLLayout {
     }
 
     private static String text(DOMTreeElement element){
-        return element.getString("text"); // as the screen shows it: every ${variable} in it is filled in
+        return element.shownText(); // as the screen shows it: every ${variable} in it is filled in
     }
 
     /**

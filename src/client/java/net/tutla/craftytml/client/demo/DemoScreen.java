@@ -4,6 +4,8 @@ import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.TitleScreen;
 import net.tutla.craftytml.client.ctml.ElementStyle;
+import net.tutla.craftytml.client.ctml.element.input.TextArea;
+import net.tutla.craftytml.client.dom.CTMLCallback;
 import net.tutla.craftytml.client.dom.DOMContext;
 import net.tutla.craftytml.client.dom.DOMTreeElement;
 import net.tutla.craftytml.client.render.CTMLScreen;
@@ -40,6 +42,7 @@ public class DemoScreen {
         DOMContext ctx = new DOMContext(tree);
         registerDemoCallbacks(ctx);
         registerCookieCounter(ctx);
+        registerInputs(ctx);
         return new CTMLScreen(DEMO_SCREEN_NAME, tree, parent, ctx);
     }
 
@@ -69,6 +72,28 @@ public class DemoScreen {
             context.putVariable("cookies", count);
             context.putVariable("cookieWord", count == 1 ? "one cookie" : count + " cookies");
             context.putVariable("cookieMood", count < 5 ? "text-amber-300" : "text-amber-100");
+        });
+    }
+
+    private static void registerInputs(DOMContext ctx){
+        ctx.putVariable("inputSays", "touch an input");
+
+        ctx.putCallBack("inputChanged", callback -> {
+            // the same name hears the cursor arrive too, and only a change is worth telling of
+            if (callback.getCallbackType() != CTMLCallback.CallbackType.INPUT) return;
+
+            DOMTreeElement input = callback.getElement();
+            if (input.getElement() instanceof TextArea area) { // a textarea can say a good deal about itself
+                TextArea.Details d = area.details();
+                callback.getCtx().putVariable("inputSays", "textarea: " + d.lines() + " lines, " + d.words()
+                        + " words, " + d.length() + " chars, at " + d.row() + ":" + d.column());
+                return;
+            }
+            String kind = input.getTag().equals("input") ? String.valueOf(input.getPropertyValue("type")) : input.getTag();
+            String now = kind.equals("checkbox")
+                    ? (Boolean.TRUE.equals(input.getPropertyValue("checked")) ? "ticked" : "unticked")
+                    : String.valueOf(input.getPropertyValue("value"));
+            callback.getCtx().putVariable("inputSays", kind + ": " + now);
         });
     }
 

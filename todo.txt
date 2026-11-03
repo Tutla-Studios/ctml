@@ -10,7 +10,6 @@ Every line is a bug or a caveat that is still true of the code, labelled by how 
 
 real shit:
 - animations
-- inputs
 
 RENDERER / PAINT  (render/CTMLRenderer.java)
 --------------------------------------------

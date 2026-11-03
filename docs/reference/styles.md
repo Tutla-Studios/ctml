@@ -299,6 +299,25 @@ The soft darkness laid behind a box
 `shadow-color`
 : And what colour, at its darkest. A shadow with none set is black at a third of full strength.
 
+## Text field
+
+How the caret and the hint of an input or a textarea look
+
+| Style | Value | Inherited | Set by |
+| --- | --- | --- | --- |
+| `caret-color` | number | no | `caret-*` |
+| `placeholder-color` | number | no | `placeholder-*` |
+| `selection-color` | number | no | `selection-*` |
+
+`caret-color`
+: The colour of the caret in a text field. It is the text colour where none is set.
+
+`placeholder-color`
+: The colour of the placeholder in a text field. It is the text colour, dimmed, where none is set.
+
+`selection-color`
+: The colour selected text is highlighted in. It is a translucent blue where none is set.
+
 ## Lists
 
 | Style | Value | Inherited | Set by |

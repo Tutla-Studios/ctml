@@ -2,7 +2,7 @@
 title: "CTMLElement"
 summary: "What one kind of element is: its tag, the properties it can carry, whether it holds children, and the styles it starts with before any class list touches it."
 created: "2026-11-01"
-updated: "2026-11-01"
+updated: "2026-11-04"
 isdoc: true
 ---
 
@@ -95,6 +95,10 @@ Where the element comes in the tab order, or TabIndex.UNSET where it says nothin
 ### `public int defaultTabIndex()`
 
 Where the element sits in the tab order when the script says nothing, which for everything but a button is nowhere. A browser has the same idea: a div is not tabbable and a button always is.
+
+### `public String shownText()`
+
+The words the element shows of its own, as the screen shows them: the text property with its ${variables} filled in. The form controls say something else, what they hold or what they are asking for, and everything that lays text out asks here.
 
 ### `public boolean firesInput()`
 

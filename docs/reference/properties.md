@@ -2,7 +2,7 @@
 title: "Properties"
 summary: "Every property an element can carry, what it takes and which elements read it."
 created: "2026-11-01"
-updated: "2026-11-01"
+updated: "2026-11-04"
 isdoc: true
 ---
 
@@ -214,15 +214,521 @@ Whether an ordered list counts down instead of up.
 
 ## `value`
 
-The number of one list item, which the items after it carry on from.
+What an element holds. On a list item it is the number of that item, which the items after it carry on from; on an input, a textarea or an option it is the text, the number or the choice the element stands for, and it is rewritten as the user changes it, so reading it back gives what is on screen.
+
+It is kept as text whatever it was written as, so value=7 and value="7" are the same thing.
+
+| | |
+| --- | --- |
+| Value | string |
+| Applies to | li, input, textarea, select, option |
+| Java class | `net.tutla.craftytml.client.ctml.property.Value` |
+
+```html
+<input type="text" value="hello">
+```
+
+## `type`
+
+What kind of input an input is: text, password, email, search, url, tel, number, checkbox, radio, range, hidden, button, submit or reset. Submit and reset are buttons, there being no forms for them to send or clear. One it does not know is read as text.
+
+| | |
+| --- | --- |
+| Value | string |
+| Applies to | input |
+| Java class | `net.tutla.craftytml.client.ctml.property.Type` |
+
+```html
+<input type="checkbox">
+```
+
+## `placeholder`
+
+The dimmed words shown in a text field while it holds nothing.
+
+| | |
+| --- | --- |
+| Value | string |
+| Applies to | input, textarea |
+| Java class | `net.tutla.craftytml.client.ctml.property.Placeholder` |
+
+```html
+<input type="text" placeholder="your name">
+```
+
+## `checked`
+
+Whether a checkbox or a radio button is ticked. It is rewritten as the user ticks it, so reading it back gives what is on screen.
+
+| | |
+| --- | --- |
+| Value | boolean |
+| Applies to | input |
+| Java class | `net.tutla.craftytml.client.ctml.property.Checked` |
+
+```html
+<input type="checkbox" checked>
+```
+
+## `name`
+
+Which group a radio button belongs to: ticking one unticks every other radio button with the same name in the same screen.
+
+| | |
+| --- | --- |
+| Value | string |
+| Applies to | input |
+| Java class | `net.tutla.craftytml.client.ctml.property.Name` |
+
+```html
+<input type="radio" name="colour" value="red">
+```
+
+## `min`
+
+The lowest a number or a range can go. A range starts at zero, and a number has no lowest unless this says so.
 
 | | |
 | --- | --- |
 | Value | integer |
-| Applies to | li |
-| Java class | `net.tutla.craftytml.client.ctml.property.Value` |
+| Applies to | input |
+| Java class | `net.tutla.craftytml.client.ctml.property.Min` |
 
 ```html
-<li value="10">ten</li>
+<input type="range" min=0 max=10>
+```
+
+## `max`
+
+The highest a number or a range can go. A range stops at a hundred, and a number has no highest unless this says so.
+
+| | |
+| --- | --- |
+| Value | integer |
+| Applies to | input |
+| Java class | `net.tutla.craftytml.client.ctml.property.Max` |
+
+```html
+<input type="range" min=0 max=10>
+```
+
+## `step`
+
+How far one nudge moves a number or a range: the arrow keys, and where a dragged range lands. It is one unless this says so, and always a whole number.
+
+| | |
+| --- | --- |
+| Value | integer |
+| Applies to | input |
+| Java class | `net.tutla.craftytml.client.ctml.property.Step` |
+
+```html
+<input type="range" min=0 max=100 step=10>
+```
+
+## `maxlength`
+
+How many characters a text field takes. Typing and pasting stop at it; nothing is cut off a value that was written longer.
+
+| | |
+| --- | --- |
+| Value | integer |
+| Applies to | input, textarea |
+| Java class | `net.tutla.craftytml.client.ctml.property.MaxLength` |
+
+```html
+<input type="text" maxlength=16>
+```
+
+## `disabled`
+
+Takes the element out of use: it cannot be focused, typed into or pressed, and is drawn dimmed. On an option it cannot be chosen.
+
+| | |
+| --- | --- |
+| Value | boolean |
+| Applies to | input, textarea, select, option |
+| Java class | `net.tutla.craftytml.client.ctml.property.Disabled` |
+
+```html
+<input type="text" disabled>
+```
+
+## `readonly`
+
+Lets a text field be focused, selected and read but not typed into.
+
+| | |
+| --- | --- |
+| Value | boolean |
+| Applies to | input, textarea |
+| Java class | `net.tutla.craftytml.client.ctml.property.ReadOnly` |
+
+```html
+<input type="text" value="fixed" readonly>
+```
+
+## `selected`
+
+Marks the option a select starts on. The first option is the one chosen where none says so.
+
+| | |
+| --- | --- |
+| Value | boolean |
+| Applies to | option |
+| Java class | `net.tutla.craftytml.client.ctml.property.Selected` |
+
+```html
+<option value="b" selected text="Bee"></option>
+```
+
+## `required`
+
+Says the control has to be filled in. Nothing refuses to submit, there being no forms, but isValid on the element reports it.
+
+| | |
+| --- | --- |
+| Value | boolean |
+| Applies to | input, textarea, select |
+| Java class | `net.tutla.craftytml.client.ctml.property.Required` |
+
+```html
+<input type="text" required>
+```
+
+## `autofocus`
+
+Gives the control the keyboard when the screen opens. Where several say so, the first in the markup gets it.
+
+| | |
+| --- | --- |
+| Value | boolean |
+| Applies to | input, textarea, select |
+| Java class | `net.tutla.craftytml.client.ctml.property.Autofocus` |
+
+```html
+<input type="text" autofocus>
+```
+
+## `minlength`
+
+How many characters a text field has to hold to count as valid. Typing is never stopped by it; isValid on the element reports it.
+
+| | |
+| --- | --- |
+| Value | integer |
+| Applies to | input, textarea |
+| Java class | `net.tutla.craftytml.client.ctml.property.MinLength` |
+
+```html
+<input type="text" minlength=3>
+```
+
+## `pattern`
+
+A regular expression the whole of a text field has to match to count as valid. One that does not compile is ignored. isValid on the element reports it.
+
+| | |
+| --- | --- |
+| Value | string |
+| Applies to | input |
+| Java class | `net.tutla.craftytml.client.ctml.property.Pattern` |
+
+```html
+<input type="text" pattern="[a-z]+">
+```
+
+## `size`
+
+How wide a text field starts out, in characters. A width class on the element wins over it.
+
+| | |
+| --- | --- |
+| Value | integer |
+| Applies to | input |
+| Java class | `net.tutla.craftytml.client.ctml.property.Size` |
+
+```html
+<input type="text" size=20>
+```
+
+## `rows`
+
+How many lines tall a textarea starts out. A height class on the element wins over it.
+
+| | |
+| --- | --- |
+| Value | integer |
+| Applies to | textarea |
+| Java class | `net.tutla.craftytml.client.ctml.property.Rows` |
+
+```html
+<textarea rows=4></textarea>
+```
+
+## `cols`
+
+How many characters wide a textarea starts out. A width class on the element wins over it.
+
+| | |
+| --- | --- |
+| Value | integer |
+| Applies to | textarea |
+| Java class | `net.tutla.craftytml.client.ctml.property.Cols` |
+
+```html
+<textarea cols=30></textarea>
+```
+
+## `label`
+
+The words an option shows, ahead of its text property and the words between its tags.
+
+| | |
+| --- | --- |
+| Value | string |
+| Applies to | option |
+| Java class | `net.tutla.craftytml.client.ctml.property.Label` |
+
+```html
+<option value="a" label="Apple"></option>
+```
+
+## `autocomplete`
+
+Read and kept like any other property, so a script can set and read it back, but nothing in ctml acts on it: there is no autofill to switch off.
+
+| | |
+| --- | --- |
+| Value | string |
+| Applies to | input, textarea, select |
+| Java class | `net.tutla.craftytml.client.ctml.property.Autocomplete` |
+
+```html
+<input type="text" autocomplete="off">
+```
+
+## `inputmode`
+
+Read and kept like any other property, so a script can set and read it back, but nothing in ctml acts on it: there is no on screen keyboard to pick a layout for.
+
+| | |
+| --- | --- |
+| Value | string |
+| Applies to | input, textarea |
+| Java class | `net.tutla.craftytml.client.ctml.property.InputMode` |
+
+```html
+<input type="text" inputmode="numeric">
+```
+
+## `accept`
+
+Read and kept like any other property, so a script can set and read it back, but nothing in ctml acts on it: there is no file input to filter.
+
+| | |
+| --- | --- |
+| Value | string |
+| Applies to | input |
+| Java class | `net.tutla.craftytml.client.ctml.property.Accept` |
+
+```html
+<input type="text" accept=".png">
+```
+
+## `capture`
+
+Read and kept like any other property, so a script can set and read it back, but nothing in ctml acts on it: there is no file input to capture into.
+
+| | |
+| --- | --- |
+| Value | string |
+| Applies to | input |
+| Java class | `net.tutla.craftytml.client.ctml.property.Capture` |
+
+```html
+<input type="text" capture="user">
+```
+
+## `alt`
+
+Read and kept like any other property, so a script can set and read it back, but nothing in ctml acts on it: there is no image input to describe.
+
+| | |
+| --- | --- |
+| Value | string |
+| Applies to | input |
+| Java class | `net.tutla.craftytml.client.ctml.property.Alt` |
+
+```html
+<input type="text" alt="a picture">
+```
+
+## `list`
+
+Read and kept like any other property, so a script can set and read it back, but nothing in ctml acts on it: there is no datalist to suggest from.
+
+| | |
+| --- | --- |
+| Value | string |
+| Applies to | input |
+| Java class | `net.tutla.craftytml.client.ctml.property.ListId` |
+
+```html
+<input type="text" list="choices">
+```
+
+## `form`
+
+Read and kept like any other property, so a script can set and read it back, but nothing in ctml acts on it: there are no forms to belong to.
+
+| | |
+| --- | --- |
+| Value | string |
+| Applies to | input, textarea, select |
+| Java class | `net.tutla.craftytml.client.ctml.property.Form` |
+
+```html
+<input type="text" form="signup">
+```
+
+## `formaction`
+
+Read and kept like any other property, so a script can set and read it back, but nothing in ctml acts on it: there are no forms to submit.
+
+| | |
+| --- | --- |
+| Value | string |
+| Applies to | input |
+| Java class | `net.tutla.craftytml.client.ctml.property.FormAction` |
+
+```html
+<input type="text" formaction="/send">
+```
+
+## `formenctype`
+
+Read and kept like any other property, so a script can set and read it back, but nothing in ctml acts on it: there are no forms to submit.
+
+| | |
+| --- | --- |
+| Value | string |
+| Applies to | input |
+| Java class | `net.tutla.craftytml.client.ctml.property.FormEncType` |
+
+```html
+<input type="text" formenctype="text/plain">
+```
+
+## `formmethod`
+
+Read and kept like any other property, so a script can set and read it back, but nothing in ctml acts on it: there are no forms to submit.
+
+| | |
+| --- | --- |
+| Value | string |
+| Applies to | input |
+| Java class | `net.tutla.craftytml.client.ctml.property.FormMethod` |
+
+```html
+<input type="text" formmethod="post">
+```
+
+## `formtarget`
+
+Read and kept like any other property, so a script can set and read it back, but nothing in ctml acts on it: there are no forms to submit.
+
+| | |
+| --- | --- |
+| Value | string |
+| Applies to | input |
+| Java class | `net.tutla.craftytml.client.ctml.property.FormTarget` |
+
+```html
+<input type="text" formtarget="_blank">
+```
+
+## `dirname`
+
+Read and kept like any other property, so a script can set and read it back, but nothing in ctml acts on it: there are no forms to submit.
+
+| | |
+| --- | --- |
+| Value | string |
+| Applies to | input, textarea |
+| Java class | `net.tutla.craftytml.client.ctml.property.DirName` |
+
+```html
+<input type="text" dirname="side">
+```
+
+## `wrap`
+
+Read and kept like any other property, so a script can set and read it back, but nothing in ctml acts on it: a textarea never wraps, and scrolls sideways instead.
+
+| | |
+| --- | --- |
+| Value | string |
+| Applies to | textarea |
+| Java class | `net.tutla.craftytml.client.ctml.property.Wrap` |
+
+```html
+<textarea wrap="soft"></textarea>
+```
+
+## `title`
+
+Read and kept like any other property, so a script can set and read it back, but nothing in ctml acts on it: there are no tooltips.
+
+| | |
+| --- | --- |
+| Value | string |
+| Applies to | input, textarea, select |
+| Java class | `net.tutla.craftytml.client.ctml.property.Title` |
+
+```html
+<input type="text" title="your name">
+```
+
+## `multiple`
+
+Read and kept like any other property, so a script can set and read it back, but nothing in ctml acts on it: a select only ever takes one choice, and there is no file input.
+
+| | |
+| --- | --- |
+| Value | boolean |
+| Applies to | input, select |
+| Java class | `net.tutla.craftytml.client.ctml.property.Multiple` |
+
+```html
+<select multiple></select>
+```
+
+## `spellcheck`
+
+Read and kept like any other property, so a script can set and read it back, but nothing in ctml acts on it: there is no spell checker.
+
+| | |
+| --- | --- |
+| Value | boolean |
+| Applies to | input, textarea |
+| Java class | `net.tutla.craftytml.client.ctml.property.SpellCheck` |
+
+```html
+<input type="text" spellcheck=false>
+```
+
+## `formnovalidate`
+
+Read and kept like any other property, so a script can set and read it back, but nothing in ctml acts on it: there are no forms to submit.
+
+| | |
+| --- | --- |
+| Value | boolean |
+| Applies to | input |
+| Java class | `net.tutla.craftytml.client.ctml.property.FormNoValidate` |
+
+```html
+<input type="text" formnovalidate>
 ```
 

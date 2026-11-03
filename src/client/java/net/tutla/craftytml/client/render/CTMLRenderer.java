@@ -287,14 +287,19 @@ public class CTMLRenderer {
         // the text is content, so the box's own clip cuts it off as well as whatever is above it
         Rect inner = inside(box, layer.clip());
         if (inner == layer.clip()) {
+            CTMLControls.selection(box, graphics, font, alpha);
             text(box, graphics, font, alpha, covered);
+            CTMLControls.caret(box, graphics, font, alpha);
         } else if (!inner.isEmpty()) {
             push(graphics, inner);
+            CTMLControls.selection(box, graphics, font, alpha);
             text(box, graphics, font, alpha, covered);
+            CTMLControls.caret(box, graphics, font, alpha);
             graphics.disableScissor();
         }
 
         picture(box, graphics, alpha);
+        CTMLControls.paint(box, graphics, alpha);
         if (clipped) graphics.disableScissor();
     }
 
@@ -486,7 +491,7 @@ public class CTMLRenderer {
     }
 
     /** A fill with its corners rounded off, one fill per row of the corners. */
-    private static void rounded(GuiGraphicsExtractor graphics, int x, int y, int width, int height, int radius, int color){
+    static void rounded(GuiGraphicsExtractor graphics, int x, int y, int width, int height, int radius, int color){
         rounded(graphics, x, y, width, height, radius, color, List.of());
     }
 
@@ -993,7 +998,9 @@ public class CTMLRenderer {
         if (box.lines().isEmpty()) return;
 
         ElementStyle style = box.style();
-        int color = fade(style.get(ElementStyle.COLOR, DEFAULT_TEXT_COLOR), alpha);
+        Integer hint = CTMLControls.hint(box); // a placeholder with a colour of its own is drawn in it as it is
+        if (hint == null && CTMLControls.dimmed(box)) alpha *= 0.5f; // a placeholder, or the words of something out of use
+        int color = fade(hint != null ? hint : style.get(ElementStyle.COLOR, DEFAULT_TEXT_COLOR), alpha);
         boolean shadow = style.get(ElementStyle.TEXT_SHADOW, true); // what minecraft does with text by default
 
         // a text gradient paints the glyphs, and so does a background clipped to them: css's bg-clip-text,
@@ -1073,7 +1080,7 @@ public class CTMLRenderer {
         }
     }
 
-    private static int fade(int color, float alpha){
+    static int fade(int color, float alpha){
         if (alpha >= 1.0f) return color;
         int faded = Math.round(((color >>> 24) & 0xFF) * alpha);
         return (color & 0x00FFFFFF) | (faded << 24);

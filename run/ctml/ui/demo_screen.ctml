@@ -549,6 +549,39 @@
       <div class="w-full text-xs text-slate-500" text="its lit and pressed looks are hover: and active: classes"></div>
     </div>
 
+    <div class="w-full bg-slate-800 border border-slate-700 rounded-sm px-1 py-[2px] text-xs text-slate-400" text="inputs">
+      <input type="text" class="w-full text-xs text-slate-100 focus:border-sky-400" placeholder="text" callback="inputChanged">
+      <input type="password" class="w-full mt-1 text-xs text-slate-100 focus:border-sky-400" placeholder="password" callback="inputChanged">
+      <input type="number" class="w-10 mt-1 text-xs text-slate-100 focus:border-sky-400" value=5 min=0 max=20 callback="inputChanged">
+      <input type="text" class="w-10 mt-1 text-xs text-slate-100" value="read only" readonly>
+      <input type="text" class="w-10 mt-1 text-xs text-slate-100" value="disabled" disabled>
+      <textarea class="w-full mt-1 text-xs text-slate-100 caret-sky-300 placeholder-slate-500 focus:border-sky-400" rows=3 placeholder="textarea" callback="inputChanged"></textarea>
+      <div class="w-full mt-1 flex flex-row gap-1 items-center">
+        <input type="checkbox" class="focus:border-sky-400" checked callback="inputChanged">
+        <span class="text-xs text-slate-200" text="checkbox"></span>
+        <input type="checkbox" class="focus:border-sky-400" callback="inputChanged">
+        <span class="text-xs text-slate-200" text="another"></span>
+      </div>
+      <div class="w-full mt-1 flex flex-row gap-1 items-center">
+        <input type="radio" name="size" value="small" class="focus:border-sky-400" callback="inputChanged">
+        <span class="text-xs text-slate-200" text="small"></span>
+        <input type="radio" name="size" value="large" class="focus:border-sky-400" checked callback="inputChanged">
+        <span class="text-xs text-slate-200" text="large"></span>
+      </div>
+      <div class="w-full mt-1 flex flex-row gap-1 items-center">
+        <input type="range" min=0 max=100 step=5 value=40 class="focus:ring" callback="inputChanged">
+        <input type="button" class="text-xs text-slate-100 hover:bg-sky-600" value="button" callback="inputChanged">
+      </div>
+      <select class="w-16 mt-1 text-xs text-slate-100 focus:border-sky-400" callback="inputChanged">
+        <option value="apple" text="Apple"></option>
+        <option value="bee" selected text="Bee"></option>
+        <option value="cat" text="Cat"></option>
+      </select>
+      <div class="w-full mt-1 text-xs text-amber-200">${inputSays}</div>
+      <div class="w-full text-xs text-slate-500" text="shift+arrows/drag/dbl-click select, ctrl+a c x v z y"></div>
+      <div class="w-full text-xs text-slate-500" text="up/down steps the number, space ticks, a drag slides"></div>
+    </div>
+
     <div class="w-full bg-slate-800 border border-slate-700 rounded-sm px-1 py-[2px] text-xs text-slate-400" text="variables in strings">
       <button class="px-1 py-[2px] rounded-sm bg-amber-600 border border-amber-400 text-slate-900 text-xs hover:bg-amber-400 active:bg-amber-700" callback="clickCookie" text="cookie"></button>
       <div class="w-full mt-1 text-xs text-amber-200">cookies: ${cookies}</div>

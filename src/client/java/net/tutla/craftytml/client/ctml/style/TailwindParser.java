@@ -497,6 +497,11 @@ public final class TailwindParser {
             else set(s, ElementStyle.SHADOW_COLOR, TailwindColors.parse(v));
         });
 
+        // the caret and the placeholder of a text field
+        valued("caret", (s, v) -> set(s, ElementStyle.CARET_COLOR, TailwindColors.parse(v)));
+        valued("placeholder", (s, v) -> set(s, ElementStyle.PLACEHOLDER_COLOR, TailwindColors.parse(v)));
+        valued("selection", (s, v) -> set(s, ElementStyle.SELECTION_COLOR, TailwindColors.parse(v)));
+
         valued("bg-position", (s, v) -> {
             Length[] pair = lengths(v);
             if (pair != null) image(s, i -> i.withPosition(pair[0], pair[1]));

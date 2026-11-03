@@ -3,6 +3,10 @@ package net.tutla.craftytml.client.tusan.register;
 import net.tutla.craftytml.client.ctml.CTMLElement;
 import net.tutla.craftytml.client.ctml.element.*;
 import net.tutla.craftytml.client.ctml.element.input.Button;
+import net.tutla.craftytml.client.ctml.element.input.Input;
+import net.tutla.craftytml.client.ctml.element.input.Option;
+import net.tutla.craftytml.client.ctml.element.input.Select;
+import net.tutla.craftytml.client.ctml.element.input.TextArea;
 import net.tutla.craftytml.client.ctml.element.markdown.*;
 import net.tutla.craftytml.client.ctml.element.markdown.font.*;
 import net.tutla.craftytml.client.ctml.element.markdown.heading.*;
@@ -57,6 +61,10 @@ public class ElementRegistry {
         register(new Heading5());
         register(new Heading6());
         register(new Button());
+        register(new Input());
+        register(new TextArea());
+        register(new Select());
+        register(new Option());
     }
 
     public static void register(CTMLElement element){

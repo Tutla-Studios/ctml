@@ -212,7 +212,9 @@ ways to choose, switched by the tabs along its top: `wheel` (a hue ring with a s
 square inside), `box` (a saturation and brightness box over a hue bar), `bars` (sliders for red, green, blue,
 hue, saturation and brightness) and `swatch` (a grid of ready made colours). Everything but the swatches
 can be dragged, each change calls the callback, and hex typed while it is open is applied with enter. Left
-and right (or page up and down) switch tabs. Neither takes `min`, `max` or `step`, and both are read off the
+and right (or page up and down) switch tabs. Add `alpha` to a colour and its value becomes `#rrggbbaa`: the picker gets an opacity bar under whichever
+tab is showing, the swatch is drawn over a chequerboard, and `alpha()` and `argb()` on `Input` give the opacity
+and the colour with it. Without `alpha` it stays `#rrggbb` and opaque. Neither takes `min`, `max` or `step`, and both are read off the
 element as `value`, with `date()` and `rgb()` on `Input` for java.
 
 What is not: wrapping in a textarea (a long line scrolls sideways),

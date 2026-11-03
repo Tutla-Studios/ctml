@@ -382,6 +382,20 @@ Marks the option a select starts on. The first option is the one chosen where no
 <option value="b" selected text="Bee"></option>
 ```
 
+## `alpha`
+
+Lets a colour input carry an opacity. Its value is then written #rrggbbaa, its picker gets an opacity bar under the other ways of choosing, and its swatch is drawn over a chequerboard so it can be seen through. Without it a colour is #rrggbb and fully opaque, the way html has it.
+
+| | |
+| --- | --- |
+| Value | boolean |
+| Applies to | input |
+| Java class | `net.tutla.craftytml.client.ctml.property.Alpha` |
+
+```html
+<input type="color" alpha value="#38bdf880">
+```
+
 ## `required`
 
 Says the control has to be filled in. Nothing refuses to submit, there being no forms, but isValid on the element reports it.

@@ -51,6 +51,7 @@ final class CTMLPickers {
     // the colour picker
     private static final int COLOR_W = 140;
     private static final int COLOR_H = 118;
+    private static final int ALPHA_H = 14; // the opacity bar, for a colour that carries one
     private static final int TAB_W = 35;
     private static final int TAB_H = 11;
     private static final int BODY_Y = 12;
@@ -72,7 +73,7 @@ final class CTMLPickers {
     static int[] area(CTMLLayout.Box box, Input input, int screenWidth, int screenHeight){
         boolean date = input.kind() == Input.Kind.DATE;
         int w = date ? DATE_W : COLOR_W;
-        int h = date ? DATE_H : COLOR_H;
+        int h = date ? DATE_H : COLOR_H + (input.hasAlpha() ? ALPHA_H : 0);
         int x = Math.clamp(box.x(), 0, Math.max(0, screenWidth - w));
         int y = box.bottom();
         if (y + h > screenHeight && box.y() - h >= 0) y = box.y() - h;
@@ -99,6 +100,16 @@ final class CTMLPickers {
 
     private static void centered(GuiGraphicsExtractor g, Font font, String text, int x, int y, int w, int h, int color){
         g.text(font, text, x + (w - font.width(text)) / 2, y + (h - font.lineHeight) / 2 + 1, color, false);
+    }
+
+    /** The grey and white squares that show through a colour that is not opaque. */
+    static void checker(GuiGraphicsExtractor g, int x, int y, int w, int h){
+        for (int cy = 0; cy < h; cy += 4) {
+            for (int cx = 0; cx < w; cx += 4) {
+                g.fill(x + cx, y + cy, x + Math.min(w, cx + 4), y + Math.min(h, cy + 4),
+                        ((cx + cy) / 4) % 2 == 0 ? 0xFFFFFFFF : 0xFFBBBBBB);
+            }
+        }
     }
 
     /** A small marker on a picker: a white square with a dark edge, so it shows on any colour. */
@@ -264,11 +275,28 @@ final class CTMLPickers {
 
         int fy = y + BODY_Y + BODY_H;
         int current = input.rgb();
+        if (input.hasAlpha()) {
+            g.fill(x, fy, x + 138, fy + 1, BORDER);
+            g.text(font, "A", x + 4, fy + 3, TEXT, false);
+            checker(g, x + BAR_X, fy + 2, BAR_W, 10);
+            for (int i = 0; i < BAR_W; i++) {
+                int alpha = Math.round(i / (float) (BAR_W - 1) * 255);
+                g.fill(x + BAR_X + i, fy + 2, x + BAR_X + i + 1, fy + 12, (alpha << 24) | current);
+            }
+            int at = x + BAR_X + Math.round(input.alpha() * (BAR_W - 1));
+            g.fill(at - 1, fy + 1, at + 2, fy + 13, 0xFF000000);
+            g.fill(at, fy + 1, at + 1, fy + 13, TEXT);
+            g.text(font, Math.round(input.alpha() * 100) + "%", x + BAR_X + BAR_W + 4, fy + 3, TEXT, false);
+            fy += ALPHA_H;
+        }
         g.fill(x, fy, x + 138, fy + 1, BORDER);
-        g.fill(x + 3, fy + 2, x + 25, fy + 12, 0xFF000000 | current);
+        checker(g, x + 3, fy + 2, 22, 10);
+        g.fill(x + 3, fy + 2, x + 25, fy + 12, input.argb());
         outline(g, x + 3, fy + 2, 22, 10, BORDER);
         String typed = input.typedHex();
-        g.text(font, typed != null ? "#" + typed + "_" : ColorMath.hex(current), x + 30, fy + 3, TEXT, false);
+        g.text(font, typed != null ? "#" + typed + "_"
+                : input.hasAlpha() ? ColorMath.hex(current, Math.round(input.alpha() * 255)) : ColorMath.hex(current),
+                x + 30, fy + 3, TEXT, false);
     }
 
     private static void paintWheel(Input input, GuiGraphicsExtractor g, int cx, int cy){
@@ -402,6 +430,10 @@ final class CTMLPickers {
     static CTMLControls.Hold holdColor(Input input, DOMContext ctx, DOMTreeElement element, int[] a, double px, double py){
         int x = a[0] + 1;
         int y = a[1] + 1 + BODY_Y;
+        if (input.hasAlpha() && py >= y + BODY_H + 1 && py < y + BODY_H + ALPHA_H) {
+            int bx = x + BAR_X;
+            return (fx, fy) -> apply(ctx, element, input.setAlpha((float) ((fx - bx) / (BAR_W - 1))));
+        }
         if (py < y || py >= y + BODY_H) return null;
 
         switch (input.mode()) {

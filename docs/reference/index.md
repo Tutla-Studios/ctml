@@ -14,7 +14,7 @@ The whole of ctml, as the code has it. Every page here is generated from the sou
 | Page | What is in it |
 | --- | --- |
 | [Elements](/ctml/reference/elements) | The 40 elements, with the styles each starts with |
-| [Properties](/ctml/reference/properties) | The 51 properties an element can carry |
+| [Properties](/ctml/reference/properties) | The 52 properties an element can carry |
 | [Styles](/ctml/reference/styles) | The 115 styles a class list can write |
 | [Classes](/ctml/reference/classes) | The 357 classes that write them |
 | [Variants](/ctml/reference/variants) | The 21 conditions a class can sit behind |

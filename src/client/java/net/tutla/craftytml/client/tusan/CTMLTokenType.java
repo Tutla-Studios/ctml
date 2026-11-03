@@ -110,6 +110,7 @@ public enum CTMLTokenType implements TokenType {
     DISABLED,
     READONLY,
     SELECTED,
+    ALPHA,
     REQUIRED,
     AUTOFOCUS,
     MINLENGTH,

@@ -38,6 +38,7 @@ public class PropertyRegistry {
         register(new Disabled());
         register(new ReadOnly());
         register(new Selected());
+        register(new Alpha());
         register(new Required());
         register(new Autofocus());
         register(new MinLength());

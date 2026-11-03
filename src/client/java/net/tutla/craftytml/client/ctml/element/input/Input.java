@@ -2,6 +2,7 @@ package net.tutla.craftytml.client.ctml.element.input;
 
 import net.tutla.craftytml.client.ctml.CTMLDiagnostics;
 import net.tutla.craftytml.client.ctml.ElementStyle;
+import net.tutla.craftytml.client.ctml.property.Alpha;
 import net.tutla.craftytml.client.ctml.property.Checked;
 import net.tutla.craftytml.client.ctml.property.Max;
 import net.tutla.craftytml.client.ctml.property.Min;
@@ -29,7 +30,7 @@ import java.util.Locale;
  * #rrggbb and shows a swatch; a press opens a picker with four ways to choose: a hue wheel with a
  * saturation and brightness square inside it, a saturation and brightness box with a hue bar, red, green,
  * blue, hue, saturation and brightness sliders, and a grid of swatches. Hex can be typed in while it is open.
- * Both fire an INPUT for each change, a drag in the picker included. min, max and step do not apply to either. A type it does not know is read as text.
+ * With the alpha property a colour also carries an opacity, written #rrggbbaa, with its own bar in the picker. Both fire an INPUT for each change, a drag in the picker included. min, max and step do not apply to either. A type it does not know is read as text.
  *
  * <p>What it holds is kept in its own properties, rewritten as the user changes it: value for the text,
  * the number or the position of the slider, and checked for a checkbox or a radio button. A function
@@ -54,7 +55,7 @@ import java.util.Locale;
  * of them are in the tab order unless disabled, except hidden, which takes up no room at all.
  *
  * @ctml.group input
- * @ctml.properties type, value, placeholder, checked, name, min, max, step, maxlength, minlength, size, pattern, required, autofocus, disabled, readonly, callback, tabindex
+ * @ctml.properties type, value, placeholder, checked, name, min, max, step, alpha, maxlength, minlength, size, pattern, required, autofocus, disabled, readonly, callback, tabindex
  * @ctml.example <input type="text" class="w-32" placeholder="your name" callback="nameChanged">
  */
 public class Input extends FormControl {
@@ -315,12 +316,39 @@ public class Input extends FormControl {
         return read < 0 ? 0 : read;
     }
 
-    /** Puts a colour in and says whether that was a change. */
+    /** Whether it carries an opacity, which is what the alpha property turns on. */
+    public boolean hasAlpha(){
+        return propertyList.propertyFromName("alpha") instanceof Alpha alpha && alpha.isOn();
+    }
+
+    /** How opaque it is, from nothing to one; always one where it has no alpha. */
+    public float alpha(){
+        return hasAlpha() && !value().isEmpty() ? ColorMath.parseAlpha(value()) / 255.0f : 1.0f;
+    }
+
+    /** The colour with its opacity as 0xAARRGGBB, the way the screen draws it. */
+    public int argb(){
+        return (Math.round(alpha() * 255) << 24) | rgb();
+    }
+
+    /** The text a colour is written as: with the opacity on the end where it carries one. */
+    private String written(int rgb){
+        return hasAlpha() ? ColorMath.hex(rgb, Math.round(alpha() * 255)) : ColorMath.hex(rgb);
+    }
+
+    /** Puts a colour in, keeping the opacity it has, and says whether that was a change. */
     public boolean setRgb(int rgb){
-        boolean moved = setValue(ColorMath.hex(rgb));
+        boolean moved = setValue(written(rgb));
         syncHsv();
         typedHex = null;
         return moved;
+    }
+
+    /** Sets how opaque it is, from nothing to one. Says whether that was a change; it is not one without alpha. */
+    public boolean setAlpha(float alpha){
+        if (!hasAlpha()) return false;
+        typedHex = null;
+        return setValue(ColorMath.hex(rgb(), Math.round(Math.clamp(alpha, 0.0f, 1.0f) * 255)));
     }
 
     /** Works the hue, saturation and brightness back out of the colour, keeping the hue of a grey, which has none. */
@@ -341,7 +369,7 @@ public class Input extends FormControl {
         this.saturation = Math.clamp(saturation, 0.0f, 1.0f);
         this.brightness = Math.clamp(brightness, 0.0f, 1.0f);
         typedHex = null;
-        return setValue(ColorMath.hex(ColorMath.hsvToRgb(this.hue, this.saturation, this.brightness)));
+        return setValue(written(ColorMath.hsvToRgb(this.hue, this.saturation, this.brightness)));
     }
 
     public int mode(){ return mode; }
@@ -361,7 +389,7 @@ public class Input extends FormControl {
         if (codePoint == '#') return true;
         if (Character.digit(codePoint, 16) < 0) return false;
         String held = typedHex == null ? "" : typedHex;
-        if (held.length() >= 6) return true;
+        if (held.length() >= (hasAlpha() ? 8 : 6)) return true;
         typedHex = held + Character.toLowerCase((char) codePoint);
         return true;
     }
@@ -374,8 +402,15 @@ public class Input extends FormControl {
     /** Takes what was typed as the colour, if it reads as one. Says whether the colour changed. */
     public boolean applyHex(){
         int read = ColorMath.parse(typedHex);
+        // four digits or eight say the opacity too, and are only believed by a colour that carries one
+        boolean says = typedHex != null && (typedHex.length() == 4 || typedHex.length() == 8);
+        int alpha = ColorMath.parseAlpha(typedHex);
         typedHex = null;
-        return read >= 0 && setRgb(read);
+        if (read < 0) return false;
+        if (!hasAlpha() || !says) return setRgb(read);
+        boolean moved = setValue(ColorMath.hex(read, alpha));
+        syncHsv();
+        return moved;
     }
 
     // ---- the popups ----

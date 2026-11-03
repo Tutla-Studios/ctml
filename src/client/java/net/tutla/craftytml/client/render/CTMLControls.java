@@ -83,8 +83,13 @@ public final class CTMLControls {
                 int size = Math.min(box.contentWidth(), box.contentHeight()) - 2;
                 CTMLRenderer.rounded(graphics, box.contentX() + 1, box.contentY() + 1, size, size, size / 2, color);
             }
-            case COLOR -> graphics.fill(box.contentX(), box.contentY(), box.contentRight(), box.contentBottom(),
-                    CTMLRenderer.fade(0xFF000000 | input.rgb(), faded));
+            case COLOR -> {
+                if (input.alpha() < 1.0f) {
+                    CTMLPickers.checker(graphics, box.contentX(), box.contentY(), box.contentWidth(), box.contentHeight());
+                }
+                graphics.fill(box.contentX(), box.contentY(), box.contentRight(), box.contentBottom(),
+                        CTMLRenderer.fade(input.argb(), faded));
+            }
             case DATE -> {
                 int left = box.right() - 12;
                 int top = box.y() + box.height() / 2 - 4;

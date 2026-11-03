@@ -54,16 +54,34 @@ public final class ColorMath {
         return String.format("#%06x", rgb & 0xFFFFFF);
     }
 
-    /** Reads #rrggbb or #rgb, with or without the hash, or returns -1 for anything else. */
-    public static int parse(String text){
-        if (text == null) return -1;
+    /** A colour with an opacity as text: a hash and eight lower case digits, the last two the opacity. */
+    public static String hex(int rgb, int alpha){
+        return String.format("#%06x%02x", rgb & 0xFFFFFF, Math.clamp(alpha, 0, 255));
+    }
+
+    /** The digits of a colour written #rgb, #rgba, #rrggbb or #rrggbbaa, widened to eight, or null for anything else. */
+    private static String digits(String text){
+        if (text == null) return null;
         String digits = text.strip();
         if (digits.startsWith("#")) digits = digits.substring(1);
-        if (!digits.matches("[0-9a-fA-F]{3}|[0-9a-fA-F]{6}")) return -1;
-        if (digits.length() == 3) {
-            digits = "" + digits.charAt(0) + digits.charAt(0) + digits.charAt(1) + digits.charAt(1)
-                    + digits.charAt(2) + digits.charAt(2);
+        if (!digits.matches("[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8}")) return null;
+        if (digits.length() <= 4) {
+            StringBuilder wide = new StringBuilder();
+            for (char each : digits.toCharArray()) wide.append(each).append(each);
+            digits = wide.toString();
         }
-        return Integer.parseInt(digits, 16);
+        return digits.length() == 6 ? digits + "ff" : digits;
+    }
+
+    /** Reads #rgb, #rgba, #rrggbb or #rrggbbaa, with or without the hash, and gives the colour without its opacity, or -1 for anything else. */
+    public static int parse(String text){
+        String digits = digits(text);
+        return digits == null ? -1 : Integer.parseInt(digits.substring(0, 6), 16);
+    }
+
+    /** The opacity of a colour written as text, from 0 to 255, which is fully opaque where it was written without one. */
+    public static int parseAlpha(String text){
+        String digits = digits(text);
+        return digits == null ? 255 : Integer.parseInt(digits.substring(6, 8), 16);
     }
 }

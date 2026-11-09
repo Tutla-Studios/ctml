@@ -65,14 +65,18 @@ public final class CTMLWindows {
         closeAll();
     }
 
-    public void open(Player player, DOMTreeElement tree, DOMContext ctx){
-        open(player, tree, ctx, CTMLWindow.Frame.DEFAULT);
+    public void open(Player player, String name, DOMTreeElement tree, DOMContext ctx){
+        open(player, name, tree, ctx, CTMLWindow.Frame.DEFAULT);
     }
 
-    /** Opens a tree in front of a player, in place of any window they already had open. */
-    public void open(Player player, DOMTreeElement tree, DOMContext ctx, CTMLWindow.Frame frame){
+    /**
+     * Opens a tree in front of a player, in place of any window they already had open, under a name that
+     * {@link #named} finds it by. Once it closes nothing here holds the tree any more, so a tree no one
+     * else keeps is gone with it.
+     */
+    public void open(Player player, String name, DOMTreeElement tree, DOMContext ctx, CTMLWindow.Frame frame){
         close(player); // the old one goes first, which also gives the player their speed back
-        CTMLWindow window = new CTMLWindow(this, player, tree, ctx, frame);
+        CTMLWindow window = new CTMLWindow(this, player, name, tree, ctx, frame);
         try {
             window.open(player);
         } catch (RuntimeException e) {
@@ -100,6 +104,13 @@ public final class CTMLWindows {
 
     public boolean isOpen(Player player){
         return windows.containsKey(player.getUniqueId());
+    }
+
+    /** The windows open under a name, for something that wants to reach into all of them at once. */
+    public List<CTMLWindow> named(String name){
+        List<CTMLWindow> found = new java.util.ArrayList<>();
+        for (CTMLWindow window : windows.values()) if (window.name().equals(name)) found.add(window);
+        return found;
     }
 
     CTMLWindow window(Player player){

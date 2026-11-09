@@ -9,7 +9,7 @@ depend: [Tums]
 commands:
   ctml:
     description: Run ctml scripts for a player and show what they build
-    usage: /ctml <open <name> [player]|run <script> [player]|demo [player]|close [player]|list>
+    usage: /ctml <open|run|demo|close|list|execute [targets] <name> [json] <ctml>|variable put/remove <name> <variable> [value]|callback put/remove <name> <callback> [command]>
     permission: craftytml.use
 
 permissions:

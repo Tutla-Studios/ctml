@@ -15,7 +15,7 @@ import org.bukkit.entity.Player;
 public record WindowRenderer(Player player) implements UIRenderer {
     @Override
     public void show(String name, DOMTreeElement tree, DOMContext ctx){
-        CraftytmlPaper.windows().open(player, tree, ctx);
+        CraftytmlPaper.windows().open(player, name, tree, ctx);
     }
 
     @Override

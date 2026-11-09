@@ -145,6 +145,7 @@ public final class CTMLWindow {
 
     private final CTMLWindows windows;
     private final UUID owner;
+    private final String name;
     private final DOMTreeElement tree;
     private final DOMContext ctx;
     private final Frame frame;
@@ -182,15 +183,23 @@ public final class CTMLWindow {
     private record Paint(double u, double v, float scaleX, float scaleY, String text, int background,
                          byte opacity, boolean shadow) {}
 
-    CTMLWindow(CTMLWindows windows, Player owner, DOMTreeElement tree, DOMContext ctx, Frame frame){
+    CTMLWindow(CTMLWindows windows, Player owner, String name, DOMTreeElement tree, DOMContext ctx, Frame frame){
         this.windows = windows;
         this.owner = owner.getUniqueId();
+        this.name = name == null ? "" : name;
         this.tree = tree;
         this.ctx = ctx;
         this.frame = frame;
     }
 
-    UUID owner(){ return owner; }
+    /** The player this window is in front of. */
+    public UUID owner(){ return owner; }
+
+    /** The name it was opened under. */
+    public String name(){ return name; }
+
+    /** The context its tree was opened with, whose variables and callbacks can be changed while it is open. */
+    public DOMContext context(){ return ctx; }
     World world(){ return world; }
     Location anchor(){ return anchor; }
 

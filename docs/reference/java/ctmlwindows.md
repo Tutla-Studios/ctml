@@ -28,11 +28,11 @@ Starts the tick task, and undoes whatever a crash or a reload left behind.
 
 Closes every window and stops ticking.
 
-### `public void open(Player player, DOMTreeElement tree, DOMContext ctx)`
+### `public void open(Player player, String name, DOMTreeElement tree, DOMContext ctx)`
 
-### `public void open(Player player, DOMTreeElement tree, DOMContext ctx, CTMLWindow.Frame frame)`
+### `public void open(Player player, String name, DOMTreeElement tree, DOMContext ctx, CTMLWindow.Frame frame)`
 
-Opens a tree in front of a player, in place of any window they already had open.
+Opens a tree in front of a player, in place of any window they already had open, under a name that `named` finds it by. Once it closes nothing here holds the tree any more, so a tree no one else keeps is gone with it.
 
 ### `public boolean close(Player player)`
 
@@ -41,4 +41,8 @@ Closes the player's window, and says false where they had none.
 ### `public void closeAll()`
 
 ### `public boolean isOpen(Player player)`
+
+### `public List<CTMLWindow> named(String name)`
+
+The windows open under a name, for something that wants to reach into all of them at once.
 

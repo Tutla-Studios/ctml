@@ -9,6 +9,7 @@ import net.tutla.craftytml.client.render.UIRenderer;
 import net.tutla.craftytml.paper.CraftytmlPaper;
 import net.tutla.craftytml.paper.render.WindowRenderer;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabExecutor;
@@ -46,89 +47,186 @@ public final class CTMLCommand implements TabExecutor {
         this.ui = ui;
     }
 
-    @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args){
-        if (args.length == 0) return false;
-        switch (args[0]) {
-            case "list" -> sender.sendMessage(UIRegistry.isEmpty()
-                    ? "No ctml uis loaded."
-                    : "ctml uis: " + String.join(", ", UIRegistry.getAllNames()));
-            case "open" -> {
-                if (args.length < 2) return false;
-                Player target = target(sender, args, 2);
-                if (target == null) return true;
-                DOMTreeElement tree = UIRegistry.getUIFromName(args[1]);
-                if (tree == null) {
-                    sender.sendMessage("No ctml ui called " + args[1] + ".");
-                    return true;
-                }
-                new WindowRenderer(target).show(args[1], tree, new DOMContext(tree));
-            }
-            case "run" -> {
-                if (args.length < 2) return false;
-                Player target = target(sender, args, 2);
-                if (target == null) return true;
-                Path file = ui.resolve(args[1]).normalize();
-                DOMTreeElement tree = file.startsWith(ui) && Files.isRegularFile(file)
-                        ? CTMLAPI.buildUI(file, Map.of("player", target))
-                        : null;
-                if (tree == null) {
-                    sender.sendMessage(args[1] + " is not a script in the ui folder, or it built no ui.");
-                    return true;
-                }
-                new WindowRenderer(target).show(args[1], tree, new DOMContext(tree));
-            }
-            case "demo" -> {
-                Player target = target(sender, args, 1);
-                if (target == null) return true;
-                if (!DemoIntro.open(new WindowRenderer(target))) {
-                    sender.sendMessage(DemoIntro.INTRO_UI + " is not in " + ui + ".");
-                }
-            }
-            case "close" -> {
-                Player target = target(sender, args, 1);
-                if (target != null && !CraftytmlPaper.windows().close(target)) sender.sendMessage("No window open.");
-            }
-            case "execute" -> {
-                return execute(sender, args);
-            }
-            case "variable" -> {
-                if (args.length < 4) return false;
-                String name = args[2], variable = args[3];
-                switch (args[1]) {
-                    case "put" -> {
-                        if (args.length < 5) return false;
-                        executed.putVariable(name, variable, rest(args, 4));
-                    }
-                    case "remove" -> {
-                        if (!executed.removeVariable(name, variable)) sender.sendMessage(name + " has no variable " + variable + ".");
-                    }
-                    default -> {
-                        return false;
-                    }
-                }
-            }
-            case "callback" -> {
-                if (args.length < 4) return false;
-                String name = args[2], callback = args[3];
-                switch (args[1]) {
-                    case "put" -> {
-                        if (args.length < 5) return false;
-                        executed.putCallback(name, callback, rest(args, 4));
-                    }
-                    case "remove" -> {
-                        if (!executed.removeCallback(name, callback)) sender.sendMessage(name + " has no callback " + callback + ".");
-                    }
-                    default -> {
-                        return false;
-                    }
-                }
-            }
-            default -> {
-                return false;
-            }
+    // ---- what every message looks like ----
+
+    private static final String USAGE_OPEN = "/ctml open <name> [player]";
+    private static final String USAGE_RUN = "/ctml run <script> [player]";
+    private static final String USAGE_DEMO = "/ctml demo [player]";
+    private static final String USAGE_CLOSE = "/ctml close [player]";
+    private static final String USAGE_LIST = "/ctml list";
+    private static final String USAGE_EXECUTE = "/ctml execute [targets] <name> [json] <ctml>";
+    private static final String USAGE_VARIABLE = "/ctml variable put|remove <name> <variable> [value]";
+    private static final String USAGE_CALLBACK = "/ctml callback put|remove <name> <callback> [command]";
+
+    /** A success, in green. Always true, so a branch can end on it. */
+    private static boolean done(CommandSender sender, String message){
+        sender.sendMessage(ChatColor.GREEN + message);
+        return true;
+    }
+
+    /** A failure and why, in red. Always true: the usage bukkit prints for false would say nothing more. */
+    private static boolean fail(CommandSender sender, String message){
+        sender.sendMessage(ChatColor.RED + message);
+        return true;
+    }
+
+    /** Input the command could not read, and how it is written. */
+    private static boolean usage(CommandSender sender, String problem, String form){
+        sender.sendMessage(ChatColor.RED + problem);
+        sender.sendMessage(ChatColor.GRAY + "Usage: " + ChatColor.WHITE + form);
+        return true;
+    }
+
+    private static boolean help(CommandSender sender){
+        sender.sendMessage(ChatColor.GOLD + "CraftyTML commands:");
+        for (String form : List.of(USAGE_OPEN, USAGE_RUN, USAGE_EXECUTE, USAGE_VARIABLE, USAGE_CALLBACK,
+                USAGE_DEMO, USAGE_CLOSE, USAGE_LIST)) {
+            sender.sendMessage(ChatColor.GRAY + " " + form);
         }
         return true;
+    }
+
+    /** Hands a tree to a player's window, and says whether it opened. */
+    private static boolean show(CommandSender sender, Player target, String name, DOMTreeElement tree, DOMContext ctx){
+        try {
+            new WindowRenderer(target).show(name, tree, ctx);
+            return true;
+        } catch (RuntimeException e) {
+            CraftytmlPaper.getPlugin(CraftytmlPaper.class).getLogger()
+                    .log(java.util.logging.Level.SEVERE, "could not open " + name + " for " + target.getName(), e);
+            fail(sender, "Could not open " + name + " for " + target.getName() + ": " + e.getMessage());
+            return false;
+        }
+    }
+
+    /** "you" where the window is the sender's own, and the player's name where it is someone else's. */
+    private static String whose(CommandSender sender, Player target){
+        return sender == target ? "you" : target.getName();
+    }
+
+    // ---- the commands ----
+
+    @Override
+    public boolean onCommand(CommandSender sender, Command command, String label, String[] args){
+        if (args.length == 0) return help(sender);
+        return switch (args[0].toLowerCase()) {
+            case "list" -> list(sender);
+            case "open" -> open(sender, args);
+            case "run" -> run(sender, args);
+            case "demo" -> demo(sender, args);
+            case "close" -> close(sender, args);
+            case "execute" -> execute(sender, args);
+            case "variable" -> variable(sender, args);
+            case "callback" -> callback(sender, args);
+            default -> {
+                fail(sender, "There is no /ctml " + args[0] + ".");
+                yield help(sender);
+            }
+        };
+    }
+
+    private boolean list(CommandSender sender){
+        if (UIRegistry.isEmpty()) return fail(sender, "No ctml uis are loaded. Put .ctml files in " + ui + " and restart.");
+        sender.sendMessage(ChatColor.GOLD + "Loaded ctml uis (" + UIRegistry.getAllNames().size() + "): "
+                + ChatColor.WHITE + String.join(", ", UIRegistry.getAllNames()));
+        return true;
+    }
+
+    private boolean open(CommandSender sender, String[] args){
+        if (args.length < 2) return usage(sender, "Name the ui to open.", USAGE_OPEN);
+        if (args.length > 3) return usage(sender, "Too many arguments.", USAGE_OPEN);
+        DOMTreeElement tree = UIRegistry.getUIFromName(args[1]);
+        if (tree == null) return fail(sender, "No ui called " + args[1] + " is loaded. /ctml list names the ones that are.");
+        Player target = target(sender, args, 2);
+        if (target == null) return true;
+        if (!show(sender, target, args[1], tree, new DOMContext(tree))) return true;
+        return done(sender, "Opened " + args[1] + " for " + whose(sender, target) + ".");
+    }
+
+    private boolean run(CommandSender sender, String[] args){
+        if (args.length < 2) return usage(sender, "Name the script to run.", USAGE_RUN);
+        if (args.length > 3) return usage(sender, "Too many arguments.", USAGE_RUN);
+        Path file = ui.resolve(args[1]).normalize();
+        if (!file.startsWith(ui)) return fail(sender, "A script has to be inside " + ui + ".");
+        if (!Files.isRegularFile(file)) return fail(sender, "There is no script called " + args[1] + " in " + ui + ".");
+        Player target = target(sender, args, 2);
+        if (target == null) return true;
+        DOMTreeElement tree = CTMLAPI.buildUI(file, Map.of("player", target));
+        if (tree == null) return fail(sender, args[1] + " ran but built no ui. The console has its errors.");
+        if (!show(sender, target, args[1], tree, new DOMContext(tree))) return true;
+        return done(sender, "Ran " + args[1] + " for " + whose(sender, target) + ".");
+    }
+
+    private boolean demo(CommandSender sender, String[] args){
+        if (args.length > 2) return usage(sender, "Too many arguments.", USAGE_DEMO);
+        Player target = target(sender, args, 1);
+        if (target == null) return true;
+        try {
+            if (!DemoIntro.open(new WindowRenderer(target))) {
+                return fail(sender, DemoIntro.INTRO_UI + " is not loaded. Put it in " + ui + " and restart.");
+            }
+        } catch (RuntimeException e) {
+            return fail(sender, "Could not open the demo for " + target.getName() + ": " + e.getMessage());
+        }
+        return done(sender, "Opened the demo for " + whose(sender, target) + ".");
+    }
+
+    private boolean close(CommandSender sender, String[] args){
+        if (args.length > 2) return usage(sender, "Too many arguments.", USAGE_CLOSE);
+        Player target = target(sender, args, 1);
+        if (target == null) return true;
+        if (!CraftytmlPaper.windows().close(target)) {
+            return fail(sender, (sender == target ? "You have" : target.getName() + " has") + " no window open.");
+        }
+        return done(sender, "Closed " + (sender == target ? "your" : target.getName() + "'s") + " window.");
+    }
+
+    private boolean variable(CommandSender sender, String[] args){
+        if (args.length < 2) return usage(sender, "Say whether to put or remove a variable.", USAGE_VARIABLE);
+        String action = args[1].toLowerCase();
+        if (!action.equals("put") && !action.equals("remove")) {
+            return usage(sender, args[1] + " is not put or remove.", USAGE_VARIABLE);
+        }
+        if (args.length < 3) return usage(sender, "Name the ui the variable is for.", USAGE_VARIABLE);
+        if (args.length < 4) return usage(sender, "Name the variable.", USAGE_VARIABLE);
+        String name = args[2], variable = args[3];
+
+        if (action.equals("remove")) {
+            if (args.length > 4) return usage(sender, "remove takes no value.", USAGE_VARIABLE);
+            if (!executed.removeVariable(name, variable)) return fail(sender, name + " has no variable " + variable + ".");
+            return done(sender, "Removed variable " + variable + " from " + name + ".");
+        }
+        if (args.length < 5) return usage(sender, "Give the variable a value.", USAGE_VARIABLE);
+        String value = rest(args, 4);
+        int open = executed.putVariable(name, variable, value);
+        return done(sender, "Set " + variable + " on " + name + " to \"" + value + "\"" + reached(open) + ".");
+    }
+
+    private boolean callback(CommandSender sender, String[] args){
+        if (args.length < 2) return usage(sender, "Say whether to put or remove a callback.", USAGE_CALLBACK);
+        String action = args[1].toLowerCase();
+        if (!action.equals("put") && !action.equals("remove")) {
+            return usage(sender, args[1] + " is not put or remove.", USAGE_CALLBACK);
+        }
+        if (args.length < 3) return usage(sender, "Name the ui the callback is for.", USAGE_CALLBACK);
+        if (args.length < 4) return usage(sender, "Name the callback, as the markup's callback property names it.", USAGE_CALLBACK);
+        String name = args[2], callback = args[3];
+
+        if (action.equals("remove")) {
+            if (args.length > 4) return usage(sender, "remove takes no command.", USAGE_CALLBACK);
+            if (!executed.removeCallback(name, callback)) return fail(sender, name + " has no callback " + callback + ".");
+            return done(sender, "Removed callback " + callback + " from " + name + ".");
+        }
+        if (args.length < 5) return usage(sender, "Give the command the callback runs.", USAGE_CALLBACK);
+        String run = rest(args, 4);
+        int open = executed.putCallback(name, callback, run);
+        return done(sender, "Pressing " + callback + " on " + name + " now runs /"
+                + (run.startsWith("/") ? run.substring(1) : run) + reached(open) + ".");
+    }
+
+    /** ", in 3 open windows", or nothing where none are open to reach. */
+    private static String reached(int open){
+        return open == 0 ? "" : ", in " + open + (open == 1 ? " open window" : " open windows");
     }
 
     /**
@@ -138,16 +236,17 @@ public final class CTMLCommand implements TabExecutor {
      * target so every one of them has a tree of their own, never registered, and gone once their window is.
      */
     private boolean execute(CommandSender sender, String[] args){
+        if (args.length < 2) return usage(sender, "Give the ui a name and its ctml.", USAGE_EXECUTE);
         int at = 1;
         List<Player> targets;
-        if (args.length > 1 && args[1].startsWith("@")) {
+        if (args[1].startsWith("@")) {
             try {
                 targets = Bukkit.selectEntities(sender, args[1]).stream()
                         .filter(Player.class::isInstance).map(Player.class::cast).toList();
             } catch (IllegalArgumentException e) {
-                sender.sendMessage(args[1] + " is not a selector: " + e.getMessage());
-                return true;
+                return fail(sender, args[1] + " is not a valid selector: " + e.getMessage());
             }
+            if (targets.isEmpty()) return fail(sender, args[1] + " matched no players.");
             at = 2;
         } else if (args.length > 3 && Bukkit.getPlayerExact(args[1]) != null) {
             targets = List.of(Bukkit.getPlayerExact(args[1]));
@@ -155,45 +254,47 @@ public final class CTMLCommand implements TabExecutor {
         } else if (sender instanceof Player player) {
             targets = List.of(player);
         } else {
-            sender.sendMessage("Name a player to show it to.");
-            return true;
+            return usage(sender, "The console has no window: name a player or a selector to show it to.", USAGE_EXECUTE);
         }
-        if (args.length < at + 2) return false;
 
+        if (args.length <= at) return usage(sender, "Give the ui a name.", USAGE_EXECUTE);
         String name = args[at];
+        if (name.startsWith("<") || name.startsWith("{")) {
+            return usage(sender, "Give the ui a name before its json and ctml.", USAGE_EXECUTE);
+        }
+
         String rest = rest(args, at + 1).strip();
         Map<String, String> callbacks = Map.of();
         if (rest.startsWith("{")) {
             int end = jsonEnd(rest);
-            if (end < 0) {
-                sender.sendMessage("The callback json is never closed.");
-                return true;
-            }
+            if (end < 0) return fail(sender, "The callback json is missing its closing }.");
             try {
                 callbacks = new com.google.gson.Gson().fromJson(rest.substring(0, end),
                         new com.google.gson.reflect.TypeToken<Map<String, String>>(){}.getType());
             } catch (RuntimeException e) {
-                sender.sendMessage("The callback json should map callback names to commands: " + e.getMessage());
-                return true;
+                return fail(sender, "The callback json has to map callback names to commands, like "
+                        + "{\"buy\":\"give {player} diamond 1\"}: " + e.getMessage());
             }
+            if (callbacks == null) callbacks = Map.of();
             rest = rest.substring(end).strip();
         }
-        if (rest.isEmpty()) return false;
+        if (rest.isEmpty()) return usage(sender, "There is no ctml to show after the name.", USAGE_EXECUTE);
+        if (!rest.startsWith("<")) return fail(sender, "The ctml has to start with a tag, like <ctml>.");
 
         int shown = 0;
         for (Player target : targets) {
             DOMTreeElement tree = CTMLAPI.buildUI(rest, Map.of("player", target));
             if (tree == null) {
-                sender.sendMessage("That markup built no ui.");
-                return true;
+                return fail(sender, "That ctml built no ui. The console has its errors."
+                        + (shown > 0 ? " It was shown to " + shown + " player(s) before that." : ""));
             }
-            new WindowRenderer(target).show(name, tree, executed.context(name, tree, target, callbacks));
-            shown++;
+            if (show(sender, target, name, tree, executed.context(name, tree, target, callbacks))) shown++;
         }
-        if (!(sender instanceof Player player && targets.equals(List.of(player)))) {
-            sender.sendMessage("Showing " + name + " to " + shown + (shown == 1 ? " player." : " players."));
-        }
-        return true;
+        if (shown == 0) return true; // each failure has already been said
+        String callbacksSaid = callbacks.isEmpty() ? "" : " with " + callbacks.size()
+                + (callbacks.size() == 1 ? " callback" : " callbacks");
+        return done(sender, "Showing " + name + callbacksSaid + " to "
+                + (targets.size() == 1 ? whose(sender, targets.getFirst()) : shown + " players") + ".");
     }
 
     /** Where the json object at the front of the text ends, just past its closing brace, or -1 where it never does. */
@@ -219,15 +320,18 @@ public final class CTMLCommand implements TabExecutor {
         return String.join(" ", java.util.Arrays.copyOfRange(args, from, args.length));
     }
 
-    /** The player named at that place in the command, or the one running it where none is named. */
+    /**
+     * The player named at that place in the command, or the one running it where none is named. Says why
+     * where there is no one, and hands back null.
+     */
     private static Player target(CommandSender sender, String[] args, int at){
         if (args.length > at) {
             Player named = Bukkit.getPlayerExact(args[at]);
-            if (named == null) sender.sendMessage(args[at] + " is not online.");
+            if (named == null) fail(sender, "No player called " + args[at] + " is online.");
             return named;
         }
         if (sender instanceof Player player) return player;
-        sender.sendMessage("Name a player to show it to.");
+        fail(sender, "The console has no window: name the player to show it to.");
         return null;
     }
 

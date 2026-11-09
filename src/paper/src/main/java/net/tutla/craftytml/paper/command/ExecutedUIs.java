@@ -10,6 +10,7 @@ import org.bukkit.entity.Player;
 
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -41,11 +42,15 @@ final class ExecutedUIs {
         return ctx;
     }
 
-    void putVariable(String name, String variable, String value){
+    /** Puts a variable on a name, and says how many open windows it reached. */
+    int putVariable(String name, String variable, String value){
         profile(name).variables().put(variable, value);
-        for (CTMLWindow window : CraftytmlPaper.windows().named(name)) window.context().putVariable(variable, value);
+        List<CTMLWindow> open = CraftytmlPaper.windows().named(name);
+        for (CTMLWindow window : open) window.context().putVariable(variable, value);
+        return open.size();
     }
 
+    /** Takes a variable off a name, and says whether the name had it. */
     boolean removeVariable(String name, String variable){
         Profile profile = profiles.get(name);
         boolean had = profile != null && profile.variables().remove(variable) != null;
@@ -54,13 +59,15 @@ final class ExecutedUIs {
         return had;
     }
 
-    void putCallback(String name, String callback, String command){
+    /** Puts a callback command on a name, and says how many open windows it reached. */
+    int putCallback(String name, String callback, String command){
         profile(name).callbacks().put(callback, command);
-        for (CTMLWindow window : CraftytmlPaper.windows().named(name)) {
-            window.context().putCallBack(callback, command(window.owner(), command));
-        }
+        List<CTMLWindow> open = CraftytmlPaper.windows().named(name);
+        for (CTMLWindow window : open) window.context().putCallBack(callback, command(window.owner(), command));
+        return open.size();
     }
 
+    /** Takes a callback off a name, and says whether the name had it. */
     boolean removeCallback(String name, String callback){
         Profile profile = profiles.get(name);
         boolean had = profile != null && profile.callbacks().remove(callback) != null;

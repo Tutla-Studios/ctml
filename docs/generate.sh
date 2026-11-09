@@ -79,8 +79,11 @@ ctml/CTMLElement.java:CTMLElement
 ctml/ElementStyle.java:ElementStyle
 ctml/style/TailwindParser.java:TailwindParser
 ctml/CTMLDiagnostics.java:CTMLDiagnostics
+render/UIRenderer.java:UIRenderer
+render/ScreenRenderer.java:ScreenRenderer
+paper/render/WindowRenderer.java:WindowRenderer
 paper/CraftytmlPaper.java:CraftytmlPaper
-paper/CTMLWindows.java:CTMLWindows
+paper/render/CTMLWindows.java:CTMLWindows
 "
 
 # ---------------------------------------------------------------------------- javadoc
@@ -998,6 +1001,7 @@ gen_java(){
         local dir pkg
         dir="$(dirname "$rel")"
         if [ "$dir" = "paper" ]; then pkg="$PAPER_PKG"
+        elif [ "${dir#paper/}" != "$dir" ]; then pkg="$PAPER_PKG.$(echo "${dir#paper/}" | tr '/' '.')"
         elif [ "$dir" = "." ]; then pkg="$PKG"
         else pkg="$PKG.$(echo "$dir" | tr '/' '.')"; fi
         {

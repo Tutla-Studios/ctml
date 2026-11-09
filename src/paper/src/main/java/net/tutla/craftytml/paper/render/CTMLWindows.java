@@ -1,4 +1,4 @@
-package net.tutla.craftytml.paper;
+package net.tutla.craftytml.paper.render;
 
 import net.tutla.craftytml.client.dom.DOMContext;
 import net.tutla.craftytml.client.dom.DOMTreeElement;
@@ -23,12 +23,12 @@ import java.util.logging.Level;
 
 /**
  * The ctml windows open on a server, at most one a player, all driven from one task that runs every tick.
- * This is what a plugin opens a tree with, the way a client opens one in a {@code CTMLScreen}: a tree
- * from {@link CraftytmlPaper#run}, a {@code DOMContext} around it with the callbacks on, and {@link #open}.
+ * A {@link WindowRenderer} opens trees here; nothing else needs to.
  *
- * <p>A tree that {@link CraftytmlPaper#run} built for a player is theirs alone. One tree opened for two
- * players is shared by both: a callback that changes it changes it for both, and so does either cursor,
- * since hover: and active: are kept on the elements.
+ * <p>A tree from the {@code UIRegistry} is one tree, so everyone it is opened for is looking at the same
+ * elements: a callback that changes it changes it for all of them, and so does any of their cursors,
+ * since hover: and active: are kept on the elements. {@code CTMLAPI.buildUI} builds a tree of its own
+ * every time it is called, for a player who should have theirs.
  */
 public final class CTMLWindows {
     private final Plugin plugin;
@@ -41,7 +41,7 @@ public final class CTMLWindows {
     /** Ticks counted here, since only paper can say what tick the server is on. */
     private int ticks;
 
-    CTMLWindows(Plugin plugin){
+    public CTMLWindows(Plugin plugin){
         this.plugin = plugin;
         this.entityKey = new NamespacedKey(plugin, "window_entity");
         this.walkSpeedKey = new NamespacedKey(plugin, "saved_walk_speed");
@@ -50,14 +50,14 @@ public final class CTMLWindows {
     }
 
     /** Starts the tick task, and undoes whatever a crash or a reload left behind. */
-    void start(){
+    public void start(){
         purgeOrphanEntities();
         for (Player p : Bukkit.getOnlinePlayers()) restoreLeftovers(p);
         task = Bukkit.getScheduler().runTaskTimer(plugin, this::tick, 1L, 1L);
     }
 
     /** Closes every window and stops ticking. */
-    void shutdown(){
+    public void shutdown(){
         if (task != null) {
             task.cancel();
             task = null;

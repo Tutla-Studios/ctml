@@ -5,11 +5,13 @@ import net.tutla.craftytml.client.ctml.element.input.TextArea;
 import net.tutla.craftytml.client.dom.CTMLCallback;
 import net.tutla.craftytml.client.dom.DOMContext;
 import net.tutla.craftytml.client.dom.DOMTreeElement;
+import net.tutla.craftytml.client.render.UIRegistry;
+import net.tutla.craftytml.client.render.UIRenderer;
 
 import java.util.ArrayList;
 import java.util.List;
 
-/** The full demo, with its callbacks and its counter on it, shown by whatever host asks for it. */
+/** The full demo, with its callbacks and its counter on it, the same on every platform. */
 public class DemoScreen {
     public static final String DEMO_SCREEN_NAME = "demo_screen.ctml";
 
@@ -17,15 +19,15 @@ public class DemoScreen {
      * Shows the demo, and says false where the file is not in the ui folder, so whoever asked for it can
      * leave the user where they are rather than showing an empty screen.
      */
-    public static boolean open(DemoHost host){
-        DOMTreeElement tree = host.tree(DEMO_SCREEN_NAME);
+    public static boolean open(UIRenderer renderer){
+        DOMTreeElement tree = UIRegistry.getUIFromName(DEMO_SCREEN_NAME);
         if (tree == null) return false;
 
         DOMContext ctx = new DOMContext(tree);
         registerDemoCallbacks(ctx);
         registerCookieCounter(ctx);
         registerInputs(ctx);
-        host.show(DEMO_SCREEN_NAME, tree, ctx);
+        renderer.show(DEMO_SCREEN_NAME, tree, ctx);
         return true;
     }
 

@@ -25,5 +25,8 @@ The classes a mod talks to, with the javadoc the source carries.
 | [ElementStyle](/ctml/reference/java/elementstyle) | Every style an element can carry, named after the css property it comes from. |
 | [TailwindParser](/ctml/reference/java/tailwindparser) | Turns a tailwind class list into an ElementStyle. |
 | [CTMLDiagnostics](/ctml/reference/java/ctmldiagnostics) | Where the engine says something is wrong with a script without giving up on it. |
+| [UIRenderer](/ctml/reference/java/uirenderer) | Where a tree is shown, and the one part of CraftyTML that is different on every platform. |
+| [ScreenRenderer](/ctml/reference/java/screenrenderer) | The client's UIRenderer: a tree is opened as a CTMLScreen, over the screen that was showing when it opened, and a link goes through minecraft's own confirm screen. |
+| [WindowRenderer](/ctml/reference/java/windowrenderer) | The server's UIRenderer, for one player: a tree is opened as a window in front of them, in place of any they had open, and a link is sent to their chat to click. |
 | [CraftytmlPaper](/ctml/reference/java/craftytmlpaper) | The Spigot/Paper/Bukkit entry point. |
 | [CTMLWindows](/ctml/reference/java/ctmlwindows) | The ctml windows open on a server, at most one a player, all driven from one task that runs every tick. |

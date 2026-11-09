@@ -10,9 +10,9 @@ isdoc: true
 
 The door into ctml: it runs a .ctml file, or markup held in a string, and puts the tree that comes out of it in the `UIRegistry` under a name.
 
-Running a script is all this does. Nothing is shown by it: a tree becomes a screen or a hud only when something shows it: a `CTMLScreen` or `CTMLHud` on Fabric, a `CTMLWindows` window on Paper, and the same tree can be any of them. A script that fails is reported and skipped, so one bad file cannot stop the rest loading.
+Running a script is all this does, and it does it the same on every platform. Nothing is shown by it: a tree is shown when it is handed to a `UIRenderer`, which is the one part that is different on a client and on a server. A script that fails is reported and skipped, so one bad file cannot stop the rest loading.
 
-Scripts run as `MinecraftEnvironment.CLIENT` unless they are handed another environment, which is how a server runs them as `MinecraftEnvironment.SERVER`.
+Scripts run as `MinecraftEnvironment.CLIENT` unless the platform says otherwise once, with `setEnvironment`, which is how a server runs them as `MinecraftEnvironment.SERVER`.
 
 ```java
 import net.tutla.craftytml.client.CTMLAPI;
@@ -20,19 +20,21 @@ import net.tutla.craftytml.client.CTMLAPI;
 
 ## Members
 
-### `public static void runAllScripts(Path scriptsDir)`
+### `public static void setEnvironment(MinecraftEnvironment side)`
 
-### `public static void runAllScripts(Path scriptsDir, MinecraftEnvironment environment)`
+Which side every script runs on from here on: set once by the platform as it starts.
+
+### `public static void runAllScripts(Path scriptsDir)`
 
 ### `public static void createUI(Path script)`
 
-### `public static void createUI(Path script, MinecraftEnvironment environment)`
-
 ### `public static void createUI(String name, String script)`
 
-### `public static void createUI(String name, String script, MinecraftEnvironment environment)`
+### `public static DOMTreeElement buildUI(Path script, Map<String, Object> variables)`
 
-### `public static DOMTreeElement runFor(Path script, MinecraftEnvironment environment, Map<String, Variable> variables)`
+Runs a script and hands back the tree it builds, without registering it, or null where it builds none. Every call is a tree of its own, which is what a server wants when each player is to have theirs. The variables are in the script's scope before its first line, so a script can be told who it is running for. Any event the script listens for is not heard, since nothing registers it.
 
-Runs a script for one viewer and hands back the tree it builds, or null where it builds none. The variables are in the script's scope before its first line, which is how a server says who it is running for. Nothing is registered: the tree is the caller's alone, so two viewers never share one, and any event the script listens for is not heard, since that would hear it for everyone.
+### `public static DOMTreeElement buildUI(String markup, Map<String, Object> variables)`
+
+The same, for markup held in a string rather than a file.
 

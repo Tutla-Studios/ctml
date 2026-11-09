@@ -20,26 +20,31 @@ run its scripts, and won't load without it. Both work on Paper, Spigot and Bukki
 
 Start the server once and it creates `plugins/CraftyTML/ui/`. That's where your `.ctml` files go.
 
-## A script runs for one player
+## Only the renderer is different
 
-A client has one player, so it runs its whole ui folder at startup. A server has many players, so
-nothing runs at startup. A script runs when someone asks for it, for one player at a time, and the tree
-it builds is that player's alone. Two players running the same script get two separate trees: one
-player's clicks, hovers and variables never reach the other's window.
+Everything up to showing a tree is the same code on a client and on a server. Scripts run through
+`CTMLAPI` into the `UIRegistry`, and you build a `DOMContext` with your variables and callbacks. The
+server runs its ui folder at startup, the same way the client runs `ctml/ui`. The only difference is the
+last step, where the tree and its context are handed to a `UIRenderer`:
 
-The script sees who it's running for as `player`, with `player.name` and `player.uuid` to hand.
+| platform | renderer | shows the tree as |
+| --- | --- | --- |
+| Fabric | `ScreenRenderer` | a `CTMLScreen` |
+| Paper, Spigot, Bukkit | `WindowRenderer(player)` | a window in front of that player |
 
 ## Commands
 
 | command | what it does |
 | --- | --- |
-| `/ctml run <script> [player]` | runs a script for a player and shows what it builds, with any callbacks registered for it |
+| `/ctml open <name> [player]` | shows a tree from the `UIRegistry` |
+| `/ctml run <script> [player]` | runs a script in the ui folder again and shows the new tree, which belongs to that player alone |
 | `/ctml demo [player]` | shows the intro, and the full demo from its button, if those files are in the ui folder |
 | `/ctml close [player]` | puts a player's window away |
-| `/ctml list` | names the scripts in the ui folder |
+| `/ctml list` | names the trees in the `UIRegistry` |
 
 Leave the player out and it's whoever ran the command. The commands need the `craftytml.use`
-permission, which ops have.
+permission, which ops have. A window opened from a command has an empty context, so its callbacks call
+nothing.
 
 ## Using a window
 
@@ -74,33 +79,41 @@ The player can turn as far as the window's edge and a little past it, and can't 
 anything until it closes. If the server crashes with a window open, the player's walk speed is put back
 the next time they join.
 
-## Callbacks
+## Showing a tree from java
 
-Callbacks are answered by java, the same as on a client (see [Callbacks](/ctml/tutorial/callbacks)). On a
-server you register them for a script by name. They're put on the context every time that script is
-opened, and the player it's open for is passed in alongside:
+The code is the same as on a client, down to the last line:
 
 ```java
-CraftytmlPaper.callbacks("shop.ctml", (player, ctx) -> {
-    ctx.putVariable("coins", 10);
-    ctx.putCallBack("buy", callback -> {
-        if (!callback.isPress()) return;
-        player.sendMessage("bought");
-    });
-});
-```
+CTMLAPI.createUI("shop.ctml", markup);
+DOMTreeElement tree = UIRegistry.getUIFromName("shop.ctml");
 
-Now `/ctml run shop.ctml` and `CraftytmlPaper.open(player, "shop.ctml")` both open the shop with
-`buy` answered.
-
-To build the context yourself, run the script and open the tree with it:
-
-```java
-DOMTreeElement tree = CraftytmlPaper.run(player, "shop.ctml");
 DOMContext ctx = new DOMContext(tree);
-ctx.putCallBack("buy", callback -> player.sendMessage("bought"));
-CraftytmlPaper.windows().open(player, tree, ctx);
+ctx.putVariable("coins", 10);
+ctx.putCallBack("buy", callback -> {
+    if (!callback.isPress()) return;
+    callback.getCtx().putVariable("coins", 9);
+});
+
+renderer.show("shop.ctml", tree, ctx);
 ```
+
+`renderer` is `new ScreenRenderer()` on a client and `new WindowRenderer(player)` on a server. Code that
+takes a `UIRenderer` and doesn't care which one it gets runs on both platforms unchanged. The intro and
+the demo work this way: `DemoIntro.open(renderer)` is the same call on both.
+
+### One tree for each player
+
+A tree in the `UIRegistry` is a single tree. If you show it to two players, they're looking at the same
+elements: a callback that changes it changes it for both, and so does either player's cursor, because
+`hover:` is kept on the element. To give each player their own tree, build it with `buildUI`, which runs
+the script every time it's called and doesn't register the result:
+
+```java
+DOMTreeElement tree = CTMLAPI.buildUI(markup, Map.of("player", player));
+```
+
+It takes markup in a string or a `Path` to a file. The map holds variables the script can read from its
+first line, which is how it knows who it's for. `/ctml run` uses `buildUI` this way.
 
 ## How big a window is
 

@@ -1,4 +1,4 @@
-package net.tutla.craftytml.paper;
+package net.tutla.craftytml.paper.render;
 
 import io.papermc.paper.dialog.Dialog;
 import io.papermc.paper.dialog.DialogResponseView;

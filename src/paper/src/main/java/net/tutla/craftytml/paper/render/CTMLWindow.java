@@ -1,4 +1,4 @@
-package net.tutla.craftytml.paper;
+package net.tutla.craftytml.paper.render;
 
 import net.tutla.craftytml.client.ctml.ElementStyle;
 import net.tutla.craftytml.client.ctml.element.input.FormControl;

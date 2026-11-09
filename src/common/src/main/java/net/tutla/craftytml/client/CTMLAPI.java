@@ -8,7 +8,6 @@ import net.tutla.tums.tusan.MinecraftEnvironment;
 import net.tutla.tums.tusan.Variable;
 import net.tutla.tums.tusan.interpreter.Interpreter;
 import net.tutla.tums.tusan.interpreter.InterpreterData;
-import net.tutla.tums.tusan.lang.Tusan;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -21,57 +20,64 @@ import java.util.stream.Stream;
  * The door into ctml: it runs a .ctml file, or markup held in a string, and puts the tree that comes
  * out of it in the {@link net.tutla.craftytml.client.render.UIRegistry} under a name.
  *
- * <p>Running a script is all this does. Nothing is shown by it: a tree becomes a screen or a hud only
- * when something shows it: a {@code CTMLScreen} or {@code CTMLHud} on Fabric, a
- * {@code CTMLWindows} window on Paper, and the same tree can be any of them. A script that fails is reported and skipped, so one bad file cannot stop the rest loading.
+ * <p>Running a script is all this does, and it does it the same on every platform. Nothing is shown by it:
+ * a tree is shown when it is handed to a {@link net.tutla.craftytml.client.render.UIRenderer}, which is
+ * the one part that is different on a client and on a server. A script that fails is reported and
+ * skipped, so one bad file cannot stop the rest loading.
  *
- * <p>Scripts run as {@link MinecraftEnvironment#CLIENT} unless they are handed another environment, which
- * is how a server runs them as {@link MinecraftEnvironment#SERVER}.
+ * <p>Scripts run as {@link MinecraftEnvironment#CLIENT} unless the platform says otherwise once, with
+ * {@link #setEnvironment}, which is how a server runs them as {@link MinecraftEnvironment#SERVER}.
  */
 public class CTMLAPI {
     private static final CTMLTusan tusan = CTMLTusan.tusan();
 
-    public static void runAllScripts(Path scriptsDir){
-        runAllScripts(scriptsDir, MinecraftEnvironment.CLIENT);
+    private static MinecraftEnvironment environment = MinecraftEnvironment.CLIENT;
+
+    /** Which side every script runs on from here on: set once by the platform as it starts. */
+    public static void setEnvironment(MinecraftEnvironment side){
+        environment = side;
     }
 
-    public static void runAllScripts(Path scriptsDir, MinecraftEnvironment environment){
+    public static void runAllScripts(Path scriptsDir){
         try (Stream<Path> stream = Files.list(scriptsDir)) {
             stream.filter(Files::isRegularFile)
-                    .forEach(script -> createUI(script, environment));
+                    .forEach(CTMLAPI::createUI);
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
     public static void createUI(Path script){
-        createUI(script, MinecraftEnvironment.CLIENT);
-    }
-
-    public static void createUI(Path script, MinecraftEnvironment environment){
-        Interpreter interpreter = setupInterpreter(null, script, environment);
+        Interpreter interpreter = setupInterpreter(null, script);
         runScript(script.getFileName().toString(), interpreter);
     }
 
     public static void createUI(String name, String script){
-        createUI(name, script, MinecraftEnvironment.CLIENT);
-    }
-
-    public static void createUI(String name, String script, MinecraftEnvironment environment){
-        Interpreter interpreter = setupInterpreter(script, null, environment);
+        Interpreter interpreter = setupInterpreter(script, null);
         runScript(name, interpreter);
     }
 
     /**
-     * Runs a script for one viewer and hands back the tree it builds, or null where it builds none. The
-     * variables are in the script's scope before its first line, which is how a server says who it is
-     * running for. Nothing is registered: the tree is the caller's alone, so two viewers never share
-     * one, and any event the script listens for is not heard, since that would hear it for everyone.
+     * Runs a script and hands back the tree it builds, without registering it, or null where it builds
+     * none. Every call is a tree of its own, which is what a server wants when each player is to have
+     * theirs. The variables are in the script's scope before its first line, so a script can be told who
+     * it is running for. Any event the script listens for is not heard, since nothing registers it.
      */
-    public static DOMTreeElement runFor(Path script, MinecraftEnvironment environment, Map<String, Variable> variables){
+    public static DOMTreeElement buildUI(Path script, Map<String, Object> variables){
+        return build(null, script, variables);
+    }
+
+    /** The same, for markup held in a string rather than a file. */
+    public static DOMTreeElement buildUI(String markup, Map<String, Object> variables){
+        return build(markup, null, variables);
+    }
+
+    private static DOMTreeElement build(String markup, Path script, Map<String, Object> variables){
+        HashMap<String, Variable> scope = new HashMap<>();
+        variables.forEach((name, value) -> scope.put(name, new Variable(name, value, null)));
+
         Interpreter interpreter = new Interpreter(tusan);
-        InterpreterData data = new InterpreterData(new HashMap<>(variables), null, null, null);
-        interpreter.setup(data, null, null, script, environment);
+        interpreter.setup(new InterpreterData(scope, null, null, null), null, markup, script, environment);
         try {
             interpreter.compile();
         } catch (Exception e) {
@@ -81,7 +87,7 @@ public class CTMLAPI {
         return interpreter.returned instanceof DOMTreeElement tree ? tree : null;
     }
 
-    private static Interpreter setupInterpreter(String script, Path scriptPath, MinecraftEnvironment environment){
+    private static Interpreter setupInterpreter(String script, Path scriptPath){
         Interpreter interpreter = new Interpreter(tusan);
         if (script != null){
             interpreter.setup(null,null,script, null, environment);

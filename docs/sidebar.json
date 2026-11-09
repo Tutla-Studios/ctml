@@ -47,6 +47,9 @@
             "ElementStyle": "/ctml/reference/java/elementstyle",
             "TailwindParser": "/ctml/reference/java/tailwindparser",
             "CTMLDiagnostics": "/ctml/reference/java/ctmldiagnostics",
+            "UIRenderer": "/ctml/reference/java/uirenderer",
+            "ScreenRenderer": "/ctml/reference/java/screenrenderer",
+            "WindowRenderer": "/ctml/reference/java/windowrenderer",
             "CraftytmlPaper": "/ctml/reference/java/craftytmlpaper",
             "CTMLWindows": "/ctml/reference/java/ctmlwindows"
         }

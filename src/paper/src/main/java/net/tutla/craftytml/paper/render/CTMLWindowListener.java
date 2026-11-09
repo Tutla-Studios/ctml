@@ -1,4 +1,4 @@
-package net.tutla.craftytml.paper;
+package net.tutla.craftytml.paper.render;
 
 import net.tutla.craftytml.client.render.CTMLEvents;
 import org.bukkit.Location;
@@ -30,13 +30,13 @@ import org.bukkit.inventory.EquipmentSlot;
  * what they would do to the world held back, and the window closed by whatever takes them away from it.
  * Only Bukkit events, so it works the same on Spigot.
  */
-final class CTMLWindowListener implements Listener {
+public final class CTMLWindowListener implements Listener {
     private static final int LEFT = CTMLEvents.MouseButton.LEFT;
     private static final int RIGHT = CTMLEvents.MouseButton.RIGHT;
 
     private final CTMLWindows windows;
 
-    CTMLWindowListener(CTMLWindows windows){
+    public CTMLWindowListener(CTMLWindows windows){
         this.windows = windows;
     }
 

@@ -2,8 +2,10 @@ package net.tutla.craftytml.client.demo;
 
 import net.tutla.craftytml.client.dom.DOMContext;
 import net.tutla.craftytml.client.dom.DOMTreeElement;
+import net.tutla.craftytml.client.render.UIRegistry;
+import net.tutla.craftytml.client.render.UIRenderer;
 
-/** The intro, with its links and the way into the full demo, shown by whatever host asks for it. */
+/** The intro, with its links and the way into the full demo, the same on every platform. */
 public class DemoIntro {
     public static final String INTRO_UI = "intro.ctml";
 
@@ -11,29 +13,29 @@ public class DemoIntro {
     private static final String DISCORD = "https://discord.tutla.net";
     private static final String MODRINTH = "https://modrinth.com/mod/ctml";
 
-    /** Shows the intro, and says false where the host has no intro to show. */
-    public static boolean open(DemoHost host){
-        DOMTreeElement tree = host.tree(INTRO_UI);
+    /** Shows the intro with a renderer, and says false where the ui folder has no intro in it. */
+    public static boolean open(UIRenderer renderer){
+        DOMTreeElement tree = UIRegistry.getUIFromName(INTRO_UI);
         if (tree == null) return false;
 
         DOMContext ctx = new DOMContext(tree);
-        registerLinks(ctx, host);
-        host.show(INTRO_UI, tree, ctx);
+        registerLinks(ctx, renderer);
+        renderer.show(INTRO_UI, tree, ctx);
         return true;
     }
 
-    private static void registerLinks(DOMContext ctx, DemoHost host){
+    private static void registerLinks(DOMContext ctx, UIRenderer renderer){
         ctx.putVariable("linkWord", "built on tums, read by tusan, made by tutla");
         ctx.putVariable("linkMood", "text-slate-500");
 
-        link(ctx, host, "openWiki", WIKI, "the wiki");
-        link(ctx, host, "openDiscord", DISCORD, "the discord");
-        link(ctx, host, "openModrinth", MODRINTH, "modrinth");
+        link(ctx, renderer, "openWiki", WIKI, "the wiki");
+        link(ctx, renderer, "openDiscord", DISCORD, "the discord");
+        link(ctx, renderer, "openModrinth", MODRINTH, "modrinth");
 
-        demo(ctx, host);
+        demo(ctx, renderer);
     }
 
-    private static void demo(DOMContext ctx, DemoHost host){
+    private static void demo(DOMContext ctx, UIRenderer renderer){
         ctx.putCallBack("openDemo", callback -> {
             DOMContext context = callback.getCtx();
 
@@ -43,14 +45,14 @@ public class DemoIntro {
                 return;
             }
 
-            if (!DemoScreen.open(host)) { // the demo file is not in the ui folder, so say so and stay put
+            if (!DemoScreen.open(renderer)) { // the demo file is not in the ui folder, so say so and stay put
                 context.putVariable("linkWord", "demo_screen.ctml is not in the ui folder");
                 context.putVariable("linkMood", "text-rose-400");
             }
         });
     }
 
-    private static void link(DOMContext ctx, DemoHost host, String name, String url, String what){
+    private static void link(DOMContext ctx, UIRenderer renderer, String name, String url, String what){
         String shown = url.replaceFirst("^https://", "");
 
         ctx.putCallBack(name, callback -> {
@@ -64,7 +66,7 @@ public class DemoIntro {
 
             context.putVariable("linkWord", "opening " + what);
             context.putVariable("linkMood", "text-emerald-300");
-            host.openLink(url);
+            renderer.openLink(url);
         });
     }
 }

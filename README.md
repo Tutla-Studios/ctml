@@ -2,7 +2,7 @@
 A Minecraft Mod that lets you build Minecraft UI with HTML
 ---
 
-CraftyTML is a Fabric Minecraft Mod that lets you write screens and huds as markup/html instead of java. Elements are written like html, styled with tailwind-like classes, and powered by [Tusan](https://wiki.tutla.net/tusan) interpreter that powers [Tums](https://wiki.tutla.net/tums). Made for developers to avoid mixins, messy gui code and other gui issues.
+CraftyTML is a Minecraft mod for Fabric and a plugin for Paper, Spigot and Bukkit that lets you write screens and huds as markup/html instead of java. One jar is both: on a client it draws screens and huds, and on a server it shows the same ui to a player as a window floating in front of them, with nothing to install on their side. Elements are written like html, styled with tailwind-like classes, and powered by [Tusan](https://wiki.tutla.net/tusan) interpreter that powers [Tums](https://wiki.tutla.net/tums). Made for developers to avoid mixins, messy gui code and other gui issues.
 
 ![intro screen](https://cdn.modrinth.com/data/y5uBAABM/images/904230d2ff6219d10e03adc17ba50cb2e8a73c7d.png)
 
@@ -13,6 +13,29 @@ CraftyTML is a Fabric Minecraft Mod that lets you write screens and huds as mark
 1. Download the latest version from [Modrinth](https://modrinth.com/mod/ctml)
 2. Drag and drop the downloaded `.jar` file into your `mods` folder
 3. Start Minecraft
+
+## How to install (for Servers)
+
+1. Download the latest version from [Modrinth](https://modrinth.com/mod/ctml), and [Tums](https://modrinth.com/mod/tums), which it runs its scripts with
+2. Drop both `.jar` files into your server's `plugins` folder (Paper, Spigot or Bukkit)
+3. Start the server, and put your `.ctml` files in `plugins/CraftyTML/ui/`
+
+### Server commands
+
+Every command needs the `craftytml.use` permission, which ops have. Where a player is optional, it is whoever runs the command.
+
+| Command | What it does |
+| --- | --- |
+| `/ctml open <name> [player]` | Shows a ui from the ui folder |
+| `/ctml run <script> [player]` | Runs a script from the ui folder again, as a ui of that player's own |
+| `/ctml execute [targets] <name> [json] <ctml>` | Shows ctml written into the command itself. `targets` is a name or a selector like `@a`, and the json maps callbacks to commands: `{"buy":"give {player} diamond 1"}` |
+| `/ctml variable put\|remove <name> <variable> [value]` | Sets or clears a variable on every window of an executed ui |
+| `/ctml callback put\|remove <name> <callback> [command]` | Sets or clears a callback command on every window of an executed ui |
+| `/ctml demo [player]` | Shows the intro and the demo |
+| `/ctml close [player]` | Closes a player's window |
+| `/ctml list` | Names the loaded uis |
+
+A player works a window by looking at it and clicking: the hotbar scrolls, sneaking closes it, and typing into a form opens a dialog on Paper.
 
 ## For developers
 
@@ -91,6 +114,9 @@ The same file is both. Nothing in the markup says which it is, whichever class y
 
 - **`CTMLScreen`** opens it as a screen. The mouse and the keyboard reach it, so callbacks fire, boxes drag, scrollbars can be grabbed and `hover:` and other variants work.
 - **`CTMLHud`** draws it over the game as a hud. Everything a script drives still works like variables, class lists, scrolling, but a hud hears nothing from the user, so callbacks never fire.
+- **`WindowRenderer`** shows it on a server, as a window in front of one player. Callbacks, variables and `hover:` work the same as in a screen.
+
+Everything before showing a tree, building it with `CTMLAPI`, its context, its variables and callbacks, is the same code on a client and on a server. Only the renderer at the end is different.
 
 
 #### Callbacks
@@ -122,16 +148,20 @@ ctx.putCallBack("sayHi", callback -> {
         callback.getCtx().getElementById("greeting").property("text", "hi!", null);
 });
 
-// and then either of the two ways to show it
+// and then show it: on a client, as a screen or a hud
         minecraft.setScreenAndShow(new CTMLScreen("myui", tree, parent, ctx));
         HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("mymod", "myui"), new CTMLHud(tree, ctx));
+
+// or on a server, in front of one player: straight ahead, or anywhere around them
+        new WindowRenderer(player).show("myui", tree, ctx);
+        new WindowRenderer(player).show("myui", tree, ctx, new CTMLWindow.Position(-1.5, 0)); // off to their left
 ```
 
 ## For Tusan developers
 
 CraftyTML, Tums & Tusan are fully open source: anything that can be done here, your mod can do to it too.
 
-`CTMLAPI` runs and registers scripts, and `CTMLRenderer.layout` and `CTMLRenderer.paint` are public as well, so you can lay a tree out and draw it inside a gui of your own.
+`CTMLAPI` runs and registers scripts, and `CTMLRenderer.layout` and `CTMLRenderer.paint` are public as well, so you can lay a tree out and draw it inside a gui of your own. Anything that shows trees, the demos included, can take a `UIRenderer` and run unchanged on both platforms: `ScreenRenderer` on a client, `WindowRenderer` on a server.
 
 The layout engine is pure arithmetic over a dom tree, so all of it can be checked without a running game; refer [`tools/headless`](https://github.com/Tutla-Studios/ctml/tree/master/tools/headless/README.md).
 

@@ -18,6 +18,9 @@ This page gets the dependency in place and a screen on the display. The
 - Java 25
 - The CraftyTML jar, from [Modrinth](https://modrinth.com/mod/ctml)
 
+This page sets up a Fabric client mod. For a Paper, Spigot or Bukkit server, the jar goes in `plugins/`
+instead, and [Paper and Spigot](/ctml/tutorial/paper) covers the rest.
+
 ## Add it to your project
 
 Put the jar in your project's `libs/` folder:

@@ -154,7 +154,19 @@ A window lays its tree out at 320 by 180 gui pixels, about the size of a small s
 another size:
 
 ```java
-CraftytmlPaper.windows().open(player, tree, ctx, new CTMLWindow.Frame(480, 270, 0.008, 3.0));
+CraftytmlPaper.windows().open(player, "map", tree, ctx, new CTMLWindow.Frame(480, 270, 0.008, 3.0));
+```
+
+### Where a window goes
+
+A window opens straight ahead of the player. To put it somewhere else, pass a `CTMLWindow.Position` to
+`show`. It's measured in blocks to the right of and above the spot straight ahead of their eyes, and
+negative numbers go left or down. Wherever the window goes, it turns to face the player, and they can
+look as far as its edges:
+
+```java
+new WindowRenderer(player).show("map", tree, ctx, new CTMLWindow.Position(-1.5, 0)); // to their left
+new WindowRenderer(player).show("map", tree, ctx, new CTMLWindow.Position(0, 1));     // above their eyeline
 ```
 
 The breakpoint variants (`md:`, `lg:` and the rest) are read against those pixels, the same as against a

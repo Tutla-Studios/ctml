@@ -34,6 +34,10 @@ Closes every window and stops ticking.
 
 Opens a tree in front of a player, in place of any window they already had open, under a name that `named` finds it by. Once it closes nothing here holds the tree any more, so a tree no one else keeps is gone with it.
 
+### `public void open(Player player, String name, DOMTreeElement tree, DOMContext ctx, CTMLWindow.Frame frame, CTMLWindow.Position position)`
+
+The same, put somewhere other than straight ahead of the player.
+
 ### `public boolean close(Player player)`
 
 Closes the player's window, and says false where they had none.

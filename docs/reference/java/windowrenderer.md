@@ -18,5 +18,9 @@ import net.tutla.craftytml.paper.render.WindowRenderer;
 
 ### `public void show(String name, DOMTreeElement tree, DOMContext ctx)`
 
+### `public void show(String name, DOMTreeElement tree, DOMContext ctx, CTMLWindow.Position position)`
+
+Shows a tree somewhere other than straight ahead: so many blocks right of and above where the player is looking, turned to face them. `new CTMLWindow.Position(-1.5, 0)` puts it off to their left.
+
 ### `public void openLink(String url)`
 

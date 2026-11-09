@@ -5,6 +5,7 @@ import net.tutla.craftytml.client.ctml.style.Gradient;
 import net.tutla.craftytml.client.dom.DOMContext;
 import net.tutla.craftytml.client.dom.DOMTreeElement;
 import net.tutla.craftytml.client.dom.DOMTreeNode;
+import net.tutla.craftytml.client.render.CTMLDrag;
 import net.tutla.craftytml.client.render.CTMLEvents;
 import net.tutla.craftytml.client.render.CTMLFocus;
 import net.tutla.craftytml.client.render.CTMLLayout;
@@ -53,9 +54,14 @@ import java.util.logging.Level;
  *
  * <h2>What is drawn</h2>
  * Background colours, borders as four flat sides, text in its colour, weight and slant, scrollbars, and
- * opacity. A gradient is drawn as the one colour at its middle, and a box that clips drops the text lines
- * that do not fit wholly inside it. Rounded corners, shadows, images, focus rings, letter-spacing and the
- * insides of form controls are not drawn: a display has no way to.
+ * opacity. A background gradient is drawn as bands of flat colour, finer the further it travels, and a
+ * text gradient colours each glyph off the ramp. A box that clips drops the text lines that do not fit
+ * wholly inside it. Rounded corners, shadows, images, focus rings, letter-spacing and the insides of form
+ * controls are not drawn: a display has no way to.
+ *
+ * <h2>Dragging</h2>
+ * A server hears a click but never the release after it, so a drag is two clicks: one on a draggable box
+ * picks it up, it follows the cursor from then on, and the next click puts it down.
  */
 public final class CTMLWindow {
 
@@ -118,6 +124,10 @@ public final class CTMLWindow {
     private static final float CURSOR_SCALE = 0.35f;
     private static final String CURSOR_GLYPH = "●";
     private static final double LOOK_MARGIN = 15;
+    /** How fine a gradient is cut: a band every this many pixels, and no more than so many bands a side. */
+    private static final int GRADIENT_BAND = 4;
+    private static final int GRADIENT_BANDS = 24;
+    private static final int GRADIENT_CELLS = 12;
 
     private final CTMLWindows windows;
     private final UUID owner;
@@ -145,6 +155,8 @@ public final class CTMLWindow {
     private double pointerX = Double.NaN, pointerY = Double.NaN;
     private DOMTreeElement hovered;
     private int releaseAt = -1;
+    /** The box being carried, between the click that picked it up and the one that puts it down. */
+    private CTMLDrag.Grip grip;
     private int lastClickTick = Integer.MIN_VALUE / 2;
 
     private float savedWalkSpeed, savedFlySpeed;
@@ -228,9 +240,14 @@ public final class CTMLWindow {
         aim(player);
         List<CTMLLayout.Box> under = under();
         states.cursor(under);
-        if (releaseAt >= 0 && now >= releaseAt) {
+        if (releaseAt >= 0 && now >= releaseAt && grip == null) {
             releaseAt = -1;
             states.release();
+        }
+        if (grip != null && !Double.isNaN(pointerX)) {
+            CTMLDrag.Grip held = grip;
+            held.follow(pointerX, pointerY);
+            fire(() -> CTMLEvents.drag(ctx, held.element()));
         }
 
         CTMLScroll.animate(layout, SECONDS_PER_TICK);
@@ -254,6 +271,12 @@ public final class CTMLWindow {
         if (now - lastClickTick < CLICK_DEBOUNCE_TICKS) return;
         lastClickTick = now;
         aim(player); // from exactly where the player is looking now, not where they were last tick
+        if (grip != null) { // the click that puts a carried box down is for nothing else
+            grip = null;
+            states.release();
+            player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, SoundCategory.MASTER, 0.5f, 0.8f);
+            return;
+        }
         if (Double.isNaN(pointerX)) return;
 
         if (button == CTMLEvents.MouseButton.LEFT) {
@@ -263,7 +286,15 @@ public final class CTMLWindow {
         double x = pointerX, y = pointerY;
         boolean[] taken = { false };
         fire(() -> taken[0] = CTMLEvents.click(layout, ctx, button, x, y));
-        if (taken[0]) player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, SoundCategory.MASTER, 0.5f, 1.2f);
+        if (taken[0]) {
+            player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, SoundCategory.MASTER, 0.5f, 1.2f);
+            return;
+        }
+        // what a click is not for, a draggable box under it is picked up by, the order a screen asks in
+        if (button == CTMLEvents.MouseButton.LEFT) {
+            grip = CTMLDrag.grab(layout, x, y);
+            if (grip != null) player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, SoundCategory.MASTER, 0.5f, 1.0f);
+        }
     }
 
     /** The scroll wheel, which on a server is the hotbar: a step to the right is a notch down. */
@@ -450,8 +481,36 @@ public final class CTMLWindow {
         if (color != null) rect(x, y, width, height, fade(color, alpha), clip, out);
 
         Gradient gradient = style.get(ElementStyle.BACKGROUND_GRADIENT);
-        if (gradient != null && gradient.isDrawable()) {
-            rect(x, y, width, height, fade(middle(gradient, width, height), alpha), clip, out);
+        if (gradient != null && gradient.isDrawable()) gradient(gradient, x, y, width, height, alpha, clip, out);
+    }
+
+    /**
+     * A gradient as bands of flat colour, each the colour the ramp has at its middle. A linear one that
+     * runs straight across or down is cut along that axis only; anything else is cut both ways, coarser.
+     */
+    private void gradient(Gradient gradient, int x, int y, int width, int height, float alpha, int[] clip,
+                          List<Paint> out){
+        if (width <= 0 || height <= 0) return;
+        int across, down;
+        if (gradient.kind() == Gradient.Kind.LINEAR) {
+            double radians = Math.toRadians(gradient.angle());
+            boolean alongX = Math.abs(Math.sin(radians)) > 1e-3;
+            boolean alongY = Math.abs(Math.cos(radians)) > 1e-3;
+            int most = alongX && alongY ? GRADIENT_CELLS : GRADIENT_BANDS;
+            across = alongX ? Math.clamp(width / GRADIENT_BAND, 1, most) : 1;
+            down = alongY ? Math.clamp(height / GRADIENT_BAND, 1, most) : 1;
+        } else {
+            across = Math.clamp(width / GRADIENT_BAND, 1, GRADIENT_CELLS);
+            down = Math.clamp(height / GRADIENT_BAND, 1, GRADIENT_CELLS);
+        }
+
+        for (int row = 0; row < down; row++) {
+            int top = height * row / down, bottom = height * (row + 1) / down;
+            for (int column = 0; column < across; column++) {
+                int left = width * column / across, right = width * (column + 1) / across;
+                float position = gradient.positionOf((left + right) / 2.0f, (top + bottom) / 2.0f, width, height);
+                rect(x + left, y + top, right - left, bottom - top, fade(gradient.colorAt(position), alpha), clip, out);
+            }
         }
     }
 
@@ -481,9 +540,9 @@ public final class CTMLWindow {
         if (ramp == null && style.get(ElementStyle.BACKGROUND_CLIP) == ElementStyle.BackgroundClip.TEXT) {
             ramp = style.get(ElementStyle.BACKGROUND_GRADIENT);
         }
-        if (ramp != null && ramp.isDrawable()) color = middle(ramp, box.contentWidth(), box.contentHeight());
+        if (ramp != null && !ramp.isDrawable()) ramp = null;
 
-        int opacity = Math.round(((color >>> 24) & 0xFF) * alpha);
+        int opacity = Math.round(((ramp != null ? 0xFF : (color >>> 24) & 0xFF)) * alpha);
         if (opacity < FAINTEST_TEXT) return;
         boolean shadow = style.get(ElementStyle.TEXT_SHADOW, true);
 
@@ -501,7 +560,8 @@ public final class CTMLWindow {
             double u = (x + line.width() / 2.0 - scale) * px - frame.widthBlocks() / 2;
             double v = frame.heightBlocks() / 2 - (y + TEXT_TOP * scale) * px;
             float size = (float) (scale * px / PX);
-            out.add(new Paint(u, v, size, size, legacy(color, line.style()) + line.content(), 0,
+            String text = ramp != null ? ramped(line, ramp, box) : legacy(color, line.style()) + line.content();
+            out.add(new Paint(u, v, size, size, text, 0,
                     opacity >= 255 ? (byte) -1 : (byte) opacity, shadow));
         }
     }
@@ -553,10 +613,27 @@ public final class CTMLWindow {
         return CTMLLayout.borderWidth(style, BORDER_WIDTHS[side], BORDER_STYLES[side]);
     }
 
-    /** A display has one colour to give a thing, so a gradient gives it the colour at its middle. */
-    private static int middle(Gradient gradient, int width, int height){
-        return gradient.colorAt(gradient.positionOf(width / 2.0f, height / 2.0f,
-                Math.max(1, width), Math.max(1, height)));
+    /**
+     * A line with a text gradient, every glyph given the colour the ramp has under its middle. The ramp is
+     * measured across the whole content box, the way a client draws it, so every line of a block agrees.
+     */
+    private static String ramped(CTMLLayout.TextLine line, Gradient ramp, CTMLLayout.Box box){
+        boolean bold = line.style().get(ElementStyle.BOLD, false);
+        int width = Math.max(1, box.contentWidth()), height = Math.max(1, box.contentHeight());
+        float middleY = line.y() + GlyphMetrics.VANILLA.lineHeight() * line.scale() / 2.0f;
+        StringBuilder out = new StringBuilder();
+        float advance = 0;
+        String content = line.content();
+        for (int i = 0; i < content.length(); ) {
+            int codePoint = content.codePointAt(i);
+            i += Character.charCount(codePoint);
+            float glyph = GlyphMetrics.advance(codePoint, bold) * line.scale();
+            float middleX = line.x() + advance + glyph / 2.0f;
+            out.append(legacy(ramp.colorAt(ramp.positionOf(middleX, middleY, width, height)), line.style()))
+                    .appendCodePoint(codePoint);
+            advance += glyph;
+        }
+        return out.toString();
     }
 
     /**

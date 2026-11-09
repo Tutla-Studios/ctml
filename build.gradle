@@ -77,3 +77,31 @@ subprojects {
         }
     }
 }
+
+// One universal jar for Fabric and Spigot/Paper: build/libs/craftytml-<version>.jar
+// Each loader only reads its own metadata (fabric.mod.json / plugin.yml) and only loads its own
+// entrypoint, so the other platform's classes are never touched.
+def mergedPlatforms = ['fabric', 'paper']
+
+tasks.register('mergedJar', Jar) {
+    group = 'build'
+    description = 'Merges the Fabric and Paper jars into one universal jar.'
+
+    archiveBaseName = rootProject.archives_base_name
+    archiveVersion = project.version.toString()
+    destinationDirectory = layout.buildDirectory.dir('libs')
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+    mergedPlatforms.each { name ->
+        def platformJar = project(":$name").tasks.named('shadowJar')
+        dependsOn platformJar
+        from({ zipTree(platformJar.get().archiveFile) }) {
+            // Architectury's @ExpectPlatform glue differs per loader; CraftyTML doesn't use @ExpectPlatform.
+            // If you add @ExpectPlatform methods later, ship per-loader jars instead.
+            exclude 'architectury_inject_*/**'
+            exclude 'META-INF/MANIFEST.MF'
+        }
+    }
+}
+
+tasks.named('assemble') { dependsOn 'mergedJar' }

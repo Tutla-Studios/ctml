@@ -4,6 +4,7 @@
     "website": "https://tutla.net",
     "faq": {
         "Do I need to write any java to make a screen?": "No. A .ctml file in your minecraft folder under ctml/ui is read at startup and becomes a tree. You need java only to show that tree, to put variables in it or to answer its callbacks.",
+        "Does it work on a server?": "Yes, on Paper, Spigot and Bukkit. The same jar is a plugin there: a script runs for one player and what it builds floats in front of them as display entities, which they work by looking and clicking. See the Paper and Spigot page.",
         "Is a screen different from a hud?": "Not as a file. Nothing in the markup says which it is: building a CTMLScreen around the tree opens it as a screen, and building a CTMLHud draws the same tree over the game. A hud hears nothing from the user, so its callbacks never fire.",
         "Which tailwind classes work?": "The ones listed in the classes reference, which is generated from the parser itself. A class nothing knows is handed back rather than quietly dropped, so your host can report a typo.",
         "Why has my edit to a .ctml file not shown up?": "There is no hot reload yet. A changed file needs the game restarted.",
@@ -20,7 +21,8 @@
         "Callbacks": "/ctml/tutorial/callbacks",
         "Huds": "/ctml/tutorial/huds",
         "Scrolling": "/ctml/tutorial/scrolling",
-        "Driving it from java": "/ctml/tutorial/java"
+        "Driving it from java": "/ctml/tutorial/java",
+        "Paper and Spigot": "/ctml/tutorial/paper"
     },
     "Reference": {
         "Overview": "/ctml/reference",
@@ -44,7 +46,9 @@
             "CTMLElement": "/ctml/reference/java/ctmlelement",
             "ElementStyle": "/ctml/reference/java/elementstyle",
             "TailwindParser": "/ctml/reference/java/tailwindparser",
-            "CTMLDiagnostics": "/ctml/reference/java/ctmldiagnostics"
+            "CTMLDiagnostics": "/ctml/reference/java/ctmldiagnostics",
+            "CraftytmlPaper": "/ctml/reference/java/craftytmlpaper",
+            "CTMLWindows": "/ctml/reference/java/ctmlwindows"
         }
     }
 }

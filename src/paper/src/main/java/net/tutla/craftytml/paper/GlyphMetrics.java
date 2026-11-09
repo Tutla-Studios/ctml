@@ -59,10 +59,14 @@ final class GlyphMetrics implements CTMLLayout.TextMetrics {
         for (int i = 0; i < text.length(); ) {
             int codePoint = text.codePointAt(i);
             i += Character.charCount(codePoint);
-            int advance = codePoint < ASCII.length ? ASCII[codePoint] : DEFAULT_ADVANCE;
-            if (advance == 0) continue; // a control character draws nothing
-            width += advance + (bold ? 1 : 0);
+            width += advance(codePoint, bold);
         }
         return width;
+    }
+
+    /** How far one glyph moves the pen, which is nothing for a control character. */
+    static int advance(int codePoint, boolean bold){
+        int advance = codePoint < ASCII.length ? ASCII[codePoint] : DEFAULT_ADVANCE;
+        return advance == 0 ? 0 : advance + (bold ? 1 : 0);
     }
 }

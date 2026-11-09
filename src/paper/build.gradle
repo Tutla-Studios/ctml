@@ -43,7 +43,18 @@ jar {
 
 assemble.dependsOn shadowJar
 
-// ./gradlew :paper:runServer starts a Paper test server in src/paper/run with the plugin loaded.
+// The scripts the client runs from run/ctml/ui, copied into the test server's ui folder on every start, so
+// /ctml demo and /ctml run work on the same files. Anything else put in that folder by hand is left alone.
+tasks.register('copyTestUi', Copy) {
+    from rootProject.file('run/ctml/ui')
+    into layout.projectDirectory.dir('run/plugins/CraftyTML/ui')
+}
+
+// ./gradlew :paper:runServer starts a Paper test server in src/paper/run with the plugin loaded, and Tums
+// beside it, since the plugin depends on it.
 tasks.named('runServer') {
+    dependsOn 'copyTestUi'
     minecraftVersion(rootProject.minecraft_version)
+    pluginJars(rootProject.tumsJar)
+    jvmArgs('-Xms2G', '-Xmx2G')
 }

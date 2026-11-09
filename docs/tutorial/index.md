@@ -23,6 +23,7 @@ It assumes you have the dependency in place and a `.ctml` file being read, which
 | [Huds](/ctml/tutorial/huds) | The same tree drawn over the game |
 | [Scrolling](/ctml/tutorial/scrolling) | Scrollports, styled bars and bringing a box into view |
 | [Driving it from java](/ctml/tutorial/java) | Markup written in java, your own gui, headless checks |
+| [Paper and Spigot](/ctml/tutorial/paper) | The same files on a server, as a window in front of one player |
 
 ## How the pieces fit
 

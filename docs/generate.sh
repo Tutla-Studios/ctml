@@ -36,6 +36,9 @@ ROOT="$(cd "$HERE/.." && pwd)"
 # the ctml language lives in common; the java api the reference covers is partly fabric's
 SRC="$ROOT/src/common/src/main/java/net/tutla/craftytml/client"
 FABRIC_SRC="$ROOT/src/fabric/src/client/java/net/tutla/craftytml/client"
+# and the server side, whose classes JAVA_API names as paper/<file>
+PAPER_SRC="$ROOT/src/paper/src/main/java/net/tutla/craftytml/paper"
+PAPER_PKG="net.tutla.craftytml.paper"
 PKG="net.tutla.craftytml.client"
 
 # where the docs sit on the wiki, which is where the sync mounts this folder
@@ -76,6 +79,8 @@ ctml/CTMLElement.java:CTMLElement
 ctml/ElementStyle.java:ElementStyle
 ctml/style/TailwindParser.java:TailwindParser
 ctml/CTMLDiagnostics.java:CTMLDiagnostics
+paper/CraftytmlPaper.java:CraftytmlPaper
+paper/CTMLWindows.java:CTMLWindows
 "
 
 # ---------------------------------------------------------------------------- javadoc
@@ -969,7 +974,10 @@ stylenote_table(){
 }
 
 # The opening sentence of a class's javadoc, for the page summary
-api_file(){ [ -f "$SRC/$1" ] && echo "$SRC/$1" || echo "$FABRIC_SRC/$1"; }
+api_file(){
+    case "$1" in paper/*) echo "$PAPER_SRC/${1#paper/}"; return;; esac
+    [ -f "$SRC/$1" ] && echo "$SRC/$1" || echo "$FABRIC_SRC/$1"
+}
 
 first_sentence(){
     jdoc_body "$1" | head -1 \
@@ -989,7 +997,9 @@ gen_java(){
 "
         local dir pkg
         dir="$(dirname "$rel")"
-        [ "$dir" = "." ] && pkg="$PKG" || pkg="$PKG.$(echo "$dir" | tr '/' '.')"
+        if [ "$dir" = "paper" ]; then pkg="$PAPER_PKG"
+        elif [ "$dir" = "." ]; then pkg="$PKG"
+        else pkg="$PKG.$(echo "$dir" | tr '/' '.')"; fi
         {
             jdoc_body "$file"
             echo
@@ -1076,7 +1086,7 @@ INTRO
 # that is there has to be named here, so a new page cannot be written and then left out of the
 # sidebar by accident.
 #
-TUTORIAL_ORDER="index first-screen styling variables callbacks huds scrolling java"
+TUTORIAL_ORDER="index first-screen styling variables callbacks huds scrolling java paper"
 
 # The title a hand written page carries in its frontmatter
 page_title(){ sed -n 's/^title: "\(.*\)"$/\1/p' "$OUT/$1" | head -1; }
@@ -1102,6 +1112,8 @@ gen_sidebar(){
         printf '    "faq": {\n'
         printf '        "Do I need to write any java to make a screen?": '
         printf '"No. A .ctml file in your minecraft folder under ctml/ui is read at startup and becomes a tree. You need java only to show that tree, to put variables in it or to answer its callbacks.",\n'
+        printf '        "Does it work on a server?": '
+        printf '"Yes, on Paper, Spigot and Bukkit. The same jar is a plugin there: a script runs for one player and what it builds floats in front of them as display entities, which they work by looking and clicking. See the Paper and Spigot page.",\n'
         printf '        "Is a screen different from a hud?": '
         printf '"Not as a file. Nothing in the markup says which it is: building a CTMLScreen around the tree opens it as a screen, and building a CTMLHud draws the same tree over the game. A hud hears nothing from the user, so its callbacks never fire.",\n'
         printf '        "Which tailwind classes work?": '

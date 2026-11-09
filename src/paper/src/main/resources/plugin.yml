@@ -8,8 +8,8 @@ depend: [Tums]
 
 commands:
   ctml:
-    description: Open, close and list ctml windows
-    usage: /ctml <open <name>|close|list>
+    description: Run ctml scripts for a player and show what they build
+    usage: /ctml <run <script> [player]|demo [player]|close [player]|list>
     permission: craftytml.use
 
 permissions:

@@ -2,7 +2,7 @@
 title: "Java API"
 summary: "The CraftyTML classes a mod talks to: building a tree, showing it as a screen or a hud, and driving it from java."
 created: "2026-11-01"
-updated: "2026-11-01"
+updated: "2026-11-09"
 isdoc: true
 ---
 
@@ -25,3 +25,5 @@ The classes a mod talks to, with the javadoc the source carries.
 | [ElementStyle](/ctml/reference/java/elementstyle) | Every style an element can carry, named after the css property it comes from. |
 | [TailwindParser](/ctml/reference/java/tailwindparser) | Turns a tailwind class list into an ElementStyle. |
 | [CTMLDiagnostics](/ctml/reference/java/ctmldiagnostics) | Where the engine says something is wrong with a script without giving up on it. |
+| [CraftytmlPaper](/ctml/reference/java/craftytmlpaper) | The Spigot/Paper/Bukkit entry point. |
+| [CTMLWindows](/ctml/reference/java/ctmlwindows) | The ctml windows open on a server, at most one a player, all driven from one task that runs every tick. |

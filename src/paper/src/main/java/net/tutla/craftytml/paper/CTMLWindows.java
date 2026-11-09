@@ -23,18 +23,12 @@ import java.util.logging.Level;
 
 /**
  * The ctml windows open on a server, at most one a player, all driven from one task that runs every tick.
- * This is what a plugin opens a tree with, the way a client opens one in a {@code CTMLScreen}:
+ * This is what a plugin opens a tree with, the way a client opens one in a {@code CTMLScreen}: a tree
+ * from {@link CraftytmlPaper#run}, a {@code DOMContext} around it with the callbacks on, and {@link #open}.
  *
- * <pre>{@code
- * DOMTreeElement tree = UIRegistry.getUIFromName("shop.ctml");
- * DOMContext ctx = new DOMContext(tree);
- * ctx.putCallBack("buy", callback -> player.sendMessage("bought"));
- * CraftytmlPaper.windows().open(player, tree, ctx);
- * }</pre>
- *
- * <p>The tree is the one the registry holds, so everyone who has it open is looking at the same elements:
- * a callback that changes it changes it for all of them, and so does the cursor, since hover: and
- * active: are kept on the elements.
+ * <p>A tree that {@link CraftytmlPaper#run} built for a player is theirs alone. One tree opened for two
+ * players is shared by both: a callback that changes it changes it for both, and so does either cursor,
+ * since hover: and active: are kept on the elements.
  */
 public final class CTMLWindows {
     private final Plugin plugin;

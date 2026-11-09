@@ -32,3 +32,7 @@ import net.tutla.craftytml.client.CTMLAPI;
 
 ### `public static void createUI(String name, String script, MinecraftEnvironment environment)`
 
+### `public static DOMTreeElement runFor(Path script, MinecraftEnvironment environment, Map<String, Variable> variables)`
+
+Runs a script for one viewer and hands back the tree it builds, or null where it builds none. The variables are in the script's scope before its first line, which is how a server says who it is running for. Nothing is registered: the tree is the caller's alone, so two viewers never share one, and any event the script listens for is not heard, since that would hear it for everyone.
+

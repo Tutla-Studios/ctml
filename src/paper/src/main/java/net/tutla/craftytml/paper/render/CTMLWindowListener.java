@@ -108,13 +108,20 @@ public final class CTMLWindowListener implements Listener {
     /** The hotbar is the scroll wheel, and stays on the slot it was on. */
     @EventHandler(priority = EventPriority.LOWEST)
     public void onHotbar(PlayerItemHeldEvent event){
-        CTMLWindow window = windows.window(event.getPlayer());
-        if (window == null) return;
-        event.setCancelled(true);
         int notches = event.getNewSlot() - event.getPreviousSlot();
         if (notches > 4) notches -= 9; // round the end of the bar from the first slot to the last
         if (notches < -4) notches += 9;
-        window.scroll(event.getPlayer(), notches);
+
+        CTMLWindow window = windows.window(event.getPlayer());
+        if (window != null) {
+            event.setCancelled(true);
+            window.scroll(event.getPlayer(), notches);
+            return;
+        }
+        // on a hologram the slot only stays put where the turn actually scrolled something, so a player
+        // walking past one can still change what they are holding
+        CTMLHologram hologram = holograms.lookedAt(event.getPlayer());
+        if (hologram != null && hologram.scroll(event.getPlayer(), notches)) event.setCancelled(true);
     }
 
     @EventHandler(priority = EventPriority.LOWEST)

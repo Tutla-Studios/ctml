@@ -6,6 +6,7 @@ import net.tutla.craftytml.client.dom.DOMTreeElement;
 import net.tutla.craftytml.client.render.CTMLEvents;
 import net.tutla.craftytml.client.render.CTMLFocus;
 import net.tutla.craftytml.client.render.CTMLLayout;
+import net.tutla.craftytml.client.render.CTMLScroll;
 import net.tutla.craftytml.client.render.CTMLStates;
 import org.bukkit.Color;
 import org.bukkit.Location;
@@ -36,7 +37,8 @@ import java.util.UUID;
  * reach gets a cursor of their own, seen by them alone, and their clicks work the way they do in a window: a
  * control takes the click, and otherwise the callback under it hears it. hover: and the hover callback follow
  * the nearest player looking at it, and active: lights up on a press, since a hologram has one tree and so
- * one hover for everyone.
+ * one hover for everyone. Turning the hotbar while looking at it scrolls the box under their look, the way
+ * it does in a window, and the slot only stays put where something scrolled.
  *
  * <p>Everyone who sees a hologram shares that one tree, so a callback that changes it changes it for all of
  * them. {@link #presser()} is whoever clicked it last, which is how a callback knows who pressed it.
@@ -248,6 +250,16 @@ public final class CTMLHologram {
             releaseAt = now + PRESS_TICKS;
         }
         CTMLClicks.press(holograms.plugin(), player, surface.layout(), ctx, button, point[0], point[1]);
+    }
+
+    /**
+     * A turn of the hotbar from a player looking at it, which scrolls the box under where they look the way
+     * the wheel does: a step to the right is a notch down. Says whether anything scrolled.
+     */
+    boolean scroll(Player player, int notches){
+        if (notches == 0 || surface.layout() == null) return false;
+        double[] point = lookedAt(player, CTMLHolograms.REACH);
+        return point != null && CTMLScroll.wheel(surface.layout(), point[0], point[1], 0, -notches);
     }
 
     /** Forgets a player who has left, so their clicks and their cursor are not kept. */

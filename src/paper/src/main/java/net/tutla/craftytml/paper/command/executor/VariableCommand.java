@@ -9,7 +9,7 @@ import java.util.Map;
 public final class VariableCommand extends StoreCommand {
     public VariableCommand(ExecutedUIs executed){
         super("variable", "/ctml variable list|put|remove [name] [variable] [value]",
-                "Lists, sets or clears the variables of an executed ui.", executed,
+                "Lists, sets or clears the variables of an executed ui or a hologram.", executed,
                 "put <name> <variable> <value>: the value is the rest of the line.",
                 "remove <name> <variable>, and list [name] for one ui or all of them.",
                 "Every window open under the name changes straight away, and every one executed under it later.");

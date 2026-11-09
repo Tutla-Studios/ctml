@@ -85,13 +85,13 @@ the window changes size.
 
 ## On a server
 
-Everything on this page works the same in a window on a server. Only the input is different:
+Everything on this page works the same in a window or a hologram on a server. Only the input is different:
 - **The hotbar is the wheel.** Scrolling the hotbar scrolls the box the player is looking at, a step to
   the right being a notch down, and the selected slot doesn't move.
 - **No keys.** The arrow keys, page up and down, home and end never reach a server.
 - **No grabbing the bar.** A bar can't be grabbed; it's still drawn and still moves with the scroll.
-- **Holograms** don't take the wheel at all, so only `scrollx`, `scrolly` and `scrollinto` move a
-  scrollport in one.
+- **On a hologram**, the hotbar scrolls the box under the player's cursor in the same way. The held slot
+  only stays put when something scrolled, so a player can still change items while looking at one.
 
 ## In a hud
 

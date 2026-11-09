@@ -15,7 +15,7 @@ import java.util.Set;
 public final class CallbackCommand extends StoreCommand {
     public CallbackCommand(ExecutedUIs executed){
         super("callback", "/ctml callback list|put|remove [name] [callback] [command]",
-                "Lists, sets or clears the callback commands of an executed ui.", executed,
+                "Lists, sets or clears the callback commands of an executed ui or a hologram.", executed,
                 "put <name> <callback> <command>: {player} in the command is whoever pressed it.",
                 "remove <name> <callback>, and list [name] for one ui or all of them.",
                 "Only a press runs the command, never a hover.");

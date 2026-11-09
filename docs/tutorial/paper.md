@@ -1,6 +1,6 @@
 ---
 title: "Paper and Spigot"
-summary: "Run the same .ctml files on a Paper, Spigot or Bukkit server, shown to one player at a time as a window floating in front of them."
+summary: "Run the same .ctml files on a Paper, Spigot or Bukkit server, as a window in front of one player or a hologram in the world for everyone."
 created: "2026-11-09"
 updated: "2026-11-09"
 isdoc: true
@@ -8,10 +8,11 @@ isdoc: true
 
 CraftyTML runs on servers as well as clients. The same jar is a Fabric mod and a Paper, Spigot and Bukkit
 plugin. On a server it reads the same `.ctml` files and lays them out the same way, but it can't open a
-screen on a player's client. Instead it builds a window out of display entities that floats in front of
-one player, and they use it by looking at it and clicking.
+screen on a player's client. Instead it builds the ui out of display entities, either as a window that
+floats in front of one player, or as a hologram standing in the world that everyone can see. Players use
+both by looking at them and clicking.
 
-Nothing needs to be installed on the client. A vanilla client sees the window.
+Nothing needs to be installed on the client. A vanilla client sees the window or the hologram.
 
 ## Installing it
 
@@ -31,6 +32,7 @@ last step, where the tree and its context are handed to a `UIRenderer`:
 | --- | --- | --- |
 | Fabric | `ScreenRenderer` | a `CTMLScreen` |
 | Paper, Spigot, Bukkit | `WindowRenderer(player)` | a window in front of that player |
+| Paper, Spigot, Bukkit | `HologramRenderer(location)` | a hologram standing at that place, for everyone |
 
 ## Commands
 
@@ -62,7 +64,8 @@ nothing.
   so each player's window is theirs alone, and the tree is freed when the window closes.
 
 Variables and callbacks can also be kept for a name, and are added to every window open under that name
-straight away, and to every one executed under it later:
+straight away, and to every one executed under it later. A hologram's id counts as a name too, so the
+same commands reach holograms:
 
 ```text
 /ctml variable put shop price 5 coins
@@ -82,8 +85,10 @@ a function or the console.
 A hologram is a ui standing in the world where everyone can see it, rather than a window in front of one
 player. Nobody is held still. Where it has anything to click, everyone looking at it from within 6 blocks
 gets a cursor only they can see. Clicks work the way they do in a window: buttons press, checkboxes tick,
-and forms open a dialog. `hover:` styles and hover callbacks follow whoever is nearest and looking at it,
-and `active:` lights up on a press.
+and forms open a dialog. Turning the hotbar while looking at it scrolls the box under the cursor, as it
+does in a window, but the held slot only stays put when something actually scrolled, so walking past a
+hologram doesn't stop anyone changing items. `hover:` styles and hover callbacks follow whoever is
+nearest and looking at it, and `active:` lights up on a press. A hologram can't be dragged.
 
 ```text
 /ctml hologram create board ~ ~2 ~ 180 {"hi":"say hi {player}"} <ctml class="bg-slate-900/80 p-2"><button callback="hi" text="wave"></button></ctml>
@@ -140,6 +145,10 @@ While a window is open, the player can't walk away from it:
   picks a `draggable` box up, it follows the cursor, and the next click puts it down.
 - **Sneaking** closes the window, and so does teleporting away, dying or leaving.
 
+The player can turn as far as the window's edge and a little past it, and can't walk, jump or break
+anything until it closes. If the server crashes with a window open, the player's walk speed is put back
+the next time they join.
+
 ## Forms
 
 A server can't hear a keyboard, so what a player types goes through one of minecraft's own dialogs.
@@ -156,10 +165,6 @@ An input is labelled in the dialog with its `name`, or its `placeholder` where i
 
 Dialogs are part of Paper. On Spigot and Bukkit the click-only controls still work, but nothing can be
 typed.
-
-The player can turn as far as the window's edge and a little past it, and can't walk, jump or break
-anything until it closes. If the server crashes with a window open, the player's walk speed is put back
-the next time they join.
 
 ## Showing a tree from java
 
@@ -224,7 +229,8 @@ client's window.
 
 ## What a window can't draw
 
-A window is made of flat display entities, and some of what a client screen draws has no equivalent:
+Windows and holograms are both made of flat display entities, and some of what a client screen draws has
+no equivalent:
 
 - **Drawn:** background colours, borders, text in its colour, weight and slant, scrollbars, opacity,
   gradients, and form controls with their ticks, sliders and swatches. A background gradient is drawn
@@ -234,7 +240,8 @@ A window is made of flat display entities, and some of what a client screen draw
   can't be cut.
 - **No keyboard:** typing goes through the form's dialog. Tab doesn't move the focus, and enter and
   space don't press anything.
-- **No huds.** A window is always in front of one player, never drawn over everyone's game.
+- **No huds.** Nothing is drawn on a player's screen. A window floats in front of one player, and a
+  [hologram](#holograms) stands in the world for everyone.
 
 Text is measured with the vanilla font's glyph widths, which is what the client draws a display in. A
 resource pack that changes the font moves the text on screen, but not where the server laid it out.

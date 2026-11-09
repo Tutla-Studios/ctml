@@ -48,7 +48,7 @@ hello.ctml  ──CTMLAPI──▶  DOMTreeElement  ──┬──▶  CTMLScre
                                  ▲          ├──▶  CTMLHud           (drawn only, hears nothing)
                                  │          │ server:
                             DOMContext      ├──▶  WindowRenderer    (one player: look, click, hotbar)
-         (variables, callbacks,             └──▶  HologramRenderer  (everyone near it: look, click)
+         (variables, callbacks,             └──▶  HologramRenderer  (everyone near it: look, click, hotbar)
           getElementById)
 ```
 

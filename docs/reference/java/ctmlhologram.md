@@ -10,7 +10,7 @@ isdoc: true
 
 A ctml tree standing in the world where everyone can see it: a `CTMLSurface` with no one player behind it. Its middle is at the location it was put at, and its front faces the way that location looks, so a hologram put down facing yaw 0 is read from the south, by someone looking north at it.
 
-Nobody is held still. Where anything in the tree can be clicked, everyone looking at it from within reach gets a cursor of their own, seen by them alone, and their clicks work the way they do in a window: a control takes the click, and otherwise the callback under it hears it. hover: and the hover callback follow the nearest player looking at it, and active: lights up on a press, since a hologram has one tree and so one hover for everyone.
+Nobody is held still. Where anything in the tree can be clicked, everyone looking at it from within reach gets a cursor of their own, seen by them alone, and their clicks work the way they do in a window: a control takes the click, and otherwise the callback under it hears it. hover: and the hover callback follow the nearest player looking at it, and active: lights up on a press, since a hologram has one tree and so one hover for everyone. Turning the hotbar while looking at it scrolls the box under their look, the way it does in a window, and the slot only stays put where something scrolled.
 
 Everyone who sees a hologram shares that one tree, so a callback that changes it changes it for all of them. `presser()` is whoever clicked it last, which is how a callback knows who pressed it.
 

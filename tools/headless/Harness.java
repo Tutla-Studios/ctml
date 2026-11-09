@@ -1,9 +1,10 @@
-import net.minecraft.util.FormattedCharSequence;
+import net.tutla.craftytml.client.ctml.ElementStyle;
 import net.tutla.craftytml.client.ctml.CTMLElement;
 import net.tutla.craftytml.client.ctml.element.*;
 import net.tutla.craftytml.client.dom.DOMTreeElement;
 import net.tutla.craftytml.client.dom.DOMTreeText;
 import net.tutla.craftytml.client.render.CTMLLayout;
+import net.tutla.craftytml.client.render.FontMetrics;
 import net.tutla.craftytml.client.tusan.CTMLTusan;
 import net.tutla.craftytml.client.tusan.register.ElementRegistry;
 
@@ -14,13 +15,10 @@ public class Harness {
     /** 6 pixels a character, 9 pixel lines, baseline 7 down, so every number below is worked out by hand. */
     public record Stub() implements CTMLLayout.TextMetrics {
         public int width(String text){ return text.length() * 6; }
-        public int width(FormattedCharSequence text){
-            int[] count = { 0 };
-            text.accept((i, s, c) -> { count[0]++; return true; });
-            return count[0] * 6;
-        }
+        public int width(String text, ElementStyle style){ return text.codePointCount(0, text.length()) * 6; }
         public int lineHeight(){ return 9; }
         public int ascent(){ return 7; }
+        public int[] pictureSize(String source){ return new FontMetrics(null).pictureSize(source); }
     }
 
     public static DOMTreeElement div(String classes){

@@ -1,9 +1,18 @@
 pluginManagement {
     repositories {
-        maven {
-            name = 'Fabric'
-            url = 'https://maven.fabricmc.net/'
-        }
+        maven { url = 'https://maven.fabricmc.net/' }
+        maven { url = 'https://maven.architectury.dev/' }
+        maven { url = 'https://maven.neoforged.net/releases/' } // architectury-loom's own tooling
         gradlePluginPortal()
+        mavenCentral()
     }
 }
+
+rootProject.name = 'CraftyTML'
+
+include 'common'   // Architectury common: the ctml language, dom and Tusan glue, loader-agnostic
+include 'fabric'   // Fabric client mod, which holds the renderer
+include 'paper'    // Spigot/Paper/Bukkit plugin
+
+// Modules live under src/
+['common', 'fabric', 'paper'].each { project(":$it").projectDir = file("src/$it") }

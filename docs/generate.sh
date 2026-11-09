@@ -33,7 +33,9 @@ set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$HERE/.." && pwd)"
-SRC="$ROOT/src/client/java/net/tutla/craftytml/client"
+# the ctml language lives in common; the java api the reference covers is partly fabric's
+SRC="$ROOT/src/common/src/main/java/net/tutla/craftytml/client"
+FABRIC_SRC="$ROOT/src/fabric/src/client/java/net/tutla/craftytml/client"
 PKG="net.tutla.craftytml.client"
 
 # where the docs sit on the wiki, which is where the sync mounts this folder
@@ -967,6 +969,8 @@ stylenote_table(){
 }
 
 # The opening sentence of a class's javadoc, for the page summary
+api_file(){ [ -f "$SRC/$1" ] && echo "$SRC/$1" || echo "$FABRIC_SRC/$1"; }
+
 first_sentence(){
     jdoc_body "$1" | head -1 \
         | sed -e 's/\([.!?]\) .*/\1/' -e 's/`//g' -e 's/"/\\"/g' \
@@ -978,7 +982,7 @@ gen_java(){
     local links=""
     for entry in $JAVA_API; do
         rel="${entry%%:*}"; title="${entry##*:}"
-        file="$SRC/$rel"
+        file="$(api_file "$rel")"
         [ -f "$file" ] || { echo "JAVA_API names a file that is not there: $rel" >&2; exit 1; }
         out="reference/java/$(echo "$title" | tr 'A-Z' 'a-z').md"
         links="$links$title|$out|$rel
@@ -1060,7 +1064,7 @@ INTRO
         local title out rel
         while IFS='|' read -r title out rel; do
             [ -n "$title" ] || continue
-            printf '| [%s](%s) | %s |\n' "$title" "$BASE/${out%.md}" "$(first_sentence "$SRC/$rel")"
+            printf '| [%s](%s) | %s |\n' "$title" "$BASE/${out%.md}" "$(first_sentence "$(api_file "$rel")")"
         done < "$WORK/javalinks.tsv"
     } | emit "reference/java/index.md" "Java API" \
         "The CraftyTML classes a mod talks to: building a tree, showing it as a screen or a hud, and driving it from java."

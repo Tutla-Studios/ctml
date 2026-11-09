@@ -11,7 +11,7 @@ here=$(cd "$(dirname "$0")" && pwd)
 root=$(cd "$here/../.." && pwd)
 out=${CTML_HEADLESS_OUT:-/tmp/ctml-headless}
 
-args="$root/build/loom-cache/argFiles/runClient"
+args="$root/src/fabric/build/loom-cache/argFiles/runClient"
 if [ ! -f "$args" ]; then
     echo "no classpath to compile against: $args is missing." >&2
     echo "run the client (or any gradle build) once so loom writes it, then try again." >&2
@@ -19,11 +19,11 @@ if [ ! -f "$args" ]; then
 fi
 # the mod's own classes are left off: they are whatever gradle built last, and what is wanted
 # here is what the sources say now
-cp=$(sed -n 2p "$args" | tr ':' '\n' | grep -v "^$root/build/" | paste -sd:)
+cp=$(sed -n 2p "$args" | tr ':' '\n' | grep -vE "^$root/(src/[^/]*/)?build/" | paste -sd:)
 
 rm -rf "$out" && mkdir -p "$out"
-# the two fabric entry points want the loader, which nothing here needs
-find "$root/src" -name "*.java" | grep -vE "Craftytml(Client|DataGenerator)?\.java" > "$out/srcs.txt"
+# the two fabric entry points want the loader, which nothing here needs, and paper wants bukkit
+find "$root/src/common/src" "$root/src/fabric/src" -name "*.java" | grep -vE "Craftytml(Client|DataGenerator)?\.java" > "$out/srcs.txt"
 javac -nowarn -encoding UTF-8 --release 25 -cp "$cp" -d "$out" @"$out/srcs.txt"
 javac -nowarn -encoding UTF-8 --release 25 -cp "$out:$cp" -d "$out" "$here"/*.java
 

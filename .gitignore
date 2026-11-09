@@ -34,3 +34,4 @@ bin/
 !/run/ctml/
 libs
 logs
+/src/*/run/

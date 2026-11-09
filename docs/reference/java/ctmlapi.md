@@ -2,7 +2,7 @@
 title: "CTMLAPI"
 summary: "The door into ctml: it runs a .ctml file, or markup held in a string, and puts the tree that comes out of it in the UIRegistry under a name."
 created: "2026-11-01"
-updated: "2026-11-01"
+updated: "2026-11-09"
 isdoc: true
 ---
 
@@ -10,7 +10,9 @@ isdoc: true
 
 The door into ctml: it runs a .ctml file, or markup held in a string, and puts the tree that comes out of it in the `UIRegistry` under a name.
 
-Running a script is all this does. Nothing is shown by it: a tree becomes a screen or a hud only when a `CTMLScreen` or `CTMLHud` is built around it, and the same tree can be either. A script that fails is reported and skipped, so one bad file cannot stop the rest loading.
+Running a script is all this does. Nothing is shown by it: a tree becomes a screen or a hud only when something shows it: a `CTMLScreen` or `CTMLHud` on Fabric, a `CTMLWindows` window on Paper, and the same tree can be any of them. A script that fails is reported and skipped, so one bad file cannot stop the rest loading.
+
+Scripts run as `MinecraftEnvironment.CLIENT` unless they are handed another environment, which is how a server runs them as `MinecraftEnvironment.SERVER`.
 
 ```java
 import net.tutla.craftytml.client.CTMLAPI;
@@ -20,7 +22,13 @@ import net.tutla.craftytml.client.CTMLAPI;
 
 ### `public static void runAllScripts(Path scriptsDir)`
 
+### `public static void runAllScripts(Path scriptsDir, MinecraftEnvironment environment)`
+
 ### `public static void createUI(Path script)`
 
+### `public static void createUI(Path script, MinecraftEnvironment environment)`
+
 ### `public static void createUI(String name, String script)`
+
+### `public static void createUI(String name, String script, MinecraftEnvironment environment)`
 

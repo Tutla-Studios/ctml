@@ -9,7 +9,7 @@ characters and nine pixel lines, and compare what comes out against numbers work
     tools/headless/run.sh demo run/ctml/ui/groot.ctm   lay a real script out and print the boxes
 
 They compile against the jars gradle last resolved, which it writes to
-`build/loom-cache/argFiles/runClient`, so the client (or any gradle build) has to have run once.
+`src/fabric/build/loom-cache/argFiles/runClient`, so the client (or any gradle build) has to have run once.
 Nothing here is part of the mod: no gradle wiring, no dependency on it from `src`.
 
 | suite | what it covers |

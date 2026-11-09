@@ -1,0 +1,16 @@
+plugins {
+    id 'dev.architectury.loom-no-remap'
+    id 'architectury-plugin'
+}
+
+// Paper is not an Architectury platform: it bundles this module's plain jar, so nothing in common may
+// touch Minecraft or a loader until the Paper side has its own answer for it. Today none of it does.
+architectury {
+    common rootProject.enabled_platforms.split(',')
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${rootProject.minecraft_version}"
+    // Only for the @Environment annotations and Mixin; no Fabric-specific code should live in common.
+    implementation "net.fabricmc:fabric-loader:${rootProject.loader_version}"
+}

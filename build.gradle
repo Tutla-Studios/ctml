@@ -1,109 +1,79 @@
 plugins {
-    id 'net.fabricmc.fabric-loom' version "${loom_version}"
-    id 'maven-publish'
+    id 'base'
+    id 'architectury-plugin' version '3.5-SNAPSHOT'
+    id 'dev.architectury.loom-no-remap' version '1.17-SNAPSHOT' apply false
+    id 'com.gradleup.shadow' version '9.4.1' apply false
+    id 'xyz.jpenilla.run-paper' version '3.0.2' apply false
 }
 
-version = project.mod_version
-group = project.maven_group
-
-repositories {
-    // Add repositories to retrieve artifacts from in here.
-    // You should only use this when depending on other mods because
-    // Loom adds the essential maven repositories to download Minecraft and libraries from automatically.
-    // See https://docs.gradle.org/current/userguide/declaring_repositories.html
-    // for more information about repositories.
+architectury {
+    minecraft = project.minecraft_version
 }
 
-loom {
-    splitEnvironmentSourceSets()
+// Tums' universal jar (Fabric mod and Paper plugin in one), straight out of the Tums checkout next to
+// this one: build it there with ./gradlew build first.
+ext.tumsJar = file("../Tums/build/libs/tums-${project.tums_version}.jar")
 
-    mods {
-        "craftytml" {
-            sourceSet sourceSets.main
-            sourceSet sourceSets.client
-        }
+allprojects {
+    group = project.maven_group
+    version = project.mod_version
+}
+
+subprojects {
+    apply plugin: 'java'
+    apply plugin: 'maven-publish'
+
+    base {
+        archivesName = "${rootProject.archives_base_name}-${project.name}"
     }
 
-}
-
-fabricApi {
-    configureDataGeneration {
-        client = true
-    }
-}
-
-dependencies {
-    // To change the versions see the gradle.properties file
-    minecraft "com.mojang:minecraft:${project.minecraft_version}"
-
-    implementation "net.fabricmc:fabric-loader:${project.loader_version}"
-
-    // Fabric API. This is technically optional, but you probably want it anyway.
-    implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
-    implementation files("libs/tums-0.1.0.jar")
-}
-
-processResources {
-    inputs.property "version", project.version
-    inputs.property "loader_version", project.loader_version
-    inputs.property "minecraft_version", project.minecraft_version
-
-    filesMatching("fabric.mod.json") {
-        expand "version": project.version,
-                "loader_version": project.loader_version,
-                "minecraft_version": project.minecraft_version
-    }
-}
-
-tasks.withType(JavaCompile).configureEach {
-    it.options.release = 25
-}
-
-// The javadoc here carries ctml markup, in @ctml.example and in prose, and ctml is not html: it has
-// its own elements and its own properties, and nothing is gained by having it validate as html.
-// Every other doclint check still applies. The @ctml tags are the ones docs/generate.sh reads out of
-// the registered elements and properties to build the reference with.
-tasks.withType(Javadoc).configureEach {
-    options.tags = [
-            'ctml.group:t:Group:',
-            'ctml.properties:t:Own properties:',
-            'ctml.example:t:Example:',
-            'ctml.on:t:Applies to:'
-    ]
-    options.addStringOption('Xdoclint:all,-html,-accessibility,-missing', '-quiet')
-}
-
-java {
-    // Loom will automatically attach sourcesJar to a RemapSourcesJar task and to the "build" task
-    // if it is present.
-    // If you remove this line, sources will not be generated.
-    withSourcesJar()
-
-    sourceCompatibility = JavaVersion.VERSION_25
-    targetCompatibility = JavaVersion.VERSION_25
-}
-
-jar {
-    inputs.property "projectName", project.name
-
-    from("LICENSE") {
-        rename { "${it}_${project.name}"}
-    }
-}
-
-// configure the maven publication
-publishing {
-    publications {
-        create("mavenJava", MavenPublication) {
-            from components.java
-        }
-    }
-
-    // See https://docs.gradle.org/current/userguide/publishing_maven.html for information on how to set up publishing.
     repositories {
-        // Add repositories to publish to here.
-        // Notice: This block does NOT have the same function as the block in the top level.
-        // The repositories here will be used for publishing your artifact, not for
-        // retrieving dependencies.
+        mavenCentral()
+    }
+
+    dependencies {
+        // Tusan, which ctml scripts are parsed and run with. Not bundled into CraftyTML: the same jar
+        // is installed beside it, as a mod on Fabric and as a plugin on Paper.
+        compileOnly files(rootProject.tumsJar)
+    }
+
+    java {
+        withSourcesJar()
+        sourceCompatibility = JavaVersion.VERSION_25
+        targetCompatibility = JavaVersion.VERSION_25
+    }
+
+    tasks.withType(JavaCompile).configureEach {
+        it.options.release = 25
+        it.options.encoding = 'UTF-8'
+    }
+
+    // The javadoc here carries ctml markup, in @ctml.example and in prose, and ctml is not html: it has
+    // its own elements and its own properties, and nothing is gained by having it validate as html.
+    // Every other doclint check still applies. The @ctml tags are the ones docs/generate.sh reads out of
+    // the registered elements and properties to build the reference with.
+    tasks.withType(Javadoc).configureEach {
+        options.tags = [
+                'ctml.group:t:Group:',
+                'ctml.properties:t:Own properties:',
+                'ctml.example:t:Example:',
+                'ctml.on:t:Applies to:'
+        ]
+        options.addStringOption('Xdoclint:all,-html,-accessibility,-missing', '-quiet')
+    }
+
+    jar {
+        from(rootProject.file('LICENSE.txt')) {
+            rename { "${it}_${rootProject.archives_base_name}" }
+        }
+    }
+
+    publishing {
+        publications {
+            mavenJava(MavenPublication) {
+                artifactId = base.archivesName.get()
+                from components.java
+            }
+        }
     }
 }

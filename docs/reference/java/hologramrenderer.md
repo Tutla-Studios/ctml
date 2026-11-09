@@ -26,6 +26,10 @@ Stands each tree under the name it is shown with.
 
 Stands everything under one id, each tree replacing the one before.
 
+### `public HologramRenderer(Location location, String id, CTMLHologram.Settings settings)`
+
+The same, turned and sized by the settings. A renderer is handed one tree at a time, so what it puts up is always shared, whatever the settings say about that.
+
 ### `public void show(String name, DOMTreeElement tree, DOMContext ctx)`
 
 ### `public void openLink(String url)`

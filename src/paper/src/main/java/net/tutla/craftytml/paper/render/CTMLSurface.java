@@ -54,6 +54,14 @@ import java.util.function.Consumer;
  * drawn: a display has no way to.
  */
 public final class CTMLSurface {
+    /**
+     * Which way a surface faces. FIXED keeps the orientation it was put down with. CAMERA and VERTICAL turn
+     * it towards whoever is looking, on their own client: every viewer sees it face them, CAMERA all the way
+     * round and VERTICAL only about the upright, the way a sign on a post would turn.
+     */
+    public enum Facing { FIXED, VERTICAL, CAMERA }
+
+    private static final float MARKER_SCALE = 0.35f;
     // ---- what a vanilla text display draws (the client's TextDisplayRenderer) ----------------------
     // One of its pixels is 0.025 blocks at scale 1. A display of a single space draws a background 5 px
     // wide (a 4 px advance and a pixel of padding) and 10 px tall, its bottom on the entity and its middle
@@ -105,6 +113,9 @@ public final class CTMLSurface {
     private final CTMLWindow.Frame frame;
     /** Who can see it, or null for everyone, the ones who join later included. */
     private final Set<UUID> viewers;
+    private final Facing facing;
+    /** The roll about the facing, in radians, which a billboarded surface turns its own frame by. */
+    private float roll;
 
     private final List<TextDisplay> displays = new ArrayList<>();
     private final List<Paint> drawn = new ArrayList<>();
@@ -127,11 +138,23 @@ public final class CTMLSurface {
      */
     public CTMLSurface(Plugin plugin, NamespacedKey entityKey, DOMTreeElement tree, CTMLWindow.Frame frame,
                        Collection<UUID> viewers){
+        this(plugin, entityKey, tree, frame, viewers, Facing.FIXED);
+    }
+
+    /** The same, turning towards whoever looks at it rather than keeping still, where the facing says. */
+    public CTMLSurface(Plugin plugin, NamespacedKey entityKey, DOMTreeElement tree, CTMLWindow.Frame frame,
+                       Collection<UUID> viewers, Facing facing){
         this.plugin = plugin;
         this.entityKey = entityKey;
         this.tree = tree;
         this.frame = frame;
         this.viewers = viewers == null ? null : Set.copyOf(viewers);
+        this.facing = facing == null ? Facing.FIXED : facing;
+    }
+
+    /** Whether each viewer's client turns it to face them, rather than it keeping one orientation. */
+    private boolean billboarded(){
+        return facing != Facing.FIXED;
     }
 
     /**
@@ -141,20 +164,42 @@ public final class CTMLSurface {
      * Anything already drawn is drawn again in the new place.
      */
     public void place(World world, Vector center, Vector along, Vector fallbackRight){
+        place(world, center, along, fallbackRight, 0);
+    }
+
+    /**
+     * The same, rolled about the facing by so many degrees, clockwise as you look at its front. A surface
+     * that turns to face its viewers keeps the roll in its own frame, so it stays rolled whichever way it turns.
+     */
+    public void place(World world, Vector center, Vector along, Vector fallbackRight, double rollDegrees){
         this.world = world;
         this.center = center.clone();
+        this.roll = (float) Math.toRadians(rollDegrees);
         Vector look = along.clone().normalize();
         boolean level = look.getX() * look.getX() + look.getZ() * look.getZ() > 1e-6;
         right = level ? new Vector(-look.getZ(), 0, look.getX()).normalize() : fallbackRight.clone().normalize();
         up = right.getCrossProduct(look).normalize();
         normal = look.clone().multiply(-1);
+        if (roll != 0) { // turned about the normal: clockwise to the eye looking along the look
+            double cos = Math.cos(roll), sin = Math.sin(roll);
+            Vector rolledRight = right.clone().multiply(cos).add(up.clone().multiply(-sin));
+            Vector rolledUp = up.clone().multiply(cos).add(right.clone().multiply(sin));
+            right = rolledRight;
+            up = rolledUp;
+        }
 
-        // a display with no yaw or pitch is turned by its transformation alone, whose columns are where
-        // its own x, y and z end up; text faces its own +z
-        rotation = new Quaternionf().setFromNormalized(new Matrix3f(
-                (float) right.getX(), (float) right.getY(), (float) right.getZ(),
-                (float) up.getX(), (float) up.getY(), (float) up.getZ(),
-                (float) normal.getX(), (float) normal.getY(), (float) normal.getZ()));
+        if (billboarded()) {
+            // the client turns a billboard to face the camera itself, and the transformation is applied in
+            // that turned frame: its own x right, y up and z towards the viewer, so only the roll is left
+            rotation = new Quaternionf().rotateZ(-roll);
+        } else {
+            // a display with no yaw or pitch is turned by its transformation alone, whose columns are where
+            // its own x, y and z end up; text faces its own +z
+            rotation = new Quaternionf().setFromNormalized(new Matrix3f(
+                    (float) right.getX(), (float) right.getY(), (float) right.getZ(),
+                    (float) up.getX(), (float) up.getY(), (float) up.getZ(),
+                    (float) normal.getX(), (float) normal.getY(), (float) normal.getZ()));
+        }
 
         // the displays stand on the old middle, so they go, and the next paint puts new ones down
         removeDisplays();
@@ -191,12 +236,105 @@ public final class CTMLSurface {
      * front, so a ray looking at the front makes D . N negative.
      */
     public double[] hit(Vector origin, Vector dir){
-        double facing = dir.dot(normal);
-        if (facing > -1e-4) return null;
-        double t = center.clone().subtract(origin).dot(normal) / facing;
+        Vector[] basis = basisFor(dir);
+        Vector r = basis[0], u = basis[1], n = basis[2];
+        double towards = dir.dot(n);
+        if (towards > -1e-4) return null;
+        double t = center.clone().subtract(origin).dot(n) / towards;
         if (t <= 0) return null;
         Vector rel = origin.clone().add(dir.clone().multiply(t)).subtract(center);
-        return new double[]{ rel.dot(right), rel.dot(up), t };
+        return new double[]{ rel.dot(r), rel.dot(u), t };
+    }
+
+    /**
+     * The right, up and normal the plane has for someone looking along dir. A fixed surface has the one it
+     * was put down with; a billboard has whatever the viewer's client turned it to, which is their camera's.
+     */
+    private Vector[] basisFor(Vector dir){
+        if (!billboarded()) return new Vector[]{ right, up, normal };
+        Vector look = dir.clone().normalize();
+        Vector flat = new Vector(look.getX(), 0, look.getZ());
+        if (flat.lengthSquared() < 1e-8) flat = right.getCrossProduct(new Vector(0, 1, 0)).multiply(-1);
+        flat.normalize();
+        Vector r = new Vector(-flat.getZ(), 0, flat.getX());
+        Vector u, n;
+        if (facing == Facing.VERTICAL) {
+            u = new Vector(0, 1, 0);
+            n = flat.clone().multiply(-1);
+        } else {
+            u = r.getCrossProduct(look).normalize();
+            n = look.clone().multiply(-1);
+        }
+        if (roll != 0) {
+            double cos = Math.cos(roll), sin = Math.sin(roll);
+            Vector rolledRight = r.clone().multiply(cos).add(u.clone().multiply(-sin));
+            u = u.clone().multiply(cos).add(r.clone().multiply(sin));
+            r = rolledRight;
+        }
+        return new Vector[]{ r, u, n };
+    }
+
+    /**
+     * Where a display goes for a spot on the plane pushed out of its front by depth, as a transformation's
+     * translation: along the world's axes for a fixed surface, whose displays stand on their own depth
+     * already, and along its own turned frame for a billboard, whose displays all stand on its middle.
+     */
+    private Vector3f offset(double u, double v, double depth){
+        if (billboarded()) return rotation.transform(new Vector3f((float) u, (float) v, (float) depth));
+        return right.clone().multiply(u).add(up.clone().multiply(v)).toVector3f();
+    }
+
+    /** Where a display at that depth is spawned: on its own depth when fixed, on the middle when billboarded. */
+    private Location standing(double depth){
+        return (billboarded() ? center.clone() : onPlane(0, 0, depth)).toLocation(world, 0f, 0f);
+    }
+
+    private Display.Billboard billboard(){
+        return switch (facing) {
+            case FIXED -> Display.Billboard.FIXED;
+            case VERTICAL -> Display.Billboard.VERTICAL;
+            case CAMERA -> Display.Billboard.CENTER;
+        };
+    }
+
+    // ---- a viewer's own cursor ----
+
+    /** A dot only one viewer sees, to point with on this surface. */
+    public TextDisplay spawnMarker(Player viewer, String glyph){
+        Quaternionf turned = rotation();
+        return spawnFor(viewer, standing(0), TextDisplay.class, d -> {
+            d.setBillboard(billboard());
+            d.setBrightness(new Display.Brightness(15, 15));
+            d.setDefaultBackground(false);
+            d.setBackgroundColor(Color.fromARGB(0, 0, 0, 0));
+            d.setShadowed(false);
+            d.setText(glyph);
+            d.setTeleportDuration(2);
+            d.setTransformation(new Transformation(new Vector3f(), turned,
+                    new Vector3f(MARKER_SCALE, MARKER_SCALE, MARKER_SCALE), new Quaternionf()));
+        });
+    }
+
+    /**
+     * Puts a dot over a spot on the plane, just in front of everything painted there. On a fixed surface it
+     * is brought towards the eye along the line of sight, so from where the viewer stands it covers that very
+     * spot however far off centre it is; a billboard faces the viewer square on, so it only needs lifting.
+     */
+    public void moveMarker(TextDisplay marker, Vector eye, double u, double v){
+        // the dot's middle is 1 px right of the entity and its glyph about 5 px up
+        double s = MARKER_SCALE * PX;
+        double lift = (displays.size() + 2) * DEPTH_STEP;
+        if (billboarded()) {
+            marker.setInterpolationDelay(0);
+            marker.setInterpolationDuration(2);
+            marker.setTransformation(new Transformation(offset(u - s, v - 4.5 * s, lift), new Quaternionf(rotation),
+                    new Vector3f(MARKER_SCALE, MARKER_SCALE, MARKER_SCALE), new Quaternionf()));
+            return;
+        }
+        Vector point = onPlane(u - s, v - 4.5 * s, 0);
+        Vector toEye = eye.clone().subtract(point).normalize();
+        double depth = lift / Math.max(0.1, toEye.dot(normal));
+        marker.teleport(point.add(toEye.multiply(depth)).toLocation(world));
     }
 
     /** A point on the plane in layout pixels, { x, y }, or null where it is off the edge. */
@@ -259,13 +397,14 @@ public final class CTMLSurface {
             Paint paint = paints.get(i);
             if (i == displays.size()) {
                 // dressed before it is added to the world, so its first frame is already where it goes
-                displays.add(spawnDisplay(i * DEPTH_STEP, d -> apply(d, paint, null)));
+                double depth = i * DEPTH_STEP;
+                displays.add(spawnDisplay(depth, d -> apply(d, paint, null, depth)));
                 drawn.add(paint);
                 continue;
             }
             Paint was = drawn.get(i);
             if (paint.equals(was)) continue;
-            apply(displays.get(i), paint, was);
+            apply(displays.get(i), paint, was, i * DEPTH_STEP);
             drawn.set(i, paint);
         }
         while (displays.size() > paints.size()) {
@@ -275,7 +414,7 @@ public final class CTMLSurface {
         }
     }
 
-    private void apply(TextDisplay display, Paint paint, Paint was){
+    private void apply(TextDisplay display, Paint paint, Paint was, double depthAt){
         if (was == null || !was.text().equals(paint.text())) display.setText(paint.text());
         if (was == null || was.background() != paint.background()) {
             display.setBackgroundColor(Color.fromARGB(paint.background()));
@@ -284,14 +423,14 @@ public final class CTMLSurface {
         if (was == null || was.shadow() != paint.shadow()) display.setShadowed(paint.shadow());
         if (was == null || was.u() != paint.u() || was.v() != paint.v()
                 || was.scaleX() != paint.scaleX() || was.scaleY() != paint.scaleY()) {
-            Vector at = right.clone().multiply(paint.u()).add(up.clone().multiply(paint.v()));
+            Vector3f at = offset(paint.u(), paint.v(), depthAt);
             float depth = paint.text().equals(" ") ? 1f : paint.scaleX();
             // a display is whatever paint comes at its place in the list, so after a scroll most of them are
             // showing something else entirely: sliding them there would send everything flying across the
             // window, so they jump
             display.setInterpolationDelay(0);
             display.setInterpolationDuration(0);
-            display.setTransformation(new Transformation(at.toVector3f(), new Quaternionf(rotation),
+            display.setTransformation(new Transformation(at, new Quaternionf(rotation),
                     new Vector3f(paint.scaleX(), paint.scaleY(), depth), new Quaternionf()));
         }
     }
@@ -609,9 +748,8 @@ public final class CTMLSurface {
      * about the plane, so a repaint never has to teleport it.
      */
     public TextDisplay spawnDisplay(double depth, Consumer<TextDisplay> dress){
-        Location at = onPlane(0, 0, depth).toLocation(world, 0f, 0f);
-        return spawn(at, TextDisplay.class, d -> {
-            d.setBillboard(Display.Billboard.FIXED);
+        return spawn(standing(depth), TextDisplay.class, d -> {
+            d.setBillboard(billboard());
             d.setBrightness(new Display.Brightness(15, 15));
             d.setShadowRadius(0f);
             d.setShadowStrength(0f);

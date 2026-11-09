@@ -53,9 +53,13 @@ public final class ExecutedUIs {
         return ctx;
     }
 
-    /** The hologram standing under a name, if there is one: names and hologram ids are the same thing. */
-    private static CTMLHologram hologram(String name){
-        return CraftytmlPaper.holograms().get(name);
+    /**
+     * The trees of the hologram standing under a name, if there is one, since names and hologram ids are the
+     * same thing: its one tree when shared, or every player's own when per player.
+     */
+    private static List<CTMLHologram.View> hologramViews(String name){
+        CTMLHologram hologram = CraftytmlPaper.holograms().get(name);
+        return hologram == null ? List.of() : hologram.views();
     }
 
     /** Puts a variable on a name, and says how many open windows it reached. */
@@ -63,9 +67,9 @@ public final class ExecutedUIs {
         profile(name).variables().put(variable, value);
         List<CTMLWindow> open = CraftytmlPaper.windows().named(name);
         for (CTMLWindow window : open) window.context().putVariable(variable, value);
-        CTMLHologram hologram = hologram(name);
-        if (hologram != null) hologram.context().putVariable(variable, value);
-        return open.size() + (hologram == null ? 0 : 1);
+        List<CTMLHologram.View> views = hologramViews(name);
+        for (CTMLHologram.View view : views) view.context().putVariable(variable, value);
+        return open.size() + views.size();
     }
 
     /** Takes a variable off a name, and says whether the name had it. */
@@ -73,8 +77,7 @@ public final class ExecutedUIs {
         Profile profile = profiles.get(name);
         boolean had = profile != null && profile.variables().remove(variable) != null;
         for (CTMLWindow window : CraftytmlPaper.windows().named(name)) window.context().removeVariable(variable);
-        CTMLHologram hologram = hologram(name);
-        if (hologram != null) hologram.context().removeVariable(variable);
+        for (CTMLHologram.View view : hologramViews(name)) view.context().removeVariable(variable);
         forgetIfEmpty(name);
         return had;
     }
@@ -87,9 +90,9 @@ public final class ExecutedUIs {
             UUID owner = window.owner();
             window.context().putCallBack(callback, command(() -> Bukkit.getPlayer(owner), command));
         }
-        CTMLHologram hologram = hologram(name);
-        if (hologram != null) hologram.context().putCallBack(callback, command(hologram::presser, command));
-        return open.size() + (hologram == null ? 0 : 1);
+        List<CTMLHologram.View> views = hologramViews(name);
+        for (CTMLHologram.View view : views) view.context().putCallBack(callback, command(view::presser, command));
+        return open.size() + views.size();
     }
 
     /** Takes a callback off a name, and says whether the name had it. */
@@ -98,8 +101,7 @@ public final class ExecutedUIs {
         boolean had = profile != null && profile.callbacks().remove(callback) != null;
         // a context has no way to forget a name, but one that leads nowhere is the same as none
         for (CTMLWindow window : CraftytmlPaper.windows().named(name)) window.context().putCallBack(callback, null);
-        CTMLHologram hologram = hologram(name);
-        if (hologram != null) hologram.context().putCallBack(callback, null);
+        for (CTMLHologram.View view : hologramViews(name)) view.context().putCallBack(callback, null);
         forgetIfEmpty(name);
         return had;
     }

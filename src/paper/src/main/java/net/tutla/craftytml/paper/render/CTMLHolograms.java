@@ -16,6 +16,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Function;
 import java.util.logging.Level;
 
 /**
@@ -66,14 +67,39 @@ public final class CTMLHolograms {
     }
 
     public CTMLHologram spawn(String id, Location at, DOMTreeElement tree, DOMContext ctx){
-        return spawn(id, at, tree, ctx, CTMLWindow.Frame.DEFAULT);
+        return spawn(id, at, tree, ctx, CTMLHologram.Settings.DEFAULT);
     }
 
-    /** Puts a tree into the world under an id, in place of any hologram already standing under it. */
+    /** The same, at a size of its own. */
     public CTMLHologram spawn(String id, Location at, DOMTreeElement tree, DOMContext ctx, CTMLWindow.Frame frame){
+        return spawn(id, at, tree, ctx, CTMLHologram.Settings.DEFAULT.withFrame(frame));
+    }
+
+    /**
+     * Puts one tree into the world under an id for everyone, in place of any hologram already standing under
+     * it, turned and sized by the settings. One tree can only be in one place, so this is always shared: a
+     * hologram per player is {@link #spawn(String, Location, Function, CTMLHologram.Settings)}.
+     */
+    public CTMLHologram spawn(String id, Location at, DOMTreeElement tree, DOMContext ctx, CTMLHologram.Settings settings){
+        if (settings.perPlayer()) {
+            throw new IllegalArgumentException("one tree cannot be every player's own: hand a factory for a per-player hologram");
+        }
+        return stand(id, at, new CTMLHologram(this, id, tree, ctx, settings));
+    }
+
+    /**
+     * Puts up a hologram that gives every player near it a tree of their own, built by the factory when they
+     * come near and seen by them alone, so what each does with it stays theirs. The factory may hand back
+     * null for a player who should see nothing.
+     */
+    public CTMLHologram spawn(String id, Location at, Function<Player, CTMLHologram.Content> factory,
+                              CTMLHologram.Settings settings){
+        return stand(id, at, new CTMLHologram(this, id, factory, settings.withPerPlayer(true)));
+    }
+
+    private CTMLHologram stand(String id, Location at, CTMLHologram hologram){
         if (at.getWorld() == null) throw new IllegalArgumentException("a hologram needs a world to stand in");
         remove(id);
-        CTMLHologram hologram = new CTMLHologram(this, id, tree, ctx, frame);
         try {
             hologram.place(at);
         } catch (RuntimeException e) {
@@ -89,6 +115,14 @@ public final class CTMLHolograms {
         CTMLHologram hologram = holograms.get(id);
         if (hologram == null) return false;
         hologram.place(to);
+        return true;
+    }
+
+    /** Moves a standing hologram and turns it to a new roll, and says false where there is none under the id. */
+    public boolean move(String id, Location to, double roll){
+        CTMLHologram hologram = holograms.get(id);
+        if (hologram == null) return false;
+        hologram.place(to, roll);
         return true;
     }
 

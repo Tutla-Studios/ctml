@@ -89,7 +89,9 @@ Everything on this page works the same in a window or a hologram on a server. On
 - **The hotbar is the wheel.** Scrolling the hotbar scrolls the box the player is looking at, a step to
   the right being a notch down, and the selected slot doesn't move.
 - **No keys.** The arrow keys, page up and down, home and end never reach a server.
-- **No grabbing the bar.** A bar can't be grabbed; it's still drawn and still moves with the scroll.
+- **Grabbing the bar takes two clicks.** One click on a bar picks its thumb up, it follows the
+  player's look, and the next click lets go. A server never hears a release, so the click is what
+  ends the drag.
 - **On a hologram**, the hotbar scrolls the box under the player's cursor in the same way. The held slot
   only stays put when something scrolled, so a player can still change items while looking at one.
 

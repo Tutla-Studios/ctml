@@ -88,7 +88,9 @@ gets a cursor only they can see. Clicks work the way they do in a window: button
 and forms open a dialog. Turning the hotbar while looking at it scrolls the box under the cursor, as it
 does in a window, but the held slot only stays put when something actually scrolled, so walking past a
 hologram doesn't stop anyone changing items. `hover:` styles and hover callbacks follow whoever is
-nearest and looking at it, and `active:` lights up on a press. A hologram can't be dragged.
+nearest and looking at it, and `active:` lights up on a press. Dragging works too: one click picks a
+`draggable` box or a scrollbar up, it follows that player's look, and their next click puts it down.
+Each player carries their own, so two people can move two boxes at once.
 
 ```text
 /ctml hologram create board ~ ~2 ~ 180 {"hi":"say hi {player}"} <ctml class="bg-slate-900/80 p-2"><button callback="hi" text="wave"></button></ctml>
@@ -110,6 +112,38 @@ nearest and looking at it, and `active:` lights up on a press. A hologram can't 
 - **`open` shows a registered ui's tree as it is**, so its callbacks only fire if something gives it them:
   `/ctml callback put <id> ...`, or java.
 
+### How a hologram stands
+
+Options written anywhere between the id and the markup change how a hologram stands:
+
+| Option | What it does |
+| --- | --- |
+| `--pitch=<degrees>` | Tilts it forwards or back, the way looking down or up does. |
+| `--roll=<degrees>` | Turns it about its own middle, clockwise as you face it. |
+| `--face=fixed` | The default: it keeps the yaw, pitch and roll it was put up with. |
+| `--face=camera` | It turns to face every viewer, each on their own screen, keeping its roll. |
+| `--face=vertical` | It turns to face every viewer but stays upright, like a sign spinning on a post. |
+| `--shared` | The default: one ui everyone sees. One player's click, hover or drag is seen by all. |
+| `--per-player` | Every player near it gets a ui of their own that only they see and use. |
+
+```text
+/ctml hologram create sign ~ ~2 ~ --face=vertical <ctml class="bg-slate-900/80 p-2"><div text="welcome"></div></ctml>
+/ctml hologram create menu 0 70 0 180 --per-player {"buy":"give {player} diamond"} <ctml>...</ctml>
+/ctml hologram move sign ~ ~3 ~ --roll=10
+```
+
+A per-player hologram builds each player's ui when they come within 48 blocks, with them as `player` in
+the script, and takes it down when they leave. Building takes a tree for every player, so it can't share one
+registered tree:
+- **`create`** builds its ctml again for each player.
+- **`open`** reads the ui's file from `plugins/CraftyTML/ui/` for each player.
+- **`demo`** shows the registered intro, so it can only be shared.
+
+`{player}` in a per-player hologram's callback commands is always the player whose ui it is.
+
+`move` can change the place, the yaw, the pitch and the roll. Which way a hologram faces and whether it's
+per player are set when it's put up; to change them, put it up again under the same id.
+
 From java, `HologramRenderer` is the renderer. Like every other renderer, it's the last step after the
 usual tree and context:
 
@@ -128,8 +162,34 @@ The location's yaw and pitch are the way its front faces. `CraftytmlPaper.hologr
 `remove`, `get` and list them, and a hologram's `presser()` is whoever clicked it last, which is how a
 callback finds out who pressed it.
 
-Everyone shares a hologram's one tree, so a callback that changes it changes it for everyone, and its one
-`hover:` follows the nearest player looking at it. `new HologramRenderer(location, "lobby")` keeps
+`CTMLHologram.Settings` holds the rest of how it stands: its facing, roll, size, and whether it's per
+player. Hand a renderer settings for a fixed or turning hologram:
+
+```java
+CTMLHologram.Settings settings = CTMLHologram.Settings.DEFAULT
+        .withFacing(CTMLSurface.Facing.CAMERA)
+        .withRoll(10);
+new HologramRenderer(location, "board", settings).show("board", tree, ctx);
+```
+
+A renderer is handed one tree, so what it puts up is always shared. For a per-player hologram, hand
+`CraftytmlPaper.holograms()` a factory instead. It's called for each player who comes near, and each
+player's tree and context are theirs alone:
+
+```java
+CraftytmlPaper.holograms().spawn("menu", location, player -> {
+    DOMTreeElement tree = CTMLAPI.buildUI(markup, Map.of("player", player));
+    DOMContext ctx = new DOMContext(tree);
+    ctx.putCallBack("buy", callback -> {
+        if (callback.isPress()) player.getInventory().addItem(new ItemStack(Material.DIAMOND));
+    });
+    return new CTMLHologram.Content(tree, ctx);
+}, CTMLHologram.Settings.DEFAULT.withPerPlayer(true));
+```
+
+Everyone shares a shared hologram's one tree, so a callback that changes it changes it for everyone, and
+its one `hover:` follows the nearest player looking at it. On a per-player hologram, each player's hover,
+clicks and drags only reach their own. `new HologramRenderer(location, "lobby")` keeps
 everything it shows under one id, so a button that shows another ui replaces the hologram in place. A hologram whose chunk unloads is put back
 up when the chunk loads again, but holograms aren't saved: a restart or a reload removes them all.
 
@@ -142,7 +202,10 @@ While a window is open, the player can't walk away from it:
 - **Left click** is a left click, and presses a button. **Right click** is a right click.
 - **The hotbar** is the scroll wheel: a step right is a notch down. The selected slot doesn't change.
 - **Dragging** takes two clicks. A server hears a click but never the release after it, so one click
-  picks a `draggable` box up, it follows the cursor, and the next click puts it down.
+  picks a `draggable` box or a scrollbar's thumb up, it follows the cursor, and the next click puts it
+  down.
+- **Focus** goes to whatever focusable box a click lands on, so `focus:` and `focus-within:` classes
+  work. Tab and the other keys never arrive.
 - **Sneaking** closes the window, and so does teleporting away, dying or leaving.
 
 The player can turn as far as the window's edge and a little past it, and can't walk, jump or break

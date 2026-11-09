@@ -159,7 +159,7 @@ every movement it makes, so one that moves with nothing reported lets go within 
 
 On a server, a drag takes two clicks, because the server never hears a release: one click picks the box
 up, it follows where the player looks, and the next click puts it down. `DRAG` fires all the while it
-moves. Holograms can't be dragged.
+moves. It works the same on a hologram, where each player carries their own box with their own look.
 
 ## Buttons are plain boxes
 

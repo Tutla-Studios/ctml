@@ -32,11 +32,23 @@ Takes every hologram down and stops ticking.
 
 ### `public CTMLHologram spawn(String id, Location at, DOMTreeElement tree, DOMContext ctx, CTMLWindow.Frame frame)`
 
-Puts a tree into the world under an id, in place of any hologram already standing under it.
+The same, at a size of its own.
+
+### `public CTMLHologram spawn(String id, Location at, DOMTreeElement tree, DOMContext ctx, CTMLHologram.Settings settings)`
+
+Puts one tree into the world under an id for everyone, in place of any hologram already standing under it, turned and sized by the settings. One tree can only be in one place, so this is always shared: a hologram per player is `spawn(String, Location, Function, CTMLHologram.Settings)`.
+
+### `public CTMLHologram spawn(String id, Location at, Function<Player, CTMLHologram.Content> factory, CTMLHologram.Settings settings)`
+
+Puts up a hologram that gives every player near it a tree of their own, built by the factory when they come near and seen by them alone, so what each does with it stays theirs. The factory may hand back null for a player who should see nothing.
 
 ### `public boolean move(String id, Location to)`
 
 Moves a standing hologram, and says false where there is none under the id.
+
+### `public boolean move(String id, Location to, double roll)`
+
+Moves a standing hologram and turns it to a new roll, and says false where there is none under the id.
 
 ### `public boolean remove(String id)`
 

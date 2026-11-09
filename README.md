@@ -33,13 +33,13 @@ Every command needs the `craftytml.use` permission, which ops have. Where a play
 | `/ctml execute [targets] [name] [json] <ctml>` | Shows ctml written into the command itself. `targets` is a player or a selector like `@a`, the name defaults to `default`, and the json maps callbacks to commands: `{"buy":"give {player} diamond 1"}` |
 | `/ctml variable list\|put\|remove [name] [variable] [value]` | Lists, sets or clears the variables of an executed ui or a hologram, on every window of it straight away |
 | `/ctml callback list\|put\|remove [name] [callback] [command]` | Lists, sets or clears the callback commands of an executed ui or a hologram, on every window of it straight away |
-| `/ctml hologram create <id> [x y z] [yaw] [json] <ctml>` | Stands ctml in the world for everyone to see and click, at a place (`~` works) facing a yaw. `open <id> <ui>` does the same with a registered ui, `demo` puts up the intro, and `move`, `remove` and `list` manage them. Players looking at one get a cursor and can click it |
+| `/ctml hologram create <id> [x y z] [yaw] [--options] [json] <ctml>` | Stands ctml in the world for everyone to see and click, at a place (`~` works) facing a yaw. `--pitch=` and `--roll=` turn it, `--face=camera` or `--face=vertical` turn it to face each viewer, and `--per-player` gives every player a ui of their own. `open <id> <ui>` does the same with a registered ui, `demo` puts up the intro, and `move`, `remove` and `list` manage them. Players looking at one get a cursor and can click, drag and scroll it |
 | `/ctml demo [player]` | Shows the intro and the demo |
 | `/ctml close [player]` | Closes a player's window |
 | `/ctml list [registered\|running]` | Names the registered uis, the windows open right now and who has them open, or both |
 | `/ctml help [command]` | Lists every command, or explains one |
 
-A player works a window or a hologram by looking at it and clicking. The look moves a cursor, the hotbar scrolls, a draggable box is picked up with one click and put down with the next, and typing into a form opens one of minecraft's own dialogs on Paper. Sneaking closes a window.
+A player works a window or a hologram by looking at it and clicking. The look moves a cursor, the hotbar scrolls, a draggable box or a scrollbar is picked up with one click and put down with the next, a click focuses what it lands on, and typing into a form opens one of minecraft's own dialogs on Paper. Sneaking closes a window.
 
 ## For developers
 
@@ -137,7 +137,7 @@ The same file is both. Nothing in the markup says which it is, whichever class y
 - **`CTMLScreen`** opens it as a screen. The mouse and the keyboard reach it, so callbacks fire, boxes drag, scrollbars can be grabbed and `hover:` and other variants work.
 - **`CTMLHud`** draws it over the game as a hud. Everything a script drives still works like variables, class lists, scrolling, but a hud hears nothing from the user, so callbacks never fire.
 - **`WindowRenderer`** shows it on a server, as a window in front of one player, who is held still until it closes. Callbacks, variables, drags, scrolling and `hover:` work the same as in a screen, and forms open a dialog on Paper.
-- **`HologramRenderer`** stands it in the world on a server, at any place, for everyone to see. Everyone looking at it gets a cursor of their own and can click and scroll it, and `hover:` follows the nearest of them. Holograms are gone after a restart.
+- **`HologramRenderer`** stands it in the world on a server, at any place, for everyone to see, fixed at a yaw, pitch and roll or turning to face each viewer. Everyone looking at it gets a cursor of their own and can click, drag and scroll it, and `hover:` follows the nearest of them. A per-player hologram gives every player near it a ui of their own instead. Holograms are gone after a restart.
 
 A window or a hologram is drawn out of display entities, so rounded corners, shadows, images and letter-spacing are left out there, and gradients are drawn in bands.
 

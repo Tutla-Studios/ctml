@@ -21,6 +21,7 @@ import org.bukkit.entity.Player;
 public final class HologramRenderer implements UIRenderer {
     private final Location location;
     private final String id;
+    private final CTMLHologram.Settings settings;
     /** The id of the hologram this renderer put up last, which the next one it shows replaces. */
     private String shown;
 
@@ -31,8 +32,17 @@ public final class HologramRenderer implements UIRenderer {
 
     /** Stands everything under one id, each tree replacing the one before. */
     public HologramRenderer(Location location, String id){
+        this(location, id, CTMLHologram.Settings.DEFAULT);
+    }
+
+    /**
+     * The same, turned and sized by the settings. A renderer is handed one tree at a time, so what it puts
+     * up is always shared, whatever the settings say about that.
+     */
+    public HologramRenderer(Location location, String id, CTMLHologram.Settings settings){
         this.location = location.clone();
         this.id = id;
+        this.settings = settings.withPerPlayer(false);
     }
 
     @Override
@@ -40,7 +50,7 @@ public final class HologramRenderer implements UIRenderer {
         String standing = id != null ? id : name;
         CTMLHolograms holograms = CraftytmlPaper.holograms();
         if (shown != null && !shown.equals(standing)) holograms.remove(shown);
-        holograms.spawn(standing, location, tree, ctx);
+        holograms.spawn(standing, location, tree, ctx, settings);
         shown = standing;
     }
 

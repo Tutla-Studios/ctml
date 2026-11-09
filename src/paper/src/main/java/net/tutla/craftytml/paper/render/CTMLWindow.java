@@ -2,7 +2,6 @@ package net.tutla.craftytml.paper.render;
 
 import net.tutla.craftytml.client.dom.DOMContext;
 import net.tutla.craftytml.client.dom.DOMTreeElement;
-import net.tutla.craftytml.client.render.CTMLDrag;
 import net.tutla.craftytml.client.render.CTMLEvents;
 import net.tutla.craftytml.client.render.CTMLFocus;
 import net.tutla.craftytml.client.render.CTMLLayout;
@@ -40,8 +39,8 @@ import java.util.UUID;
  * <p>Clicks go through {@link CTMLClicks}, so controls and forms work the same as on a hologram.
  *
  * <h2>Dragging</h2>
- * A server hears a click but never the release after it, so a drag is two clicks: one on a draggable box
- * picks it up, it follows the cursor from then on, and the next click puts it down.
+ * A server hears a click but never the release after it, so a drag is two clicks: one on a draggable box,
+ * or on a scrollbar, picks it up, it follows the cursor from then on, and the next click puts it down.
  */
 public final class CTMLWindow {
 
@@ -104,8 +103,8 @@ public final class CTMLWindow {
     private double pointerX = Double.NaN, pointerY = Double.NaN;
     private DOMTreeElement hovered;
     private int releaseAt = -1;
-    /** The box being carried, between the click that picked it up and the one that puts it down. */
-    private CTMLDrag.Grip grip;
+    /** The box or bar being carried, between the click that picked it up and the one that puts it down. */
+    private CTMLHold hold;
     private int lastClickTick = Integer.MIN_VALUE / 2;
 
     private float savedWalkSpeed, savedFlySpeed;
@@ -197,15 +196,11 @@ public final class CTMLWindow {
         aim(player);
         List<CTMLLayout.Box> under = under();
         states.cursor(under);
-        if (releaseAt >= 0 && now >= releaseAt && grip == null) {
+        if (releaseAt >= 0 && now >= releaseAt && hold == null) {
             releaseAt = -1;
             states.release();
         }
-        if (grip != null && !Double.isNaN(pointerX)) {
-            CTMLDrag.Grip held = grip;
-            held.follow(pointerX, pointerY);
-            CTMLClicks.fire(windows.plugin(), () -> CTMLEvents.drag(ctx, held.element()));
-        }
+        if (hold != null && !Double.isNaN(pointerX)) hold.follow(windows.plugin(), ctx, pointerX, pointerY);
 
         if (surface.refresh()) {
             under = under(); // the boxes moved, so what is under the cursor may have too
@@ -226,10 +221,10 @@ public final class CTMLWindow {
         if (now - lastClickTick < CLICK_DEBOUNCE_TICKS) return;
         lastClickTick = now;
         aim(player); // from exactly where the player is looking now, not where they were last tick
-        if (grip != null) { // the click that puts a carried box down is for nothing else
-            grip = null;
+        if (hold != null) { // the click that puts a carried box or bar down is for nothing else
+            hold = null;
             states.release();
-            player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, SoundCategory.MASTER, 0.5f, 0.8f);
+            CTMLClicks.putDown(player);
             return;
         }
         if (Double.isNaN(pointerX)) return;
@@ -238,14 +233,7 @@ public final class CTMLWindow {
             states.press(under());
             releaseAt = now + PRESS_TICKS;
         }
-        double x = pointerX, y = pointerY;
-        if (CTMLClicks.press(windows.plugin(), player, surface.layout(), ctx, button, x, y)) return;
-
-        // what a click is not for, a draggable box under it is picked up by, the order a screen asks in
-        if (button == CTMLEvents.MouseButton.LEFT) {
-            grip = CTMLDrag.grab(surface.layout(), x, y);
-            if (grip != null) player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, SoundCategory.MASTER, 0.5f, 1.0f);
-        }
+        hold = CTMLClicks.press(windows.plugin(), player, surface.layout(), ctx, states, button, pointerX, pointerY);
     }
 
     /** The scroll wheel, which on a server is the hotbar: a step to the right is a notch down. */

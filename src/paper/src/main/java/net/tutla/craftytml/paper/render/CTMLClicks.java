@@ -5,9 +5,12 @@ import net.tutla.craftytml.client.ctml.element.input.Input;
 import net.tutla.craftytml.client.dom.CTMLCallback;
 import net.tutla.craftytml.client.dom.DOMContext;
 import net.tutla.craftytml.client.dom.DOMTreeElement;
+import net.tutla.craftytml.client.render.CTMLDrag;
 import net.tutla.craftytml.client.render.CTMLEvents;
 import net.tutla.craftytml.client.render.CTMLFocus;
 import net.tutla.craftytml.client.render.CTMLLayout;
+import net.tutla.craftytml.client.render.CTMLScroll;
+import net.tutla.craftytml.client.render.CTMLStates;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
 import org.bukkit.entity.Player;
@@ -44,22 +47,51 @@ final class CTMLClicks {
     }
 
     /**
-     * A press of one of {@link CTMLEvents.MouseButton}'s buttons at a point in layout pixels. Says whether
-     * anything took it, a control or a callback, so the caller can try something else with it.
+     * A press of one of {@link CTMLEvents.MouseButton}'s buttons at a point in layout pixels, taken in the
+     * order a screen takes it: a left press first hands the keyboard focus to the focusable box under it
+     * (which is what focus: and focus-within: read), and takes hold of a scrollbar it landed on; then a
+     * control takes it, then the callback under it, and what none of them wanted picks up a draggable box.
+     * Hands back what was picked up, a bar or a box, for the caller to carry until the next click, or null.
      */
-    static boolean press(Plugin plugin, Player player, CTMLLayout.Box layout, DOMContext ctx, int button,
-                         double x, double y){
-        if (layout == null) return false;
-        CTMLLayout.Box control = button == CTMLEvents.MouseButton.LEFT ? control(CTMLFocus.path(layout, x, y)) : null;
-        if (control != null) {
-            operate(plugin, player, ctx, control, x);
-            return true;
+    static CTMLHold press(Plugin plugin, Player player, CTMLLayout.Box layout, DOMContext ctx, CTMLStates states,
+                          int button, double x, double y){
+        if (layout == null) return null;
+        boolean left = button == CTMLEvents.MouseButton.LEFT;
+        if (left) {
+            DOMTreeElement focus = CTMLFocus.at(layout, x, y);
+            if (focus != null) states.keyboard(focus);
+
+            CTMLHold bar = CTMLHold.of(CTMLScroll.grab(layout, x, y));
+            if (bar != null) {
+                pickedUp(player);
+                return bar;
+            }
+            CTMLLayout.Box control = control(CTMLFocus.path(layout, x, y));
+            if (control != null) {
+                operate(plugin, player, ctx, control, x);
+                return null;
+            }
         }
 
         boolean[] taken = { false };
         fire(plugin, () -> taken[0] = CTMLEvents.click(layout, ctx, button, x, y));
-        if (taken[0]) player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, SoundCategory.MASTER, 0.5f, 1.2f);
-        return taken[0];
+        if (taken[0]) {
+            player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, SoundCategory.MASTER, 0.5f, 1.2f);
+            return null;
+        }
+        if (!left) return null;
+        CTMLHold box = CTMLHold.of(CTMLDrag.grab(layout, x, y));
+        if (box != null) pickedUp(player);
+        return box;
+    }
+
+    /** The sound of picking something up, and of putting it down again, a little lower. */
+    static void pickedUp(Player player){
+        player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, SoundCategory.MASTER, 0.5f, 1.0f);
+    }
+
+    static void putDown(Player player){
+        player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, SoundCategory.MASTER, 0.5f, 0.8f);
     }
 
     /** Whether a control is one a form fills in, rather than a button that is pressed or one never shown. */

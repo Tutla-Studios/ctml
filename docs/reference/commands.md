@@ -63,17 +63,19 @@ Shows ctml written into the command itself.
 ## hologram
 
 ```text
-/ctml hologram create|open|demo|move|remove|list <id> [x y z] [yaw] ...
+/ctml hologram create|open|demo|move|remove|list <id> [x y z] [yaw] [--options] ...
 ```
 
 Stands a ui in the world for everyone to see.
 
-- create &lt;id&gt; [x y z] [yaw] [json] &lt;ctml&gt;: ctml written into the command, with callbacks like execute's.
-- open &lt;id&gt; &lt;ui&gt; [x y z] [yaw]: a registered ui.
-- demo [id] [x y z] [yaw]: the intro and the demo, with all their callbacks, under the id demo unless named.
-- move &lt;id&gt; [x y z] [yaw], remove &lt;id&gt;, and list.
+- create &lt;id&gt; [x y z] [yaw] [--options] [json] &lt;ctml&gt;: ctml written into the command, with callbacks like execute's.
+- open &lt;id&gt; &lt;ui&gt; [x y z] [yaw] [--options]: a registered ui.
+- demo [id] [x y z] [yaw] [--options]: the intro and the demo, with all their callbacks, under the id demo unless named.
+- move &lt;id&gt; [x y z] [yaw] [--pitch=] [--roll=], remove &lt;id&gt;, and list.
 - Coordinates take ~ like any command; without them it goes 3 blocks in front of you.
-- yaw is the way its front faces; without it, it faces you.
+- yaw is the way its front faces; without it, it faces you. --pitch= tilts it and --roll= rolls it, in degrees.
+- --face=camera turns it to face every viewer, --face=vertical only about the upright, --face=fixed keeps it still.
+- --per-player gives each player near it a ui of their own that only they see and use; --shared, the default, is one for everyone.
 - Anyone looking at it within 6 blocks gets a cursor and can click it; hover follows the nearest of them.
 - variable and callback reach it by its id.
 - Holograms are gone after a restart.

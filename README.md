@@ -28,12 +28,13 @@ Every command needs the `craftytml.use` permission, which ops have. Where a play
 | --- | --- |
 | `/ctml open <name> [player]` | Shows a ui from the ui folder |
 | `/ctml run <script> [player]` | Runs a script from the ui folder again, as a ui of that player's own |
-| `/ctml execute [targets] <name> [json] <ctml>` | Shows ctml written into the command itself. `targets` is a name or a selector like `@a`, and the json maps callbacks to commands: `{"buy":"give {player} diamond 1"}` |
-| `/ctml variable put\|remove <name> <variable> [value]` | Sets or clears a variable on every window of an executed ui |
-| `/ctml callback put\|remove <name> <callback> [command]` | Sets or clears a callback command on every window of an executed ui |
+| `/ctml execute [targets] [name] [json] <ctml>` | Shows ctml written into the command itself. `targets` is a player or a selector like `@a`, the name defaults to `default`, and the json maps callbacks to commands: `{"buy":"give {player} diamond 1"}` |
+| `/ctml variable list\|put\|remove [name] [variable] [value]` | Lists, sets or clears the variables of an executed ui, on every window of it |
+| `/ctml callback list\|put\|remove [name] [callback] [command]` | Lists, sets or clears the callback commands of an executed ui, on every window of it |
 | `/ctml demo [player]` | Shows the intro and the demo |
 | `/ctml close [player]` | Closes a player's window |
-| `/ctml list` | Names the loaded uis |
+| `/ctml list [registered\|running]` | Names the registered uis, the windows open right now and who has them open, or both |
+| `/ctml help [command]` | Lists every command, or explains one |
 
 A player works a window by looking at it and clicking: the hotbar scrolls, sneaking closes it, and typing into a form opens a dialog on Paper.
 

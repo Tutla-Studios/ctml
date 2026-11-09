@@ -112,6 +112,11 @@ public final class CTMLWindows {
         return windows.containsKey(player.getUniqueId());
     }
 
+    /** Every window open right now. */
+    public List<CTMLWindow> all(){
+        return List.copyOf(windows.values());
+    }
+
     /** The windows open under a name, for something that wants to reach into all of them at once. */
     public List<CTMLWindow> named(String name){
         List<CTMLWindow> found = new java.util.ArrayList<>();

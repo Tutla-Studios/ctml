@@ -46,6 +46,10 @@ Closes the player's window, and says false where they had none.
 
 ### `public boolean isOpen(Player player)`
 
+### `public List<CTMLWindow> all()`
+
+Every window open right now.
+
 ### `public List<CTMLWindow> named(String name)`
 
 The windows open under a name, for something that wants to reach into all of them at once.

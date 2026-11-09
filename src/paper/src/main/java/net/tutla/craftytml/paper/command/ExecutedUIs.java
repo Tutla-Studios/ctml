@@ -77,6 +77,18 @@ final class ExecutedUIs {
         return had;
     }
 
+    /** The variables put on a name, in the order they were put, or null where the name has none. */
+    Map<String, String> variables(String name){
+        Profile profile = profiles.get(name);
+        return profile == null || profile.variables().isEmpty() ? null : Map.copyOf(profile.variables());
+    }
+
+    /** The callback commands put on a name, or null where the name has none. */
+    Map<String, String> callbacks(String name){
+        Profile profile = profiles.get(name);
+        return profile == null || profile.callbacks().isEmpty() ? null : Map.copyOf(profile.callbacks());
+    }
+
     /** The ui names anything has been put on, for tab completion. */
     Iterable<String> names(){
         return profiles.keySet();

@@ -40,10 +40,11 @@ last step, where the tree and its context are handed to a `UIRenderer`:
 | `/ctml run <script> [player]` | runs a script in the ui folder again and shows the new tree, which belongs to that player alone |
 | `/ctml demo [player]` | shows the intro, and the full demo from its button, if those files are in the ui folder |
 | `/ctml close [player]` | puts a player's window away |
-| `/ctml list` | names the trees in the `UIRegistry` |
-| `/ctml execute [targets] <name> [json] <ctml>` | shows ctml written into the command itself |
-| `/ctml variable put\|remove <name> <variable> [value]` | sets or clears a variable on an executed ui |
-| `/ctml callback put\|remove <name> <callback> [command]` | sets or clears a callback on an executed ui |
+| `/ctml list [registered\|running]` | names the trees in the `UIRegistry`, the windows open now and who has them, or both |
+| `/ctml help [command]` | lists every command, or explains one in detail |
+| `/ctml execute [targets] [name] [json] <ctml>` | shows ctml written into the command itself |
+| `/ctml variable list\|put\|remove [name] [variable] [value]` | lists, sets or clears the variables of an executed ui |
+| `/ctml callback list\|put\|remove [name] [callback] [command]` | lists, sets or clears the callbacks of an executed ui |
 
 Leave the player out and it's whoever ran the command. The commands need the `craftytml.use`
 permission, which ops have. A window opened from a command has an empty context, so its callbacks call
@@ -59,7 +60,8 @@ nothing.
 
 - **Targets** are a player's name or a selector such as `@a`. Leave them out and the ui goes to whoever
   ran the command.
-- **The name** (`shop` here) is how the variable and callback commands find this ui.
+- **The name** (`shop` here) is how the variable and callback commands find this ui. It's optional:
+  without one, the ui goes under the name `default`.
 - **The json** is optional. It maps each callback name to a command, which runs from the console when the
   callback is pressed, with `{player}` replaced by the name of whoever pressed it. Hovering doesn't run
   anything.
@@ -73,7 +75,11 @@ straight away, and to every one executed under it later:
 /ctml variable put shop price 5 coins
 /ctml callback put shop sell give {player} emerald 1
 /ctml variable remove shop price
+/ctml variable list shop
+/ctml callback list
 ```
+
+`list` with a name shows what that ui has, and without one shows every ui that has anything.
 
 Typed in chat, a command can only be 256 characters long. Longer markup has to come from a command block,
 a function or the console.

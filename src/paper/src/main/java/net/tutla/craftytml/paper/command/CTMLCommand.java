@@ -7,6 +7,7 @@ import net.tutla.craftytml.client.dom.DOMTreeElement;
 import net.tutla.craftytml.client.render.UIRegistry;
 import net.tutla.craftytml.client.render.UIRenderer;
 import net.tutla.craftytml.paper.CraftytmlPaper;
+import net.tutla.craftytml.paper.render.CTMLWindow;
 import net.tutla.craftytml.paper.render.WindowRenderer;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -53,10 +54,14 @@ public final class CTMLCommand implements TabExecutor {
     private static final String USAGE_RUN = "/ctml run <script> [player]";
     private static final String USAGE_DEMO = "/ctml demo [player]";
     private static final String USAGE_CLOSE = "/ctml close [player]";
-    private static final String USAGE_LIST = "/ctml list";
-    private static final String USAGE_EXECUTE = "/ctml execute [targets] <name> [json] <ctml>";
-    private static final String USAGE_VARIABLE = "/ctml variable put|remove <name> <variable> [value]";
-    private static final String USAGE_CALLBACK = "/ctml callback put|remove <name> <callback> [command]";
+    private static final String USAGE_LIST = "/ctml list [registered|running]";
+    private static final String USAGE_HELP = "/ctml help [command]";
+    private static final String USAGE_EXECUTE = "/ctml execute [targets] [name] [json] <ctml>";
+    private static final String USAGE_VARIABLE = "/ctml variable list|put|remove [name] [variable] [value]";
+    private static final String USAGE_CALLBACK = "/ctml callback list|put|remove [name] [callback] [command]";
+
+    /** The name an executed ui goes under when the command gives it none. */
+    static final String DEFAULT_NAME = "default";
 
     /** A success, in green. Always true, so a branch can end on it. */
     private static boolean done(CommandSender sender, String message){
@@ -77,12 +82,62 @@ public final class CTMLCommand implements TabExecutor {
         return true;
     }
 
+    /** One command for help to describe: how it is written, a line on what it does, and the detail after. */
+    private record Help(String usage, String summary, List<String> detail) {}
+
+    private static final Map<String, Help> HELP = helpPages();
+
+    private static Map<String, Help> helpPages(){
+        Map<String, Help> pages = new java.util.LinkedHashMap<>();
+        pages.put("open", new Help(USAGE_OPEN, "Shows a registered ui to a player.", List.of(
+                "name is a ui in the registry: /ctml list registered names them.",
+                "Leave the player out to show it to yourself.")));
+        pages.put("run", new Help(USAGE_RUN, "Runs a script from the ui folder again, as a ui of that player's own.", List.of(
+                "script is a file in plugins/CraftyTML/ui.",
+                "The script sees the player as player, and the tree it builds is not registered.")));
+        pages.put("execute", new Help(USAGE_EXECUTE, "Shows ctml written into the command itself.", List.of(
+                "targets is a player or a selector like @a, and defaults to you.",
+                "name is what variable and callback find it by, and defaults to default.",
+                "json maps callbacks to commands run from the console: {\"buy\":\"give {player} diamond 1\"}.",
+                "Everything after that is the ctml, built afresh for every target.")));
+        pages.put("variable", new Help(USAGE_VARIABLE, "Lists, sets or clears the variables of an executed ui.", List.of(
+                "put <name> <variable> <value>: the value is the rest of the line.",
+                "remove <name> <variable>, and list [name] for one ui or all of them.",
+                "Every window open under the name changes straight away, and every one executed under it later.")));
+        pages.put("callback", new Help(USAGE_CALLBACK, "Lists, sets or clears the callback commands of an executed ui.", List.of(
+                "put <name> <callback> <command>: {player} in the command is whoever pressed it.",
+                "remove <name> <callback>, and list [name] for one ui or all of them.",
+                "Only a press runs the command, never a hover.")));
+        pages.put("list", new Help(USAGE_LIST, "Lists the registered uis and the windows open now.", List.of(
+                "registered: the uis loaded from the ui folder or registered from java.",
+                "running: every window open right now, by name, with who has it open.",
+                "With neither, both.")));
+        pages.put("demo", new Help(USAGE_DEMO, "Shows the intro, and the full demo from its button.", List.of(
+                "Needs intro.ctml and demo_screen.ctml in the ui folder.")));
+        pages.put("close", new Help(USAGE_CLOSE, "Closes a player's window.", List.of(
+                "Leave the player out to close your own. Sneaking closes it too.")));
+        pages.put("help", new Help(USAGE_HELP, "Shows these commands, or one of them in detail.", List.of()));
+        return pages;
+    }
+
     private static boolean help(CommandSender sender){
-        sender.sendMessage(ChatColor.GOLD + "CraftyTML commands:");
-        for (String form : List.of(USAGE_OPEN, USAGE_RUN, USAGE_EXECUTE, USAGE_VARIABLE, USAGE_CALLBACK,
-                USAGE_DEMO, USAGE_CLOSE, USAGE_LIST)) {
-            sender.sendMessage(ChatColor.GRAY + " " + form);
+        sender.sendMessage(ChatColor.GOLD + "CraftyTML commands " + ChatColor.GRAY + "(/ctml help <command> for more):");
+        HELP.forEach((name, page) -> sender.sendMessage(ChatColor.WHITE + " " + page.usage()
+                + ChatColor.GRAY + " - " + page.summary()));
+        return true;
+    }
+
+    private static boolean help(CommandSender sender, String[] args){
+        if (args.length == 1) return help(sender);
+        if (args.length > 2) return usage(sender, "help takes at most one command.", USAGE_HELP);
+        Help page = HELP.get(args[1].toLowerCase());
+        if (page == null) {
+            fail(sender, "There is no /ctml " + args[1] + ".");
+            return help(sender);
         }
+        sender.sendMessage(ChatColor.GOLD + page.usage());
+        sender.sendMessage(ChatColor.WHITE + page.summary());
+        for (String line : page.detail()) sender.sendMessage(ChatColor.GRAY + " " + line);
         return true;
     }
 
@@ -110,7 +165,8 @@ public final class CTMLCommand implements TabExecutor {
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args){
         if (args.length == 0) return help(sender);
         return switch (args[0].toLowerCase()) {
-            case "list" -> list(sender);
+            case "list" -> list(sender, args);
+            case "help" -> help(sender, args);
             case "open" -> open(sender, args);
             case "run" -> run(sender, args);
             case "demo" -> demo(sender, args);
@@ -125,10 +181,41 @@ public final class CTMLCommand implements TabExecutor {
         };
     }
 
-    private boolean list(CommandSender sender){
-        if (UIRegistry.isEmpty()) return fail(sender, "No ctml uis are loaded. Put .ctml files in " + ui + " and restart.");
-        sender.sendMessage(ChatColor.GOLD + "Loaded ctml uis (" + UIRegistry.getAllNames().size() + "): "
+    private boolean list(CommandSender sender, String[] args){
+        if (args.length > 2) return usage(sender, "list takes at most one of registered or running.", USAGE_LIST);
+        String which = args.length == 2 ? args[1].toLowerCase() : "both";
+        return switch (which) {
+            case "registered" -> registered(sender);
+            case "running" -> running(sender);
+            case "both" -> {
+                registered(sender);
+                yield running(sender);
+            }
+            default -> usage(sender, args[1] + " is not registered or running.", USAGE_LIST);
+        };
+    }
+
+    /** The uis in the registry, which open and demo show. */
+    private boolean registered(CommandSender sender){
+        if (UIRegistry.isEmpty()) return fail(sender, "No uis are registered. Put .ctml files in " + ui + " and restart.");
+        sender.sendMessage(ChatColor.GOLD + "Registered uis (" + UIRegistry.getAllNames().size() + "): "
                 + ChatColor.WHITE + String.join(", ", UIRegistry.getAllNames()));
+        return true;
+    }
+
+    /** Every window open right now, by the name it was opened under, with who has it open. */
+    private static boolean running(CommandSender sender){
+        List<CTMLWindow> open = CraftytmlPaper.windows().all();
+        if (open.isEmpty()) return fail(sender, "No uis are running: nobody has a window open.");
+        Map<String, List<String>> byName = new java.util.TreeMap<>();
+        for (CTMLWindow window : open) {
+            Player owner = Bukkit.getPlayer(window.owner());
+            byName.computeIfAbsent(window.name().isEmpty() ? "(unnamed)" : window.name(), n -> new java.util.ArrayList<>())
+                    .add(owner == null ? window.owner().toString() : owner.getName());
+        }
+        sender.sendMessage(ChatColor.GOLD + "Running uis (" + open.size() + (open.size() == 1 ? " window" : " windows") + "):");
+        byName.forEach((name, viewers) -> sender.sendMessage(ChatColor.WHITE + " " + name + ChatColor.GRAY
+                + " - " + String.join(", ", viewers)));
         return true;
     }
 
@@ -182,10 +269,14 @@ public final class CTMLCommand implements TabExecutor {
     }
 
     private boolean variable(CommandSender sender, String[] args){
-        if (args.length < 2) return usage(sender, "Say whether to put or remove a variable.", USAGE_VARIABLE);
+        if (args.length < 2) return usage(sender, "Say whether to list, put or remove variables.", USAGE_VARIABLE);
         String action = args[1].toLowerCase();
+        if (action.equals("list")) {
+            if (args.length > 3) return usage(sender, "list takes at most a ui name.", USAGE_VARIABLE);
+            return listing(sender, "variable", args.length == 3 ? args[2] : null, executed::variables, " = ");
+        }
         if (!action.equals("put") && !action.equals("remove")) {
-            return usage(sender, args[1] + " is not put or remove.", USAGE_VARIABLE);
+            return usage(sender, args[1] + " is not list, put or remove.", USAGE_VARIABLE);
         }
         if (args.length < 3) return usage(sender, "Name the ui the variable is for.", USAGE_VARIABLE);
         if (args.length < 4) return usage(sender, "Name the variable.", USAGE_VARIABLE);
@@ -203,10 +294,14 @@ public final class CTMLCommand implements TabExecutor {
     }
 
     private boolean callback(CommandSender sender, String[] args){
-        if (args.length < 2) return usage(sender, "Say whether to put or remove a callback.", USAGE_CALLBACK);
+        if (args.length < 2) return usage(sender, "Say whether to list, put or remove callbacks.", USAGE_CALLBACK);
         String action = args[1].toLowerCase();
+        if (action.equals("list")) {
+            if (args.length > 3) return usage(sender, "list takes at most a ui name.", USAGE_CALLBACK);
+            return listing(sender, "callback", args.length == 3 ? args[2] : null, executed::callbacks, " runs /");
+        }
         if (!action.equals("put") && !action.equals("remove")) {
-            return usage(sender, args[1] + " is not put or remove.", USAGE_CALLBACK);
+            return usage(sender, args[1] + " is not list, put or remove.", USAGE_CALLBACK);
         }
         if (args.length < 3) return usage(sender, "Name the ui the callback is for.", USAGE_CALLBACK);
         if (args.length < 4) return usage(sender, "Name the callback, as the markup's callback property names it.", USAGE_CALLBACK);
@@ -224,6 +319,32 @@ public final class CTMLCommand implements TabExecutor {
                 + (run.startsWith("/") ? run.substring(1) : run) + reached(open) + ".");
     }
 
+    /**
+     * What has been put on one ui name, or on every name where none is given: each entry as its key, the
+     * joiner and its value, under a heading saying whose they are.
+     */
+    private boolean listing(CommandSender sender, String kind, String name,
+                            java.util.function.Function<String, Map<String, String>> of, String joiner){
+        List<String> names = new java.util.ArrayList<>();
+        if (name != null) names.add(name);
+        else executed.names().forEach(names::add);
+
+        boolean any = false;
+        for (String each : names) {
+            Map<String, String> entries = of.apply(each);
+            if (entries == null) continue;
+            any = true;
+            sender.sendMessage(ChatColor.GOLD + each + ChatColor.GRAY + " (" + entries.size() + " "
+                    + kind + (entries.size() == 1 ? "" : "s") + "):");
+            entries.forEach((key, value) -> sender.sendMessage(ChatColor.GRAY + "  " + ChatColor.WHITE + key
+                    + ChatColor.GRAY + joiner + ChatColor.WHITE + (joiner.endsWith("/") && value.startsWith("/") ? value.substring(1) : value)));
+        }
+        if (!any) {
+            return fail(sender, name == null ? "No ui has any " + kind + "s." : name + " has no " + kind + "s.");
+        }
+        return true;
+    }
+
     /** ", in 3 open windows", or nothing where none are open to reach. */
     private static String reached(int open){
         return open == 0 ? "" : ", in " + open + (open == 1 ? " open window" : " open windows");
@@ -236,7 +357,7 @@ public final class CTMLCommand implements TabExecutor {
      * target so every one of them has a tree of their own, never registered, and gone once their window is.
      */
     private boolean execute(CommandSender sender, String[] args){
-        if (args.length < 2) return usage(sender, "Give the ui a name and its ctml.", USAGE_EXECUTE);
+        if (args.length < 2) return usage(sender, "Give the ctml to show.", USAGE_EXECUTE);
         int at = 1;
         List<Player> targets;
         if (args[1].startsWith("@")) {
@@ -248,7 +369,7 @@ public final class CTMLCommand implements TabExecutor {
             }
             if (targets.isEmpty()) return fail(sender, args[1] + " matched no players.");
             at = 2;
-        } else if (args.length > 3 && Bukkit.getPlayerExact(args[1]) != null) {
+        } else if (args.length > 2 && Bukkit.getPlayerExact(args[1]) != null) {
             targets = List.of(Bukkit.getPlayerExact(args[1]));
             at = 2;
         } else if (sender instanceof Player player) {
@@ -257,13 +378,15 @@ public final class CTMLCommand implements TabExecutor {
             return usage(sender, "The console has no window: name a player or a selector to show it to.", USAGE_EXECUTE);
         }
 
-        if (args.length <= at) return usage(sender, "Give the ui a name.", USAGE_EXECUTE);
-        String name = args[at];
-        if (name.startsWith("<") || name.startsWith("{")) {
-            return usage(sender, "Give the ui a name before its json and ctml.", USAGE_EXECUTE);
+        if (args.length <= at) return usage(sender, "There is no ctml to show.", USAGE_EXECUTE);
+        // the name is the word before the json or the ctml, where there is one: both of those start with a bracket
+        String name = DEFAULT_NAME;
+        if (!args[at].startsWith("<") && !args[at].startsWith("{")) {
+            name = args[at];
+            at++;
         }
 
-        String rest = rest(args, at + 1).strip();
+        String rest = rest(args, at).strip();
         Map<String, String> callbacks = Map.of();
         if (rest.startsWith("{")) {
             int end = jsonEnd(rest);
@@ -278,7 +401,7 @@ public final class CTMLCommand implements TabExecutor {
             if (callbacks == null) callbacks = Map.of();
             rest = rest.substring(end).strip();
         }
-        if (rest.isEmpty()) return usage(sender, "There is no ctml to show after the name.", USAGE_EXECUTE);
+        if (rest.isEmpty()) return usage(sender, "There is no ctml to show.", USAGE_EXECUTE);
         if (!rest.startsWith("<")) return fail(sender, "The ctml has to start with a tag, like <ctml>.");
 
         int shown = 0;
@@ -335,31 +458,136 @@ public final class CTMLCommand implements TabExecutor {
         return null;
     }
 
+    // ---- tab completion: every argument of every command offers what can go there ----
+
+    private static final List<String> SUBCOMMANDS =
+            List.of("open", "run", "execute", "variable", "callback", "demo", "close", "list", "help");
+    private static final List<String> SELECTORS = List.of("@a", "@p", "@s", "@r");
+
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args){
-        if (args.length == 1) {
-            return matching(List.of("open", "run", "demo", "close", "list", "execute", "variable", "callback"), args[0]);
+        if (args.length == 1) return matching(SUBCOMMANDS, args[0]);
+        String typed = args[args.length - 1];
+        int at = args.length - 1; // the argument being typed, counted after the subcommand's own name at 0
+        return switch (args[0].toLowerCase()) {
+            case "open" -> at == 1 ? matching(List.copyOf(UIRegistry.getAllNames()), typed)
+                    : at == 2 ? matching(players(), typed) : List.of();
+            case "run" -> at == 1 ? matching(scripts(), typed)
+                    : at == 2 ? matching(players(), typed) : List.of();
+            case "demo", "close" -> at == 1 ? matching(players(), typed) : List.of();
+            case "list" -> at == 1 ? matching(List.of("registered", "running"), typed) : List.of();
+            case "help" -> at == 1 ? matching(List.copyOf(HELP.keySet()), typed) : List.of();
+            case "execute" -> executeCompletions(args, typed);
+            case "variable" -> storeCompletions(args, typed, false);
+            case "callback" -> storeCompletions(args, typed, true);
+            default -> List.of();
+        };
+    }
+
+    /**
+     * execute's arguments, which can be left out: whatever can come next is offered, targets, then names,
+     * then the json and the ctml, each only where the arguments before it leave room for it.
+     */
+    private List<String> executeCompletions(String[] args, String typed){
+        int at = 1;
+        List<String> options = new java.util.ArrayList<>();
+        // the targets, the first time round
+        if (args.length - 1 == at) {
+            options.addAll(SELECTORS);
+            options.addAll(players());
         }
-        boolean store = args[0].equals("variable") || args[0].equals("callback");
-        if (store && args.length == 2) return matching(List.of("put", "remove"), args[1]);
-        if (store && args.length == 3) {
-            List<String> names = new java.util.ArrayList<>();
-            executed.names().forEach(names::add);
-            return matching(names, args[2]);
+        if (args.length - 1 > at && (args[at].startsWith("@") || Bukkit.getPlayerExact(args[at]) != null)) at++;
+        // a name, where one can still come
+        if (args.length - 1 == at) options.addAll(uiNames());
+        if (args.length - 1 > at && !args[at].startsWith("<") && !args[at].startsWith("{")) at++;
+        // then the json and the ctml, which both start with a bracket
+        if (args.length - 1 == at) {
+            options.add("{\"callback\":\"/command\"}");
+            options.add("<ctml");
+        } else if (args.length - 1 > at && args[at].startsWith("{") && !String.join(" ", java.util.Arrays.copyOfRange(args, at, args.length - 1)).contains("}")) {
+            return List.of(); // still inside the json
+        } else if (args.length - 1 > at) {
+            if (!typed.isEmpty() && !typed.contains("<")) options.add(typed.contains("=") ? typed : "class=\"");
+            options.addAll(List.of("<div", "<span", "<button", "</ctml>"));
         }
-        if (args[0].equals("execute") && args.length == 2) {
-            List<String> options = new java.util.ArrayList<>(List.of("@a", "@p", "@s", "@r"));
-            Bukkit.getOnlinePlayers().forEach(p -> options.add(p.getName()));
-            return matching(options, args[1]);
+        return matching(options, typed);
+    }
+
+    /**
+     * variable and callback: list, put or remove, then the ui name, then what that ui already has, and for a
+     * callback's command, the server's commands followed by {player} and the players online.
+     */
+    private List<String> storeCompletions(String[] args, String typed, boolean callbacks){
+        int at = args.length - 1;
+        if (at == 1) return matching(List.of("list", "put", "remove"), typed);
+        String action = args[1].toLowerCase();
+        if (at == 2) return matching(uiNames(), typed);
+        if (action.equals("list")) return List.of();
+
+        String name = args[2];
+        if (at == 3) {
+            java.util.Set<String> keys = new java.util.TreeSet<>();
+            Map<String, String> had = callbacks ? executed.callbacks(name) : executed.variables(name);
+            if (had != null) keys.addAll(had.keySet());
+            // a callback can also be one the open windows of this ui name in their markup and have nothing for yet
+            if (callbacks && action.equals("put")) keys.addAll(callbackNames(name));
+            return matching(List.copyOf(keys), typed);
         }
-        boolean named = args.length == 2 && (args[0].equals("open") || args[0].equals("run"));
-        if (named) return matching(List.copyOf(UIRegistry.getAllNames()), args[1]);
-        boolean player = (args.length == 3 && (args[0].equals("open") || args[0].equals("run")))
-                || (args.length == 2 && (args[0].equals("demo") || args[0].equals("close")));
-        if (player) {
-            return matching(Bukkit.getOnlinePlayers().stream().map(Player::getName).toList(), args[args.length - 1]);
+        if (!action.equals("put")) return List.of();
+        if (!callbacks) {
+            Map<String, String> had = executed.variables(name);
+            String now = had == null ? null : had.get(args[3]);
+            return at == 4 && now != null ? matching(List.of(now), typed) : List.of();
         }
-        return List.of();
+        if (at == 4) return matching(serverCommands(), typed);
+        List<String> options = new java.util.ArrayList<>(List.of("{player}"));
+        options.addAll(SELECTORS);
+        options.addAll(players());
+        return matching(options, typed);
+    }
+
+    private static List<String> players(){
+        return Bukkit.getOnlinePlayers().stream().map(Player::getName).toList();
+    }
+
+    /** The scripts in the ui folder, which run reads from. */
+    private List<String> scripts(){
+        try (java.util.stream.Stream<Path> files = Files.list(ui)) {
+            return files.filter(Files::isRegularFile).map(file -> file.getFileName().toString()).sorted().toList();
+        } catch (java.io.IOException e) {
+            return List.of();
+        }
+    }
+
+    /** The ui names an executed ui can have: default, every name something was put on, and every open one. */
+    private List<String> uiNames(){
+        java.util.Set<String> names = new java.util.TreeSet<>();
+        names.add(DEFAULT_NAME);
+        executed.names().forEach(names::add);
+        for (CTMLWindow window : CraftytmlPaper.windows().all()) names.add(window.name());
+        return List.copyOf(names);
+    }
+
+    /** The callback names written in the markup of the windows open under a ui name. */
+    private static java.util.Set<String> callbackNames(String name){
+        java.util.Set<String> found = new java.util.TreeSet<>();
+        for (CTMLWindow window : CraftytmlPaper.windows().named(name)) {
+            DOMTreeElement root = window.context().getHeadNode();
+            if (root == null) continue;
+            root.walk(node -> {
+                if (node instanceof DOMTreeElement element && element.getCallback() != null) found.add(element.getCallback());
+            });
+        }
+        return found;
+    }
+
+    /** Every command the server knows, with its slash, for a callback to run. */
+    private static List<String> serverCommands(){
+        java.util.Set<String> commands = new java.util.TreeSet<>();
+        for (org.bukkit.help.HelpTopic topic : Bukkit.getHelpMap().getHelpTopics()) {
+            if (topic.getName().startsWith("/")) commands.add(topic.getName());
+        }
+        return List.copyOf(commands);
     }
 
     private static List<String> matching(List<String> options, String typed){

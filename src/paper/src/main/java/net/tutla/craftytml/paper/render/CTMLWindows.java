@@ -75,8 +75,14 @@ public final class CTMLWindows {
      * else keeps is gone with it.
      */
     public void open(Player player, String name, DOMTreeElement tree, DOMContext ctx, CTMLWindow.Frame frame){
+        open(player, name, tree, ctx, frame, CTMLWindow.Position.AHEAD);
+    }
+
+    /** The same, put somewhere other than straight ahead of the player. */
+    public void open(Player player, String name, DOMTreeElement tree, DOMContext ctx, CTMLWindow.Frame frame,
+                     CTMLWindow.Position position){
         close(player); // the old one goes first, which also gives the player their speed back
-        CTMLWindow window = new CTMLWindow(this, player, name, tree, ctx, frame);
+        CTMLWindow window = new CTMLWindow(this, player, name, tree, ctx, frame, position);
         try {
             window.open(player);
         } catch (RuntimeException e) {

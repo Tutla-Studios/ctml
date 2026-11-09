@@ -92,6 +92,16 @@ public final class CTMLWindow {
         double heightBlocks(){ return height * blocksPerPixel; }
     }
 
+    /**
+     * Where a window goes, measured from the player as the window opens: this many blocks to the right
+     * of and above the spot straight ahead of their eyes, at the frame's distance. A negative number goes
+     * left or down. Wherever it goes, the window is turned to face their eyes.
+     */
+    public record Position(double right, double up) {
+        /** Straight ahead, where a window goes when nothing says otherwise. */
+        public static final Position AHEAD = new Position(0, 0);
+    }
+
     // ---- what a vanilla text display draws (the client's TextDisplayRenderer) ----------------------
     // One of its pixels is 0.025 blocks at scale 1. A display of a single space draws a background 5 px
     // wide (a 4 px advance and a pixel of padding) and 10 px tall, its bottom on the entity and its middle
@@ -149,6 +159,9 @@ public final class CTMLWindow {
     private final DOMTreeElement tree;
     private final DOMContext ctx;
     private final Frame frame;
+    private final Position position;
+    /** How far the window's middle is from the eyes it opened in front of. */
+    private double reach;
     private final CTMLStates states = new CTMLStates();
 
     private final List<TextDisplay> displays = new ArrayList<>();
@@ -183,13 +196,15 @@ public final class CTMLWindow {
     private record Paint(double u, double v, float scaleX, float scaleY, String text, int background,
                          byte opacity, boolean shadow) {}
 
-    CTMLWindow(CTMLWindows windows, Player owner, String name, DOMTreeElement tree, DOMContext ctx, Frame frame){
+    CTMLWindow(CTMLWindows windows, Player owner, String name, DOMTreeElement tree, DOMContext ctx, Frame frame,
+               Position position){
         this.windows = windows;
         this.owner = owner.getUniqueId();
         this.name = name == null ? "" : name;
         this.tree = tree;
         this.ctx = ctx;
         this.frame = frame;
+        this.position = position == null ? Position.AHEAD : position;
     }
 
     /** The player this window is in front of. */
@@ -209,16 +224,31 @@ public final class CTMLWindow {
         world = player.getWorld();
         Location eye = player.getEyeLocation();
         Vector look = eye.getDirection().normalize();
-        openYaw = eye.getYaw();
-        openPitch = eye.getPitch();
 
-        // the plane faces the eye: right from the yaw alone, so it holds up looking straight up or down,
-        // up across right and the look, and the normal back towards the player
+        // the player's own right and up, from the yaw alone so they hold looking straight up or down,
+        // which is what the position is measured along
         double yaw = Math.toRadians(eye.getYaw());
-        right = new Vector(-Math.cos(yaw), 0, -Math.sin(yaw));
-        up = right.getCrossProduct(look).normalize();
-        normal = look.clone().multiply(-1);
-        center = eye.toVector().add(look.clone().multiply(frame.distance()));
+        Vector viewRight = new Vector(-Math.cos(yaw), 0, -Math.sin(yaw));
+        Vector viewUp = viewRight.getCrossProduct(look).normalize();
+        center = eye.toVector().add(look.clone().multiply(frame.distance()))
+                .add(viewRight.clone().multiply(position.right()))
+                .add(viewUp.clone().multiply(position.up()));
+
+        // the plane faces the eye from wherever it ended up: right is level and across the line from the
+        // eye to the middle, up is across the two, and the normal points back along that line
+        Vector toWindow = center.clone().subtract(eye.toVector());
+        reach = toWindow.length();
+        Vector along = toWindow.clone().multiply(1 / reach);
+        boolean level = along.getX() * along.getX() + along.getZ() * along.getZ() > 1e-6;
+        right = level ? new Vector(-along.getZ(), 0, along.getX()).normalize() : viewRight;
+        up = right.getCrossProduct(along).normalize();
+        normal = along.clone().multiply(-1);
+
+        // the camera is held around the window's middle, not around where the player happened to look
+        Location facing = eye.clone();
+        if (level) facing.setDirection(along);
+        openYaw = facing.getYaw();
+        openPitch = facing.getPitch();
 
         // a display with no yaw or pitch is turned by its transformation alone, whose columns are where
         // its own x, y and z end up; text faces its own +z
@@ -239,7 +269,7 @@ public final class CTMLWindow {
         // empty handed right clicks at the air send the server nothing, so there is a hitbox to aim at:
         // a box around the window, kept small enough that the player is not standing in it
         float box = (float) clamp(Math.max(frame.widthBlocks(), frame.heightBlocks()) + 0.2,
-                0.5, frame.distance() * 2 - 0.8);
+                0.5, reach * 2 - 0.8);
         Location at = center.clone().subtract(new Vector(0, box / 2, 0)).toLocation(world);
         Interaction hitbox = world.spawn(at, Interaction.class, i -> {
             prepare(i);
@@ -833,8 +863,8 @@ public final class CTMLWindow {
      * as the window's edge and a margin past it, from where they were looking when it opened.
      */
     float[] clampLook(float yaw, float pitch){
-        double maxYaw = Math.toDegrees(Math.atan2(frame.widthBlocks() / 2, frame.distance())) + LOOK_MARGIN;
-        double maxPitch = Math.toDegrees(Math.atan2(frame.heightBlocks() / 2, frame.distance())) + LOOK_MARGIN;
+        double maxYaw = Math.toDegrees(Math.atan2(frame.widthBlocks() / 2, reach)) + LOOK_MARGIN;
+        double maxPitch = Math.toDegrees(Math.atan2(frame.heightBlocks() / 2, reach)) + LOOK_MARGIN;
         double dYaw = wrapDegrees(yaw - openYaw);
         double dPitch = pitch - openPitch;
         double cYaw = clamp(dYaw, -maxYaw, maxYaw);

@@ -18,6 +18,14 @@ public record WindowRenderer(Player player) implements UIRenderer {
         CraftytmlPaper.windows().open(player, name, tree, ctx);
     }
 
+    /**
+     * Shows a tree somewhere other than straight ahead: so many blocks right of and above where the player
+     * is looking, turned to face them. {@code new CTMLWindow.Position(-1.5, 0)} puts it off to their left.
+     */
+    public void show(String name, DOMTreeElement tree, DOMContext ctx, CTMLWindow.Position position){
+        CraftytmlPaper.windows().open(player, name, tree, ctx, CTMLWindow.Frame.DEFAULT, position);
+    }
+
     @Override
     public void openLink(String url){
         TextComponent link = new TextComponent(url);

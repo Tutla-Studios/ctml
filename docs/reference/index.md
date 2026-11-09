@@ -2,7 +2,7 @@
 title: "Reference"
 summary: "The generated reference: elements, properties, styles, classes, variants, colours and the java API."
 created: "2026-11-01"
-updated: "2026-11-04"
+updated: "2026-11-09"
 isdoc: true
 ---
 
@@ -19,6 +19,7 @@ The whole of ctml, as the code has it. Every page here is generated from the sou
 | [Classes](/ctml/reference/classes) | The 357 classes that write them |
 | [Variants](/ctml/reference/variants) | The 21 conditions a class can sit behind |
 | [Colours](/ctml/reference/colors) | The palette, and how to write one of your own |
+| [Commands](/ctml/reference/commands) | The 10 `/ctml` subcommands a server has |
 | [Java API](/ctml/reference/java) | The classes a mod talks to |
 
 ## Writing the reference

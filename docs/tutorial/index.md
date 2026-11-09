@@ -1,13 +1,17 @@
 ---
 title: "Tutorial"
-summary: "Build a CraftyTML screen and a hud from nothing, one idea at a time."
+summary: "Build a CraftyTML screen and a hud from nothing, one idea at a time, on a client or a server."
 created: "2026-11-01"
-updated: "2026-11-01"
+updated: "2026-11-09"
 isdoc: true
 ---
 
 This tutorial builds one thing all the way through: a small stats panel, opened as a screen and then
 drawn again as a hud. Each page adds one idea and leaves you something that runs.
+
+Each page also covers a plugin on a Paper, Spigot or Bukkit server. Wherever a client and a server
+differ, the server's way is in a short **On a server** part of its own. Everything else, the markup,
+the classes, the variables and the callbacks, is the same code on both.
 
 It assumes you have the dependency in place and a `.ctml` file being read, which
 [Getting started](/ctml/getting-started) covers.
@@ -33,14 +37,19 @@ Three things do the work, and keeping them apart is most of understanding Crafty
   Nothing in the file says whether it is a screen or a hud.
 - **The context.** A `DOMContext` holds the variables the tree reads and the callbacks it names. It
   is also how you reach into the tree by id.
-- **The view.** A `CTMLScreen` opens the tree as a screen; a `CTMLHud` draws the same tree over the
-  game. The view is the only thing that decides which it is.
+- **The view.** On a client, a `CTMLScreen` opens the tree as a screen and a `CTMLHud` draws the same
+  tree over the game. On a server, a `WindowRenderer` floats it in front of one player and a
+  `HologramRenderer` stands it in the world for everyone. The view is the only thing that differs
+  between them.
 
 ```text
-hello.ctml  ──CTMLAPI──▶  DOMTreeElement  ──┬──▶  CTMLScreen   (mouse, keyboard, callbacks)
-                                 ▲          └──▶  CTMLHud      (drawn only, hears nothing)
-                                 │
-                            DOMContext      (variables, callbacks, getElementById)
+                                            client:
+hello.ctml  ──CTMLAPI──▶  DOMTreeElement  ──┬──▶  CTMLScreen        (mouse, keyboard, callbacks)
+                                 ▲          ├──▶  CTMLHud           (drawn only, hears nothing)
+                                 │          │ server:
+                            DOMContext      ├──▶  WindowRenderer    (one player: look, click, hotbar)
+         (variables, callbacks,             └──▶  HologramRenderer  (everyone near it: look, click)
+          getElementById)
 ```
 
 A tree can only be in one view at a time, and a hud hears nothing from the user, so its callbacks
@@ -48,6 +57,6 @@ never fire. Everything else is the same.
 
 ## Two things to know up front
 
-A `.ctml` file is read at startup only, so an edit needs the game restarted. And every element is
+A `.ctml` file is read at startup only, so an edit needs the game, or the server, restarted. And every element is
 written with a closing tag, except `<hr>`, `<br>` and `<img>`, which hold nothing and may be written
 either way.

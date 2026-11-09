@@ -1,13 +1,15 @@
 ---
 title: "Getting started"
-summary: "Add CraftyTML to a Fabric mod, write your first .ctml file and open it as a screen."
+summary: "Add CraftyTML to a Fabric mod or a Paper plugin, write your first .ctml file and show it."
 created: "2026-11-01"
-updated: "2026-11-01"
+updated: "2026-11-09"
 isdoc: true
 ---
 
-CraftyTML is a Fabric client mod that reads html-like markup and draws it as minecraft ui. You write
-a `.ctml` file, style it with tailwind-like classes, and show it with one line of java.
+CraftyTML reads html-like markup and draws it as minecraft ui. You write a `.ctml` file, style it
+with tailwind-like classes, and show it with one line of java. The same jar is a Fabric client mod and
+a Paper, Spigot and Bukkit plugin: on a client a tree opens as a screen or a hud, and on a server as a
+window in front of one player or a hologram anyone can see.
 
 This page gets the dependency in place and a screen on the display. The
 [tutorial](/ctml/tutorial) then builds something real with it.
@@ -18,8 +20,8 @@ This page gets the dependency in place and a screen on the display. The
 - Java 25
 - The CraftyTML jar, from [Modrinth](https://modrinth.com/mod/ctml)
 
-This page sets up a Fabric client mod. For a Paper, Spigot or Bukkit server, the jar goes in `plugins/`
-instead, and [Paper and Spigot](/ctml/tutorial/paper) covers the rest.
+The first half of this page sets up a Fabric client mod. Writing a plugin instead? Skip to
+[On a server](#on-a-server): everything except the setup and the last line of showing a tree is the same.
 
 ## Add it to your project
 
@@ -128,3 +130,61 @@ first line asks. [Callbacks](/ctml/tutorial/callbacks) goes through the rest of 
 
 There is no hot reload yet, so a changed `.ctml` file is only read when the game starts. An edit
 needs a restart.
+
+## On a server
+
+For a Paper, Spigot or Bukkit plugin, you need:
+- a plugin project for minecraft 26.3 on Java 25
+- the CraftyTML and Tums jars in the server's `plugins/` folder
+
+Compile against the same jar:
+
+```groovy
+repositories {
+    maven { url = 'https://repo.papermc.io/repository/maven-public/' }
+}
+
+dependencies {
+    compileOnly "io.papermc.paper:paper-api:26.3.build.245-stable"
+    compileOnly files("libs/craftytml-0.1.0.jar")
+}
+```
+
+and load after it, in your `plugin.yml`:
+
+```yaml
+depend: [CraftyTML]
+```
+
+There is nothing to point at a folder. CraftyTML runs every script in `plugins/CraftyTML/ui/` into the
+`UIRegistry` as it starts, so put `hello.ctml` there. The markup is exactly the same.
+
+Showing it is the same code as on a client, up to the last line. Where a client builds a `CTMLScreen`,
+a server hands the tree to a renderer:
+
+```java
+@EventHandler
+public void onJoin(PlayerJoinEvent event){
+    Player player = event.getPlayer();
+
+    DOMTreeElement tree = UIRegistry.getUIFromName("hello.ctml");
+    if (tree == null) return;                    // the file is not in plugins/CraftyTML/ui
+
+    DOMContext ctx = new DOMContext(tree);
+    ctx.putCallBack("sayHi", callback -> {
+        if (!callback.isPress()) return;
+        callback.getCtx().getElementById("greeting").property("text", "hi " + player.getName() + "!", null);
+    });
+
+    new WindowRenderer(player).show("hello.ctml", tree, ctx);
+}
+```
+
+`WindowRenderer` floats the tree in front of that one player, who looks at it to move a cursor and
+clicks to press. `new HologramRenderer(location)` stands it in the world for everyone instead. You can
+also do all of this without java, using `/ctml open hello.ctml` and the rest of the
+[commands](/ctml/reference/commands).
+
+A tree from the registry is one tree, so two players shown it share it. For a tree of their own, build
+one per player with `CTMLAPI.buildUI`, which [Paper and Spigot](/ctml/tutorial/paper) covers along with
+everything else that differs on a server.

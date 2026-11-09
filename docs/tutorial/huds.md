@@ -2,7 +2,7 @@
 title: "Huds"
 summary: "Build a CTMLHud around the same tree to draw it over the game, and what a hud cannot do."
 created: "2026-11-01"
-updated: "2026-11-01"
+updated: "2026-11-09"
 isdoc: true
 ---
 
@@ -97,6 +97,21 @@ For a second tree of the same markup, register the file under two names:
 CTMLAPI.createUI("stats-hud.ctml", markup);
 CTMLAPI.createUI("stats-screen.ctml", markup);
 ```
+
+## On a server
+
+A server can't draw on a player's screen, so there are no huds. The closest thing is a hologram: the
+same tree standing in the world, which everyone near it can see. Unlike a hud, it hears clicks:
+
+```java
+DOMTreeElement tree = UIRegistry.getUIFromName("stats.ctml");
+DOMContext ctx = new DOMContext(tree);
+new HologramRenderer(location).show("stats", tree, ctx);
+```
+
+Or without java: `/ctml hologram open stats stats.ctml`. A hologram stands where it's put rather than
+following the player, so it suits a scoreboard in a lobby better than a counter in the corner of the
+screen. [Paper and Spigot](/ctml/tutorial/paper#holograms) has the rest.
 
 ## Next
 

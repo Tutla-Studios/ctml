@@ -2,7 +2,7 @@
 title: "Variables"
 summary: "Put a value in the dom context and every ${name} in the markup says it, from the next frame on."
 created: "2026-11-01"
-updated: "2026-11-01"
+updated: "2026-11-09"
 isdoc: true
 ---
 
@@ -47,6 +47,23 @@ ClientTickEvents.END_CLIENT_TICK.register(client -> {
 
 That is the whole of it. `putVariable` tells the screen as well as storing the value, so every string
 naming it is read again and whatever it was showing changes with it. Nothing else has to be called.
+
+### On a server
+
+The same `putVariable` changes a window or a hologram, on the next tick. A server has no client tick,
+so update it from the scheduler, or from whatever event changed the value:
+
+```java
+Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+    ctx.putVariable("blocks", walked.get(player.getUniqueId()));
+    ctx.putVariable("mobs", met.get(player.getUniqueId()));
+}, 20L, 20L);
+```
+
+A context belongs to the tree it was made for. A tree from `UIRegistry` is shared by everyone shown it,
+so its variables are too; give each player a tree of their own with `CTMLAPI.buildUI` when the values
+are theirs. From a command, `/ctml variable put <name> <variable> <value>` does the same for a ui made
+with `/ctml execute` or `/ctml hologram create`.
 
 Only the elements that carry a `${` are touched, so a variable nothing mentions costs a walk of the
 tree and no layout at all.
@@ -104,6 +121,9 @@ Both say how many elements they reached. Elements are recognised by their ids, s
 named is found again whatever happens to the tree, while an id handed out automatically lasts only as
 long as that tree does. It is kept in memory and written nowhere, so a restart starts the screens
 over.
+
+On a server there is no `removed()` to hook. Call `rememberState` just before you close a window with
+`CraftytmlPaper.windows().close(player)`, and `restoreState` just after you show the tree again.
 
 ## Next
 

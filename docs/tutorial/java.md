@@ -2,7 +2,7 @@
 title: "Driving it from java"
 summary: "Markup written in java, a ctml tree inside your own gui, reading back what a script was told, and checking a layout headless."
 created: "2026-11-01"
-updated: "2026-11-01"
+updated: "2026-11-09"
 isdoc: true
 ---
 
@@ -65,6 +65,30 @@ What you take on by doing this is what `CTMLScreen` was doing for you:
 
 If you want all of that, use `CTMLScreen`. Use `layout` and `paint` when you want the drawing and
 none of the behaviour.
+
+## On a server
+
+The client-only part of this page is drawing inside a gui of your own. The rest carries over to a
+plugin:
+- **Markup written in java and registered with `CTMLAPI.createUI`** works on a server too. So does
+  `runAllScripts`, though CraftyTML already runs its own ui folder as it starts.
+- **A tree of one player's own:** a server has many players, and a registered tree is shared by everyone
+  shown it. `CTMLAPI.buildUI` builds a fresh tree every time it is called and registers nothing, with
+  variables the script can read from its first line:
+
+  ```java
+  DOMTreeElement tree = CTMLAPI.buildUI(markup, Map.of("player", player));
+  ```
+
+- **Showing a tree** goes through a renderer: `new WindowRenderer(player)` or
+  `new HologramRenderer(location)`.
+- **Code that takes a `UIRenderer`** rather than one of those runs on both a client
+  (`new ScreenRenderer()`) and a server unchanged. That's how the bundled intro and demo are written.
+- **Reaching into the tree** works the same, and `CTMLDiagnostics` reports bad classes the same way.
+
+A window is a surface of text displays laid out against the vanilla font, sized by
+`CTMLWindow.Frame` and placed by `CTMLWindow.Position`; [Paper and Spigot](/ctml/tutorial/paper) covers
+both.
 
 ## Reaching into the tree
 

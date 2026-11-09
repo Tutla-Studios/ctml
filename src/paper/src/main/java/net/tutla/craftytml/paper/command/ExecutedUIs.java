@@ -24,7 +24,7 @@ import java.util.function.Supplier;
  * <p>Only the names and strings are kept. A tree lives in its window alone, so it is gone once the window
  * closes, and a name with nothing left on it is dropped as well.
  */
-final class ExecutedUIs {
+public final class ExecutedUIs {
     /** What one ui name has had put on it. */
     private record Profile(Map<String, String> variables, Map<String, String> callbacks) {
         boolean isEmpty(){ return variables.isEmpty() && callbacks.isEmpty(); }
@@ -33,7 +33,7 @@ final class ExecutedUIs {
     private final Map<String, Profile> profiles = new HashMap<>();
 
     /** The context for one executed window: the name's variables and callbacks, then the ones given with it. */
-    DOMContext context(String name, DOMTreeElement tree, Player player, Map<String, String> callbacks){
+    public DOMContext context(String name, DOMTreeElement tree, Player player, Map<String, String> callbacks){
         UUID owner = player.getUniqueId();
         return context(name, tree, () -> Bukkit.getPlayer(owner), callbacks);
     }
@@ -42,7 +42,7 @@ final class ExecutedUIs {
      * The same, for something with no one player behind it: a hologram, whose presser is whoever clicked it
      * last, found when a callback runs rather than when the context is made.
      */
-    DOMContext context(String name, DOMTreeElement tree, Supplier<Player> presser, Map<String, String> callbacks){
+    public DOMContext context(String name, DOMTreeElement tree, Supplier<Player> presser, Map<String, String> callbacks){
         DOMContext ctx = new DOMContext(tree);
         Profile profile = profiles.get(name);
         if (profile != null) {
@@ -59,7 +59,7 @@ final class ExecutedUIs {
     }
 
     /** Puts a variable on a name, and says how many open windows it reached. */
-    int putVariable(String name, String variable, String value){
+    public int putVariable(String name, String variable, String value){
         profile(name).variables().put(variable, value);
         List<CTMLWindow> open = CraftytmlPaper.windows().named(name);
         for (CTMLWindow window : open) window.context().putVariable(variable, value);
@@ -69,7 +69,7 @@ final class ExecutedUIs {
     }
 
     /** Takes a variable off a name, and says whether the name had it. */
-    boolean removeVariable(String name, String variable){
+    public boolean removeVariable(String name, String variable){
         Profile profile = profiles.get(name);
         boolean had = profile != null && profile.variables().remove(variable) != null;
         for (CTMLWindow window : CraftytmlPaper.windows().named(name)) window.context().removeVariable(variable);
@@ -80,7 +80,7 @@ final class ExecutedUIs {
     }
 
     /** Puts a callback command on a name, and says how many open windows it reached. */
-    int putCallback(String name, String callback, String command){
+    public int putCallback(String name, String callback, String command){
         profile(name).callbacks().put(callback, command);
         List<CTMLWindow> open = CraftytmlPaper.windows().named(name);
         for (CTMLWindow window : open) {
@@ -93,7 +93,7 @@ final class ExecutedUIs {
     }
 
     /** Takes a callback off a name, and says whether the name had it. */
-    boolean removeCallback(String name, String callback){
+    public boolean removeCallback(String name, String callback){
         Profile profile = profiles.get(name);
         boolean had = profile != null && profile.callbacks().remove(callback) != null;
         // a context has no way to forget a name, but one that leads nowhere is the same as none
@@ -105,19 +105,19 @@ final class ExecutedUIs {
     }
 
     /** The variables put on a name, in the order they were put, or null where the name has none. */
-    Map<String, String> variables(String name){
+    public Map<String, String> variables(String name){
         Profile profile = profiles.get(name);
         return profile == null || profile.variables().isEmpty() ? null : Map.copyOf(profile.variables());
     }
 
     /** The callback commands put on a name, or null where the name has none. */
-    Map<String, String> callbacks(String name){
+    public Map<String, String> callbacks(String name){
         Profile profile = profiles.get(name);
         return profile == null || profile.callbacks().isEmpty() ? null : Map.copyOf(profile.callbacks());
     }
 
     /** The ui names anything has been put on, for tab completion. */
-    Iterable<String> names(){
+    public Iterable<String> names(){
         return profiles.keySet();
     }
 

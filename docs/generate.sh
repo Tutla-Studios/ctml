@@ -10,6 +10,9 @@
 #   index.md                 from the project README
 #   reference/*.md           from the registries, ElementStyle, TailwindParser, Variant, TailwindColors
 #   reference/java/*.md      from the javadoc of the classes in JAVA_API below
+#   reference/commands.md    from the /ctml subcommands: the order CTMLCommand adds them in, and the
+#                            usage, summary and help lines each passes to super(...), which are the
+#                            same strings /ctml help prints
 #   sidebar.json             from PAGES below, for the wiki's github sync to pick up
 #
 #   getting-started.md and tutorial/*.md are written by hand and never touched here. A generated page
@@ -39,6 +42,8 @@ FABRIC_SRC="$ROOT/src/fabric/src/client/java/net/tutla/craftytml/client"
 # and the server side, whose classes JAVA_API names as paper/<file>
 PAPER_SRC="$ROOT/src/paper/src/main/java/net/tutla/craftytml/paper"
 PAPER_PKG="net.tutla.craftytml.paper"
+# the /ctml command and its subcommands, which the commands reference is read off
+COMMAND_SRC="$PAPER_SRC/command"
 PKG="net.tutla.craftytml.client"
 
 # where the docs sit on the wiki, which is where the sync mounts this folder
@@ -1022,6 +1027,80 @@ gen_java(){
     printf '%s' "$links" > "$WORK/javalinks.tsv"
 }
 
+# ---------------------------------------------------------------------------- the /ctml commands
+
+# The subcommands CTMLCommand registers, in the order it registers them, which is the order help lists them in.
+command_classes(){
+    sed -n 's/.*new \([A-Z][A-Za-z0-9]*Command\)(.*/\1/p' "$COMMAND_SRC/CTMLCommand.java" | awk '!seen[$0]++'
+}
+
+# The strings a subcommand hands super(...), one a line, unescaped: its name, its usage, its summary, and
+# the lines help prints under them. A StoreCommand passes its store between them, which is not a string.
+command_strings(){
+    PERL_BADLANG=0 perl -0777 -ne '
+        if (/\bsuper\s*\((.*?)\)\s*;/s) {
+            my $call = $1;
+            while ($call =~ /"((?:\\.|[^"\\])*)"/g) {
+                my $s = $1;
+                $s =~ s/\\"/"/g;
+                $s =~ s/\\\\/\\/g;
+                print "$s\n";
+            }
+        }' "$1"
+}
+
+# Text shown as text, not as markup: the usage lines are full of <angle> brackets.
+command_text(){ sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g'; }
+
+check_commands(){
+    local cls file bad=""
+    [ -f "$COMMAND_SRC/CTMLCommand.java" ] || { echo "no CTMLCommand.java under $COMMAND_SRC" >&2; exit 1; }
+    for cls in $(command_classes); do
+        file="$(find "$COMMAND_SRC" -name "$cls.java" | head -1)"
+        if [ -z "$file" ]; then bad="$bad\n  $cls: no $cls.java under $COMMAND_SRC"; continue; fi
+        [ "$(command_strings "$file" | wc -l)" -ge 3 ] \
+            || bad="$bad\n  $cls: super(...) needs a name, a usage and a summary"
+    done
+    [ -z "$bad" ] || { printf "subcommands the commands reference cannot read:$bad\n" >&2; exit 1; }
+}
+
+gen_commands(){
+    local cls file name usage summary
+    : > "$WORK/commands.tsv"
+    for cls in $(command_classes); do
+        file="$(find "$COMMAND_SRC" -name "$cls.java" | head -1)"
+        command_strings "$file" > "$WORK/strings"
+        name="$(sed -n 1p "$WORK/strings")"
+        usage="$(sed -n 2p "$WORK/strings")"
+        summary="$(sed -n 3p "$WORK/strings")"
+        printf '%s\t%s\t%s\t%s\n' "$name" "$usage" "$summary" "$file" >> "$WORK/commands.tsv"
+    done
+    {
+        cat <<INTRO
+The \`/ctml\` command, on a Paper, Spigot or Bukkit server. Every subcommand needs the \`craftytml.use\`
+permission, which ops have, and where a player is optional it is whoever runs the command. The same lines
+are what \`/ctml help\` prints in game, and [Paper and Spigot]($BASE/tutorial/paper) walks through using them.
+
+| Command | What it does |
+| --- | --- |
+INTRO
+        while IFS=$'\t' read -r name usage summary file; do
+            printf '| [`/ctml %s`](#%s) | %s |\n' "$name" "$name" "$(printf '%s' "$summary" | command_text)"
+        done < "$WORK/commands.tsv"
+        while IFS=$'\t' read -r name usage summary file; do
+            printf '\n## %s\n\n' "$name"
+            printf '```text\n%s\n```\n\n' "$usage"
+            printf '%s\n' "$(printf '%s' "$summary" | command_text)"
+            command_strings "$file" | tail -n +4 > "$WORK/detail"
+            if [ -s "$WORK/detail" ]; then
+                echo
+                command_text < "$WORK/detail" | sed 's/^/- /'
+            fi
+        done < "$WORK/commands.tsv"
+    } | emit "reference/commands.md" "Commands" \
+        "Every /ctml subcommand on a Paper, Spigot or Bukkit server: how it is written and what it does."
+}
+
 gen_reference_index(){
     {
         cat <<INTRO
@@ -1036,6 +1115,7 @@ The whole of ctml, as the code has it. Every page here is generated from the sou
 | [Classes]($BASE/reference/classes) | The $(wc -l < "$WORK/utilities.tsv" | tr -d ' ') classes that write them |
 | [Variants]($BASE/reference/variants) | The $(wc -l < "$WORK/variants.tsv" | tr -d ' ') conditions a class can sit behind |
 | [Colours]($BASE/reference/colors) | The palette, and how to write one of your own |
+| [Commands]($BASE/reference/commands) | The $(wc -l < "$WORK/commands.tsv" | tr -d ' ') \`/ctml\` subcommands a server has |
 | [Java API]($BASE/reference/java) | The classes a mod talks to |
 
 ## Writing the reference
@@ -1154,6 +1234,7 @@ gen_sidebar(){
         printf '        "Classes": "%s/reference/classes",\n' "$BASE"
         printf '        "Variants": "%s/reference/variants",\n' "$BASE"
         printf '        "Colours": "%s/reference/colors",\n' "$BASE"
+        printf '        "Commands": "%s/reference/commands",\n' "$BASE"
         printf '        "Java API": {\n'
         printf '            "Overview": "%s/reference/java"' "$BASE"
         local out rel
@@ -1288,6 +1369,7 @@ check_tags(){
 main(){
     build_tables
     check_tags
+    check_commands
     [ "$CHECK" = 1 ] && echo "checking docs/ against src/" || echo "writing docs/ from src/"
     gen_index
     gen_elements
@@ -1297,6 +1379,7 @@ main(){
     gen_variants
     gen_colors
     gen_java
+    gen_commands
     gen_reference_index
     gen_sidebar
     if [ "$CHECK" = 1 ]; then

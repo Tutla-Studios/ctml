@@ -2,7 +2,7 @@
 title: "Your first screen"
 summary: "Write a .ctml file, read it into a tree and open it as a CTMLScreen."
 created: "2026-11-01"
-updated: "2026-11-01"
+updated: "2026-11-09"
 isdoc: true
 ---
 
@@ -11,7 +11,7 @@ rest of the tutorial builds on.
 
 ## The file
 
-Create `stats.ctml` in `ctml/ui/`:
+Create `stats.ctml` in `ctml/ui/`, or in `plugins/CraftyTML/ui/` on a server:
 
 ```html
 <ctml class="w-full h-full flex items-center justify-center bg-slate-900/80 text-slate-100 text-shadow">
@@ -87,12 +87,34 @@ worth checking rather than letting a null reach the screen.
 The screen is built before it is shown because the constructor takes the screen to go back to. Here
 that is the title screen the event handed you.
 
+### On a server
+
+A server has no title screen. Show the panel when a player joins, or from a command of your own. Only
+the last line is different:
+
+```java
+@EventHandler
+public void onJoin(PlayerJoinEvent event){
+    DOMTreeElement tree = UIRegistry.getUIFromName("stats.ctml");
+    if (tree == null) return;
+
+    DOMContext ctx = new DOMContext(tree);
+    new WindowRenderer(event.getPlayer()).show("stats.ctml", tree, ctx);
+}
+```
+
+Or skip the java and run `/ctml open stats.ctml` in game. The panel floats in front of the player, who
+can't walk away from it until they sneak or it's closed with `/ctml close`.
+
 ## What happens each frame
 
 `CTMLScreen` lays the tree out only when something has actually moved. A style, a property, the tree
 itself, a drag or a scroll bumps the dom's revision, and a resize changes the screen; every other
 frame just draws the boxes that are already worked out. You do not have to manage any of that, but it
 is why putting a variable in the context is enough to change what the screen says.
+
+A window on a server works the same way, once a tick: a tree that hasn't changed costs nothing, and a
+changed one only updates the parts that came out different.
 
 ## Next
 

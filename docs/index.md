@@ -28,7 +28,7 @@ CraftyTML is a Minecraft mod for Fabric and a plugin for Paper, Spigot and Bukki
 
 ### Server commands
 
-Every command needs the `craftytml.use` permission, which ops have. Where a player is optional, it is whoever runs the command.
+Every command needs the `craftytml.use` permission, which ops have. Where a player is optional, it is whoever runs the command. Every one is explained in full in the [commands reference](https://wiki.tutla.net/ctml/reference/commands), and in game by `/ctml help <command>`.
 
 | Command | What it does |
 | --- | --- |

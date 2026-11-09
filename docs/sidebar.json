@@ -32,6 +32,7 @@
         "Classes": "/ctml/reference/classes",
         "Variants": "/ctml/reference/variants",
         "Colours": "/ctml/reference/colors",
+        "Commands": "/ctml/reference/commands",
         "Java API": {
             "Overview": "/ctml/reference/java",
             "CTMLAPI": "/ctml/reference/java/ctmlapi",

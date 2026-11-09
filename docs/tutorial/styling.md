@@ -2,7 +2,7 @@
 title: "Styling"
 summary: "The class list: the spacing scale, colours, flex and grid, arbitrary values and variants."
 created: "2026-11-01"
-updated: "2026-11-01"
+updated: "2026-11-09"
 isdoc: true
 ---
 
@@ -108,6 +108,21 @@ sibling, and no arbitrary selectors, since there is no selector engine behind th
 
 A class the parser cannot use is handed back rather than quietly dropped, so a typo is something your
 host can report instead of something that silently does nothing.
+
+### On a server
+
+Every class is read and laid out the same on a server, and the layout comes out the same size. What
+differs is the drawing: a window or a hologram is made of flat display entities, which can't draw
+everything a screen can.
+- **Drawn as written:** colours and their `/50` alphas, borders, text in its colour, weight and slant,
+  opacity, scrollbars and form controls.
+- **Approximated:** gradients are drawn as bands of colour, and a text gradient colours each letter.
+- **Not drawn:** `rounded`, shadows, `bg-[url(...)]` and `<img>` pictures, focus rings and
+  letter-spacing. They still take up their room, so nothing moves.
+- **Text in a scrolling box:** a line the box would cut off is left out whole, since a display can't
+  be cut.
+
+A panel styled for a client looks right on a server as long as it doesn't depend on those.
 
 ## Setting a style from java
 

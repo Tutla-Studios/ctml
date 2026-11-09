@@ -2,7 +2,7 @@
 title: "Scrolling"
 summary: "Make a box a scrollport, style its bars, and bring a child into view from java."
 created: "2026-11-01"
-updated: "2026-11-01"
+updated: "2026-11-09"
 isdoc: true
 ---
 
@@ -82,6 +82,16 @@ scroll is not corrected; it picks a new anchor and waits for the frame after.
 
 Where the scroll sits is also kept as a share of the room it had, so the same place comes back after
 the window changes size.
+
+## On a server
+
+Everything on this page works the same in a window on a server. Only the input is different:
+- **The hotbar is the wheel.** Scrolling the hotbar scrolls the box the player is looking at, a step to
+  the right being a notch down, and the selected slot doesn't move.
+- **No keys.** The arrow keys, page up and down, home and end never reach a server.
+- **No grabbing the bar.** A bar can't be grabbed; it's still drawn and still moves with the scroll.
+- **Holograms** don't take the wheel at all, so only `scrollx`, `scrolly` and `scrollinto` move a
+  scrollport in one.
 
 ## In a hud
 

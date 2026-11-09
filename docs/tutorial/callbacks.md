@@ -2,7 +2,7 @@
 title: "Callbacks"
 summary: "Name a function in the markup, register it on the context, and hear what the user does to an element."
 created: "2026-11-01"
-updated: "2026-11-04"
+updated: "2026-11-09"
 isdoc: true
 ---
 
@@ -48,6 +48,26 @@ where the mouse did.
 
 And what nothing is told about: a release, a wheel, a key other than enter and space, an element
 being scrolled, and the cursor *leaving*. `HOVER` is only told about the way in.
+
+### On a server
+
+Callbacks are registered and written exactly the same way. They are just reached differently, because
+a server has no mouse or keyboard:
+- **The cursor** is wherever the player is looking on the window or hologram. Arriving over an element
+  is a `HOVER`.
+- **A left click** (attack) is `LEFT_CLICK`, or `INPUT` on a button. **A right click** (use) is
+  `RIGHT_CLICK`. There is no middle click.
+- **Keys** never arrive, so `INPUT` from enter or space never happens, and `getKeycode()` is always
+  `NO_KEY`.
+
+Your context is made for one player, so a callback can use that player directly. On a hologram,
+which everyone shares, `CraftytmlPaper.holograms().get(id).presser()` is whoever clicked it.
+
+Without java, a callback can run a server command instead:
+- `/ctml callback put <name> <callback> <command>`
+- or the json in front of `/ctml execute` and `/ctml hologram create`
+
+`{player}` in the command is whoever pressed it.
 
 ## Hovering as a feature
 
@@ -137,6 +157,10 @@ A drag ends on the mouse release. There is no way to read the live button state 
 so a release that never arrives is worked out from the cursor instead: a button that is held reports
 every movement it makes, so one that moves with nothing reported lets go within a few frames.
 
+On a server, a drag takes two clicks, because the server never hears a release: one click picks the box
+up, it follows where the player looks, and the next click puts it down. `DRAG` fires all the while it
+moves. Holograms can't be dragged.
+
 ## Buttons are plain boxes
 
 A `<button>` is a box that can be pressed. It is inline-block, centres its text, and is in the tab
@@ -217,6 +241,13 @@ tab is showing, the swatch is drawn over a chequerboard, and `alpha()` and `argb
 and the colour with it. Without `alpha` it stays `#rrggbb` and opaque. Neither takes `min`, `max` or `step`, and both are read off the
 element as `value`, with `date()` and `rgb()` on `Input` for java.
 
+On a server, nothing can be typed straight into a field, because the server never sees the keys:
+- **Checkboxes, radios and sliders** answer a click on their own.
+- **Text fields, textareas, numbers, dates, colours and selects** open the whole form as one of
+  minecraft's own dialogs when clicked. Done writes every value back and fires each changed control's
+  `INPUT`, the same as typing on a client.
+- **Spigot and Bukkit** have no dialogs, so only the click-only controls work there.
+
 What is not: wrapping in a textarea (a long line scrolls sideways),
 `<label>`, forms and `submit`, and the types that need a picker of their own (`time`, `month`, `week`, `datetime-local`, `file`).
 `min`, `max` and `step` are whole numbers. The rest of html's input attributes (`autocomplete`, `inputmode`, `accept`, `capture`, `alt`, `list`, `form`, `formaction`, `formenctype`, `formmethod`, `formtarget`, `formnovalidate`, `dirname`, `wrap`, `title`, `multiple`, `spellcheck`) are accepted and can be read back, but nothing acts on them. A `<select>` opens its list under itself and draws it over
@@ -232,6 +263,15 @@ ctx.putCallBack("openWiki", callback -> {
     if (!callback.isPress()) return;
     ConfirmLinkScreen.confirmLinkNow(parent, URI.create("https://wiki.tutla.net/ctml"));
 });
+```
+
+A server can't open anything on the client, so send the link to the player's chat to click instead, as
+the renderers' `openLink` does:
+
+```java
+TextComponent link = new TextComponent("https://wiki.tutla.net/ctml");
+link.setClickEvent(new ClickEvent(ClickEvent.Action.OPEN_URL, "https://wiki.tutla.net/ctml"));
+player.spigot().sendMessage(link);
 ```
 
 ## Next

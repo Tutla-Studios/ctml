@@ -34,18 +34,10 @@ last step, where the tree and its context are handed to a `UIRenderer`:
 
 ## Commands
 
-| command | what it does |
-| --- | --- |
-| `/ctml open <name> [player]` | shows a tree from the `UIRegistry` |
-| `/ctml run <script> [player]` | runs a script in the ui folder again and shows the new tree, which belongs to that player alone |
-| `/ctml demo [player]` | shows the intro, and the full demo from its button, if those files are in the ui folder |
-| `/ctml close [player]` | puts a player's window away |
-| `/ctml list [registered\|running]` | names the trees in the `UIRegistry`, the windows open now and who has them, or both |
-| `/ctml help [command]` | lists every command, or explains one in detail |
-| `/ctml hologram create\|open\|move\|remove\|list ...` | stands a ui in the world for everyone, see [Holograms](#holograms) |
-| `/ctml execute [targets] [name] [json] <ctml>` | shows ctml written into the command itself |
-| `/ctml variable list\|put\|remove [name] [variable] [value]` | lists, sets or clears the variables of an executed ui |
-| `/ctml callback list\|put\|remove [name] [callback] [command]` | lists, sets or clears the callbacks of an executed ui |
+Everything here can also be done with `/ctml` commands: `open`, `run`, `execute`, `hologram`, `variable`,
+`callback`, `list`, `demo`, `close` and `help`. The [Commands](/ctml/reference/commands) reference lists
+each one with how it's written and what it does. That page is generated from the plugin, so it always
+matches what `/ctml help` prints in game.
 
 Leave the player out and it's whoever ran the command. The commands need the `craftytml.use`
 permission, which ops have. A window opened from a command has an empty context, so its callbacks call

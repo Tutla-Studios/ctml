@@ -53,6 +53,23 @@ While a window is open, the player can't walk away from it:
   picks a `draggable` box up, it follows the cursor, and the next click puts it down.
 - **Sneaking** closes the window, and so does teleporting away, dying or leaving.
 
+## Forms
+
+A server can't hear a keyboard, so what a player types goes through one of minecraft's own dialogs.
+
+- **Click-only controls:** a checkbox ticks, a radio button is chosen, and a slider jumps to where the
+  click landed, straight from the click.
+- **Typing controls:** clicking a text field, a textarea, a number, a date, a colour or a select opens
+  the window's form as a dialog. Every control in the window is in it, in the order they're written:
+  text boxes, toggles for checkboxes, sliders for ranges, and a list of choices for each select and
+  each group of radio buttons. **Done** writes every value back and fires the `INPUT` callback of each
+  control that changed, the same as typing into it on a client. **Cancel** changes nothing.
+
+An input is labelled in the dialog with its `name`, or its `placeholder` where it has no name.
+
+Dialogs are part of Paper. On Spigot and Bukkit the click-only controls still work, but nothing can be
+typed.
+
 The player can turn as far as the window's edge and a little past it, and can't walk, jump or break
 anything until it closes. If the server crashes with a window open, the player's walk speed is put back
 the next time they join.
@@ -103,13 +120,13 @@ client's window.
 A window is made of flat display entities, and some of what a client screen draws has no equivalent:
 
 - **Drawn:** background colours, borders, text in its colour, weight and slant, scrollbars, opacity,
-  and gradients. A background gradient is drawn as bands of colour, and a text gradient colours each
-  glyph.
-- **Not drawn:** rounded corners, shadows, images, focus rings, letter-spacing, and the insides of form
-  controls. A text line that a scrolling box would cut off is left out whole, since a display can't be
-  cut.
-- **No keyboard:** nothing can be typed into, tab doesn't walk the focus, and enter and space don't press
-  anything. Only the mouse is available.
+  gradients, and form controls with their ticks, sliders and swatches. A background gradient is drawn
+  as bands of colour, and a text gradient colours each glyph.
+- **Not drawn:** rounded corners (a radio's dot is square), shadows, images, focus rings and
+  letter-spacing. A text line that a scrolling box would cut off is left out whole, since a display
+  can't be cut.
+- **No keyboard:** typing goes through the form's dialog. Tab doesn't move the focus, and enter and
+  space don't press anything.
 - **No huds.** A window is always in front of one player, never drawn over everyone's game.
 
 Text is measured with the vanilla font's glyph widths, which is what the client draws a display in. A

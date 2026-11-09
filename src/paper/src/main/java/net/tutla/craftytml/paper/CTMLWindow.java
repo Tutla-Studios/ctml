@@ -1,6 +1,10 @@
 package net.tutla.craftytml.paper;
 
 import net.tutla.craftytml.client.ctml.ElementStyle;
+import net.tutla.craftytml.client.ctml.element.input.FormControl;
+import net.tutla.craftytml.client.ctml.element.input.Input;
+import net.tutla.craftytml.client.ctml.element.input.Select;
+import net.tutla.craftytml.client.dom.CTMLCallback;
 import net.tutla.craftytml.client.ctml.style.Gradient;
 import net.tutla.craftytml.client.dom.DOMContext;
 import net.tutla.craftytml.client.dom.DOMTreeElement;
@@ -59,6 +63,11 @@ import java.util.logging.Level;
  * wholly inside it. Rounded corners, shadows, images, focus rings, letter-spacing and the insides of form
  * controls are not drawn: a display has no way to.
  *
+ * <h2>Forms</h2>
+ * A checkbox, a radio button and a slider answer a click straight away: a tick, a dot, or the slider set to
+ * where it was aimed. Anything that needs typing into, a text field, a textarea, a select, a number, a date
+ * or a colour, opens the window's form as a dialog instead, on Paper; Spigot and Bukkit have no dialogs.
+ *
  * <h2>Dragging</h2>
  * A server hears a click but never the release after it, so a drag is two clicks: one on a draggable box
  * picks it up, it follows the cursor from then on, and the next click puts it down.
@@ -115,6 +124,11 @@ public final class CTMLWindow {
     private static final ElementStyle.Key<ElementStyle.BorderStyle>[] BORDER_STYLES = new ElementStyle.Key[]{
             ElementStyle.BORDER_TOP_STYLE, ElementStyle.BORDER_RIGHT_STYLE,
             ElementStyle.BORDER_BOTTOM_STYLE, ElementStyle.BORDER_LEFT_STYLE };
+
+    /** What a control's own marks are drawn in, the same as on a client. */
+    private static final int THUMB = 4;
+    private static final int TRACK = 0xFF6B7280;
+    private static final int FIELD_BACKGROUND = 0xFF111827;
 
     private static final int CLICK_DEBOUNCE_TICKS = 4;
     /** How long a press holds active: on what it landed in, since a server never hears the release. */
@@ -204,7 +218,7 @@ public final class CTMLWindow {
                 (float) up.getX(), (float) up.getY(), (float) up.getZ(),
                 (float) normal.getX(), (float) normal.getY(), (float) normal.getZ()));
 
-        cursor = spawnDisplay(player, 0);
+        cursor = spawnDisplay(player, 0, d -> {});
         cursor.setText("");
         cursor.setBackgroundColor(Color.fromARGB(0, 0, 0, 0));
         cursor.setShadowed(false);
@@ -284,6 +298,14 @@ public final class CTMLWindow {
             releaseAt = now + PRESS_TICKS;
         }
         double x = pointerX, y = pointerY;
+
+        // a control under the click takes it, the way a client asks its controls before anything else
+        CTMLLayout.Box control = button == CTMLEvents.MouseButton.LEFT ? control(under()) : null;
+        if (control != null) {
+            operate(player, control, x);
+            return;
+        }
+
         boolean[] taken = { false };
         fire(() -> taken[0] = CTMLEvents.click(layout, ctx, button, x, y));
         if (taken[0]) {
@@ -307,6 +329,89 @@ public final class CTMLWindow {
     /** Swallows clicks for a moment, for the arm swing that follows dropping an item. */
     void suppressClicks(int now){
         lastClickTick = now;
+    }
+
+    /** Whether a control is one a form fills in, rather than a button that is pressed or one never shown. */
+    static boolean isControl(FormControl control){
+        if (!(control instanceof Input input)) return true;
+        return switch (input.kind()) {
+            case BUTTON, SUBMIT, RESET, HIDDEN -> false;
+            default -> true;
+        };
+    }
+
+    /** The innermost box in a chain that is a control a form fills in, or null. */
+    private static CTMLLayout.Box control(List<CTMLLayout.Box> chain){
+        for (int i = chain.size() - 1; i >= 0; i--) {
+            if (chain.get(i).element().getElement() instanceof FormControl control && isControl(control)) {
+                return chain.get(i);
+            }
+        }
+        return null;
+    }
+
+    /** A click on a control: the ones a click can work on their own, and the form for the rest. */
+    private void operate(Player player, CTMLLayout.Box box, double x){
+        FormControl control = (FormControl) box.element().getElement();
+        if (!control.isEditable()) return;
+        DOMTreeElement element = box.element();
+
+        if (control instanceof Input input) {
+            boolean changed;
+            switch (input.kind()) {
+                case CHECKBOX -> changed = input.setChecked(!input.isChecked());
+                case RADIO -> changed = tick(ctx, element, input);
+                case RANGE -> changed = input.slideTo((float) ((x - box.x() - THUMB / 2.0) / Math.max(1, box.width() - THUMB)));
+                default -> {
+                    form(player);
+                    return;
+                }
+            }
+            if (changed) {
+                fire(() -> ctx.fire(CTMLCallback.CallbackType.INPUT, element, CTMLCallback.NO_KEY));
+                player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, SoundCategory.MASTER, 0.5f, 1.2f);
+            }
+            return;
+        }
+        form(player);
+    }
+
+    /** Whether the server has Paper's dialogs, which Spigot and Bukkit do not. Found without loading PaperForms. */
+    private static final boolean DIALOGS = present("io.papermc.paper.dialog.Dialog");
+
+    private static boolean present(String name){
+        try {
+            Class.forName(name, false, CTMLWindow.class.getClassLoader());
+            return true;
+        } catch (ClassNotFoundException e) {
+            return false;
+        }
+    }
+
+    private void form(Player player){
+        if (!DIALOGS) {
+            player.sendMessage("Typing into a form needs a Paper server.");
+            return;
+        }
+        PaperForms.open(windows.plugin(), player, ctx);
+    }
+
+    /**
+     * Ticks a radio button and unticks every other one under the same name in the same tree. Says whether
+     * anything changed: a button that is already ticked stays so, the way a browser has it.
+     */
+    static boolean tick(DOMContext ctx, DOMTreeElement element, Input radio){
+        if (!radio.setChecked(true)) return false;
+        String group = element.getString("name");
+        if (group == null || group.isEmpty() || ctx == null || ctx.getHeadNode() == null) return true;
+        ctx.getHeadNode().walk(node -> {
+            if (node != element && node instanceof DOMTreeElement other
+                    && other.getElement() instanceof Input input && input.kind() == Input.Kind.RADIO
+                    && group.equals(other.getString("name"))) {
+                input.setChecked(false);
+            }
+        });
+        return true;
     }
 
     private void fire(Runnable callback){
@@ -403,8 +508,10 @@ public final class CTMLWindow {
             Paint paint = paints.get(i);
             if (i == displays.size()) {
                 if (player == null) break;
-                displays.add(spawnDisplay(player, i * DEPTH_STEP));
-                drawn.add(null);
+                // dressed before it is added to the world, so its first frame is already where it goes
+                displays.add(spawnDisplay(player, i * DEPTH_STEP, d -> apply(d, paint, null)));
+                drawn.add(paint);
+                continue;
             }
             Paint was = drawn.get(i);
             if (paint.equals(was)) continue;
@@ -429,8 +536,11 @@ public final class CTMLWindow {
                 || was.scaleX() != paint.scaleX() || was.scaleY() != paint.scaleY()) {
             Vector at = right.clone().multiply(paint.u()).add(up.clone().multiply(paint.v()));
             float depth = paint.text().equals(" ") ? 1f : paint.scaleX();
+            // a display is whatever paint comes at its place in the list, so after a scroll most of them are
+            // showing something else entirely: sliding them there would send everything flying across the
+            // window, so they jump
             display.setInterpolationDelay(0);
-            display.setInterpolationDuration(was == null ? 0 : MOVE_TICKS);
+            display.setInterpolationDuration(0);
             display.setTransformation(new Transformation(at.toVector3f(), new Quaternionf(rotation),
                     new Vector3f(paint.scaleX(), paint.scaleY(), depth), new Quaternionf()));
         }
@@ -449,7 +559,10 @@ public final class CTMLWindow {
         }
 
         int[] inside = inside(box, clip);
-        if (visible) text(box, inside, alpha, out);
+        if (visible) {
+            text(box, inside, alpha, out);
+            control(box, inside, alpha, out);
+        }
         for (CTMLLayout.Box child : CTMLLayout.paintOrder(box.children())) paint(child, inside, alpha, out);
 
         if (visible) { // over everything in the box, and outside its own clip so a thumb in its gutter shows
@@ -536,6 +649,13 @@ public final class CTMLWindow {
         if (box.lines().isEmpty()) return;
         ElementStyle style = box.style();
         int color = style.get(ElementStyle.COLOR, DEFAULT_TEXT_COLOR);
+        // a placeholder is drawn in its own colour where it has one, and dimmed where it does not, and so
+        // are the words of a control that is out of use
+        if (box.element().getElement() instanceof FormControl control) {
+            Integer hint = control.showsPlaceholder() ? style.get(ElementStyle.PLACEHOLDER_COLOR) : null;
+            if (hint != null) color = hint;
+            else if (control.isDisabled() || control.showsPlaceholder()) alpha *= 0.5f;
+        }
         Gradient ramp = style.get(ElementStyle.TEXT_GRADIENT);
         if (ramp == null && style.get(ElementStyle.BACKGROUND_CLIP) == ElementStyle.BackgroundClip.TEXT) {
             ramp = style.get(ElementStyle.BACKGROUND_GRADIENT);
@@ -563,6 +683,47 @@ public final class CTMLWindow {
             String text = ramp != null ? ramped(line, ramp, box) : legacy(color, line.style()) + line.content();
             out.add(new Paint(u, v, size, size, text, 0,
                     opacity >= 255 ? (byte) -1 : (byte) opacity, shadow));
+        }
+    }
+
+    /** The part of a control drawn over its box: the tick, the dot, the slider, the swatch and the arrow. */
+    private void control(CTMLLayout.Box box, int[] clip, float alpha, List<Paint> out){
+        if (!(box.element().getElement() instanceof FormControl control)) return;
+        float faded = control.isDisabled() ? alpha * 0.5f : alpha;
+        int color = fade(box.style().get(ElementStyle.COLOR, DEFAULT_TEXT_COLOR), faded);
+
+        if (control instanceof Select) {
+            int middle = box.right() - 8, top = box.y() + box.height() / 2 - 1;
+            for (int row = 0; row < 4; row++) rect(middle - (3 - row), top + row, 2 * (3 - row) + 1, 1, color, clip, out);
+            return;
+        }
+        if (!(control instanceof Input input)) return;
+        switch (input.kind()) {
+            case CHECKBOX -> {
+                if (input.isChecked()) {
+                    rect(box.contentX() + 1, box.contentY() + 1, box.contentWidth() - 2, box.contentHeight() - 2, color, clip, out);
+                }
+            }
+            case RADIO -> {
+                if (input.isChecked()) { // no round shapes on a display, so the dot is a smaller square
+                    int size = Math.max(1, Math.min(box.contentWidth(), box.contentHeight()) - 4);
+                    rect(box.contentX() + 2, box.contentY() + 2, size, size, color, clip, out);
+                }
+            }
+            case COLOR -> rect(box.contentX(), box.contentY(), box.contentWidth(), box.contentHeight(),
+                    fade(input.argb(), faded), clip, out);
+            case DATE -> {
+                int left = box.right() - 12, top = box.y() + box.height() / 2 - 4;
+                rect(left, top, 9, 9, color, clip, out);
+                rect(left + 1, top + 3, 7, 5, fade(FIELD_BACKGROUND, faded), clip, out);
+            }
+            case RANGE -> {
+                int middle = box.y() + box.height() / 2;
+                rect(box.x(), middle - 1, box.width(), 2, fade(TRACK, faded), clip, out);
+                int reach = Math.max(0, box.width() - THUMB);
+                rect(box.x() + Math.round(input.share() * reach), box.y(), THUMB, box.height(), color, clip, out);
+            }
+            default -> {}
         }
     }
 
@@ -746,7 +907,7 @@ public final class CTMLWindow {
      * A display on the window's centre, pushed towards the player by depth. Its transformation alone
      * moves it about the plane, so a repaint never has to teleport it.
      */
-    private TextDisplay spawnDisplay(Player player, double depth){
+    private TextDisplay spawnDisplay(Player player, double depth, java.util.function.Consumer<TextDisplay> dress){
         Location at = onPlane(0, 0, depth).toLocation(world, 0f, 0f);
         TextDisplay display = world.spawn(at, TextDisplay.class, d -> {
             prepare(d);
@@ -759,6 +920,7 @@ public final class CTMLWindow {
             d.setBackgroundColor(Color.fromARGB(0, 0, 0, 0));
             d.setAlignment(TextDisplay.TextAlignment.LEFT);
             d.setLineWidth(Integer.MAX_VALUE / 2); // a laid out line is already as wide as it may be
+            dress.accept(d);
         });
         show(player, display);
         return display;

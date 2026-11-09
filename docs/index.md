@@ -37,6 +37,7 @@ Every command needs the `craftytml.use` permission, which ops have. Where a play
 | `/ctml execute [targets] [name] [json] <ctml>` | Shows ctml written into the command itself. `targets` is a player or a selector like `@a`, the name defaults to `default`, and the json maps callbacks to commands: `{"buy":"give {player} diamond 1"}` |
 | `/ctml variable list\|put\|remove [name] [variable] [value]` | Lists, sets or clears the variables of an executed ui, on every window of it |
 | `/ctml callback list\|put\|remove [name] [callback] [command]` | Lists, sets or clears the callback commands of an executed ui, on every window of it |
+| `/ctml hologram create <id> [x y z] [yaw] [json] <ctml>` | Stands ctml in the world for everyone to see and click, at a place (`~` works) facing a yaw. `open <id> <ui>` does the same with a registered ui, `demo` puts up the intro, and `move`, `remove` and `list` manage them. Players looking at one get a cursor and can click it |
 | `/ctml demo [player]` | Shows the intro and the demo |
 | `/ctml close [player]` | Closes a player's window |
 | `/ctml list [registered\|running]` | Names the registered uis, the windows open right now and who has them open, or both |
@@ -122,6 +123,7 @@ The same file is both. Nothing in the markup says which it is, whichever class y
 - **`CTMLScreen`** opens it as a screen. The mouse and the keyboard reach it, so callbacks fire, boxes drag, scrollbars can be grabbed and `hover:` and other variants work.
 - **`CTMLHud`** draws it over the game as a hud. Everything a script drives still works like variables, class lists, scrolling, but a hud hears nothing from the user, so callbacks never fire.
 - **`WindowRenderer`** shows it on a server, as a window in front of one player. Callbacks, variables and `hover:` work the same as in a screen.
+- **`HologramRenderer`** stands it in the world on a server, at any place, for everyone to see. Anyone close enough can click it. Holograms are gone after a restart.
 
 Everything before showing a tree, building it with `CTMLAPI`, its context, its variables and callbacks, is the same code on a client and on a server. Only the renderer at the end is different.
 
@@ -162,6 +164,9 @@ ctx.putCallBack("sayHi", callback -> {
 // or on a server, in front of one player: straight ahead, or anywhere around them
         new WindowRenderer(player).show("myui", tree, ctx);
         new WindowRenderer(player).show("myui", tree, ctx, new CTMLWindow.Position(-1.5, 0)); // off to their left
+
+// or in the world for everyone, its middle at a location and its front facing the way the location looks
+        new HologramRenderer(location).show("myui", tree, ctx);
 ```
 
 ## For Tusan developers

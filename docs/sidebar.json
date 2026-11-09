@@ -50,6 +50,9 @@
             "UIRenderer": "/ctml/reference/java/uirenderer",
             "ScreenRenderer": "/ctml/reference/java/screenrenderer",
             "WindowRenderer": "/ctml/reference/java/windowrenderer",
+            "HologramRenderer": "/ctml/reference/java/hologramrenderer",
+            "CTMLHolograms": "/ctml/reference/java/ctmlholograms",
+            "CTMLHologram": "/ctml/reference/java/ctmlhologram",
             "CraftytmlPaper": "/ctml/reference/java/craftytmlpaper",
             "CTMLWindows": "/ctml/reference/java/ctmlwindows"
         }

@@ -82,6 +82,9 @@ ctml/CTMLDiagnostics.java:CTMLDiagnostics
 render/UIRenderer.java:UIRenderer
 render/ScreenRenderer.java:ScreenRenderer
 paper/render/WindowRenderer.java:WindowRenderer
+paper/render/HologramRenderer.java:HologramRenderer
+paper/render/CTMLHolograms.java:CTMLHolograms
+paper/render/CTMLHologram.java:CTMLHologram
 paper/CraftytmlPaper.java:CraftytmlPaper
 paper/render/CTMLWindows.java:CTMLWindows
 "

@@ -35,9 +35,11 @@ public final class CTMLWindowListener implements Listener {
     private static final int RIGHT = CTMLEvents.MouseButton.RIGHT;
 
     private final CTMLWindows windows;
+    private final CTMLHolograms holograms;
 
-    public CTMLWindowListener(CTMLWindows windows){
+    public CTMLWindowListener(CTMLWindows windows, CTMLHolograms holograms){
         this.windows = windows;
+        this.holograms = holograms;
     }
 
     // ---- the mouse -----------------------------------------------------------------------------------
@@ -45,7 +47,17 @@ public final class CTMLWindowListener implements Listener {
     @EventHandler(priority = EventPriority.LOWEST)
     public void onInteract(PlayerInteractEvent event){
         CTMLWindow window = windows.window(event.getPlayer());
-        if (window == null) return;
+        if (window == null) {
+            // a player with no window open clicking a hologram they are looking at
+            if (event.getAction() == Action.PHYSICAL) return;
+            CTMLHologram hologram = holograms.lookedAt(event.getPlayer());
+            if (hologram == null) return;
+            event.setCancelled(true); // nothing behind the hologram is broken, placed or used by the click
+            if (event.getHand() == EquipmentSlot.OFF_HAND) return;
+            boolean right = event.getAction() == Action.RIGHT_CLICK_AIR || event.getAction() == Action.RIGHT_CLICK_BLOCK;
+            hologram.click(event.getPlayer(), right ? RIGHT : LEFT, holograms.now());
+            return;
+        }
         event.setCancelled(true); // nothing is broken, placed or used through a window
         if (event.getHand() == EquipmentSlot.OFF_HAND || event.getAction() == Action.PHYSICAL) return;
         boolean right = event.getAction() == Action.RIGHT_CLICK_AIR || event.getAction() == Action.RIGHT_CLICK_BLOCK;
@@ -56,7 +68,14 @@ public final class CTMLWindowListener implements Listener {
     @EventHandler(priority = EventPriority.LOWEST)
     public void onInteractEntity(PlayerInteractEntityEvent event){
         CTMLWindow window = windows.window(event.getPlayer());
-        if (window == null) return;
+        if (window == null) {
+            CTMLHologram hologram = holograms.owning(event.getRightClicked());
+            if (hologram == null) hologram = holograms.lookedAt(event.getPlayer());
+            if (hologram == null) return;
+            event.setCancelled(true);
+            if (event.getHand() == EquipmentSlot.HAND) hologram.click(event.getPlayer(), RIGHT, holograms.now());
+            return;
+        }
         event.setCancelled(true);
         if (event.getHand() != EquipmentSlot.HAND) return;
         window.click(event.getPlayer(), RIGHT, windows.now());
@@ -71,14 +90,19 @@ public final class CTMLWindowListener implements Listener {
     public void onSwing(PlayerAnimationEvent event){
         if (event.getAnimationType() != PlayerAnimationType.ARM_SWING) return;
         CTMLWindow window = windows.window(event.getPlayer());
-        if (window == null) return;
-        window.click(event.getPlayer(), LEFT, windows.now());
+        if (window != null) {
+            window.click(event.getPlayer(), LEFT, windows.now());
+            return;
+        }
+        CTMLHologram hologram = holograms.lookedAt(event.getPlayer());
+        if (hologram != null) hologram.click(event.getPlayer(), LEFT, holograms.now());
     }
 
     /** A mob that happens to be in the way of a click is not hit by it. */
     @EventHandler(priority = EventPriority.LOWEST)
     public void onAttack(EntityDamageByEntityEvent event){
-        if (event.getDamager() instanceof Player player && windows.isOpen(player)) event.setCancelled(true);
+        if (event.getDamager() instanceof Player player
+                && (windows.isOpen(player) || holograms.lookedAt(player) != null)) event.setCancelled(true);
     }
 
     /** The hotbar is the scroll wheel, and stays on the slot it was on. */
@@ -176,6 +200,7 @@ public final class CTMLWindowListener implements Listener {
     @EventHandler(priority = EventPriority.MONITOR)
     public void onQuit(PlayerQuitEvent event){
         windows.close(event.getPlayer());
+        holograms.forget(event.getPlayer().getUniqueId());
     }
 
     @EventHandler(priority = EventPriority.LOWEST)

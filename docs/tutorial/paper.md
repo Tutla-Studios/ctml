@@ -42,6 +42,7 @@ last step, where the tree and its context are handed to a `UIRenderer`:
 | `/ctml close [player]` | puts a player's window away |
 | `/ctml list [registered\|running]` | names the trees in the `UIRegistry`, the windows open now and who has them, or both |
 | `/ctml help [command]` | lists every command, or explains one in detail |
+| `/ctml hologram create\|open\|move\|remove\|list ...` | stands a ui in the world for everyone, see [Holograms](#holograms) |
 | `/ctml execute [targets] [name] [json] <ctml>` | shows ctml written into the command itself |
 | `/ctml variable list\|put\|remove [name] [variable] [value]` | lists, sets or clears the variables of an executed ui |
 | `/ctml callback list\|put\|remove [name] [callback] [command]` | lists, sets or clears the callbacks of an executed ui |
@@ -83,6 +84,57 @@ straight away, and to every one executed under it later:
 
 Typed in chat, a command can only be 256 characters long. Longer markup has to come from a command block,
 a function or the console.
+
+## Holograms
+
+A hologram is a ui standing in the world where everyone can see it, rather than a window in front of one
+player. Nobody is held still. Where it has anything to click, everyone looking at it from within 6 blocks
+gets a cursor only they can see. Clicks work the way they do in a window: buttons press, checkboxes tick,
+and forms open a dialog. `hover:` styles and hover callbacks follow whoever is nearest and looking at it,
+and `active:` lights up on a press.
+
+```text
+/ctml hologram create board ~ ~2 ~ 180 {"hi":"say hi {player}"} <ctml class="bg-slate-900/80 p-2"><button callback="hi" text="wave"></button></ctml>
+/ctml hologram open sign shop.ctml 100 70 -20
+/ctml hologram demo lobby 0 70 0 180
+/ctml hologram move board ~ ~3 ~
+/ctml hologram remove board
+/ctml hologram list
+```
+
+- **The place** is three coordinates that take `~` like any command. Leave them out and the hologram goes
+  3 blocks in front of you. It is the hologram's middle.
+- **The yaw** is the way its front faces. Leave it out and it turns to face whoever ran the command.
+- **The id** is how `move`, `remove`, `variable` and `callback` find it. Creating a hologram under an id
+  that's already standing replaces it.
+- **The json and ctml** work the same as with `execute`. `{player}` in a callback command is whoever clicked.
+- **`demo`** puts up the intro with all its callbacks, under the id `demo` unless you give one. Its button
+  turns the same hologram into the full demo.
+- **`open` shows a registered ui's tree as it is**, so its callbacks only fire if something gives it them:
+  `/ctml callback put <id> ...`, or java.
+
+From java, `HologramRenderer` is the renderer. Like every other renderer, it's the last step after the
+usual tree and context:
+
+```java
+DOMTreeElement tree = UIRegistry.getUIFromName("board.ctml");
+DOMContext ctx = new DOMContext(tree);
+ctx.putCallBack("hi", callback -> {
+    if (!callback.isPress()) return;
+    Player who = CraftytmlPaper.holograms().get("board").presser();
+    who.sendMessage("hi");
+});
+new HologramRenderer(location).show("board", tree, ctx);
+```
+
+The location's yaw and pitch are the way its front faces. `CraftytmlPaper.holograms()` can `move`,
+`remove`, `get` and list them, and a hologram's `presser()` is whoever clicked it last, which is how a
+callback finds out who pressed it.
+
+Everyone shares a hologram's one tree, so a callback that changes it changes it for everyone, and its one
+`hover:` follows the nearest player looking at it. `new HologramRenderer(location, "lobby")` keeps
+everything it shows under one id, so a button that shows another ui replaces the hologram in place. A hologram whose chunk unloads is put back
+up when the chunk loads again, but holograms aren't saved: a restart or a reload removes them all.
 
 ## Using a window
 

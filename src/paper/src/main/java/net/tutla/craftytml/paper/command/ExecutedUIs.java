@@ -4,6 +4,7 @@ import net.tutla.craftytml.client.dom.CTMLCallback;
 import net.tutla.craftytml.client.dom.DOMContext;
 import net.tutla.craftytml.client.dom.DOMTreeElement;
 import net.tutla.craftytml.paper.CraftytmlPaper;
+import net.tutla.craftytml.paper.render.CTMLHologram;
 import net.tutla.craftytml.paper.render.CTMLWindow;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -14,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 /**
  * The variables and callback commands of the uis {@code /ctml execute} shows, kept by ui name. What is put
@@ -32,14 +34,28 @@ final class ExecutedUIs {
 
     /** The context for one executed window: the name's variables and callbacks, then the ones given with it. */
     DOMContext context(String name, DOMTreeElement tree, Player player, Map<String, String> callbacks){
+        UUID owner = player.getUniqueId();
+        return context(name, tree, () -> Bukkit.getPlayer(owner), callbacks);
+    }
+
+    /**
+     * The same, for something with no one player behind it: a hologram, whose presser is whoever clicked it
+     * last, found when a callback runs rather than when the context is made.
+     */
+    DOMContext context(String name, DOMTreeElement tree, Supplier<Player> presser, Map<String, String> callbacks){
         DOMContext ctx = new DOMContext(tree);
         Profile profile = profiles.get(name);
         if (profile != null) {
             profile.variables().forEach(ctx::putVariable);
-            profile.callbacks().forEach((callback, command) -> ctx.putCallBack(callback, command(player.getUniqueId(), command)));
+            profile.callbacks().forEach((callback, command) -> ctx.putCallBack(callback, command(presser, command)));
         }
-        callbacks.forEach((callback, command) -> ctx.putCallBack(callback, command(player.getUniqueId(), command)));
+        callbacks.forEach((callback, command) -> ctx.putCallBack(callback, command(presser, command)));
         return ctx;
+    }
+
+    /** The hologram standing under a name, if there is one: names and hologram ids are the same thing. */
+    private static CTMLHologram hologram(String name){
+        return CraftytmlPaper.holograms().get(name);
     }
 
     /** Puts a variable on a name, and says how many open windows it reached. */
@@ -47,7 +63,9 @@ final class ExecutedUIs {
         profile(name).variables().put(variable, value);
         List<CTMLWindow> open = CraftytmlPaper.windows().named(name);
         for (CTMLWindow window : open) window.context().putVariable(variable, value);
-        return open.size();
+        CTMLHologram hologram = hologram(name);
+        if (hologram != null) hologram.context().putVariable(variable, value);
+        return open.size() + (hologram == null ? 0 : 1);
     }
 
     /** Takes a variable off a name, and says whether the name had it. */
@@ -55,6 +73,8 @@ final class ExecutedUIs {
         Profile profile = profiles.get(name);
         boolean had = profile != null && profile.variables().remove(variable) != null;
         for (CTMLWindow window : CraftytmlPaper.windows().named(name)) window.context().removeVariable(variable);
+        CTMLHologram hologram = hologram(name);
+        if (hologram != null) hologram.context().removeVariable(variable);
         forgetIfEmpty(name);
         return had;
     }
@@ -63,8 +83,13 @@ final class ExecutedUIs {
     int putCallback(String name, String callback, String command){
         profile(name).callbacks().put(callback, command);
         List<CTMLWindow> open = CraftytmlPaper.windows().named(name);
-        for (CTMLWindow window : open) window.context().putCallBack(callback, command(window.owner(), command));
-        return open.size();
+        for (CTMLWindow window : open) {
+            UUID owner = window.owner();
+            window.context().putCallBack(callback, command(() -> Bukkit.getPlayer(owner), command));
+        }
+        CTMLHologram hologram = hologram(name);
+        if (hologram != null) hologram.context().putCallBack(callback, command(hologram::presser, command));
+        return open.size() + (hologram == null ? 0 : 1);
     }
 
     /** Takes a callback off a name, and says whether the name had it. */
@@ -73,6 +98,8 @@ final class ExecutedUIs {
         boolean had = profile != null && profile.callbacks().remove(callback) != null;
         // a context has no way to forget a name, but one that leads nowhere is the same as none
         for (CTMLWindow window : CraftytmlPaper.windows().named(name)) window.context().putCallBack(callback, null);
+        CTMLHologram hologram = hologram(name);
+        if (hologram != null) hologram.context().putCallBack(callback, null);
         forgetIfEmpty(name);
         return had;
     }
@@ -107,11 +134,11 @@ final class ExecutedUIs {
      * A callback that runs a command from the console when it is pressed, {@code {player}} in it standing
      * for whoever pressed it. A hover reaches the same callback, and is not a press, so it runs nothing.
      */
-    private static Consumer<CTMLCallback> command(UUID owner, String command){
+    private static Consumer<CTMLCallback> command(Supplier<Player> presser, String command){
         String line = command.startsWith("/") ? command.substring(1) : command;
         return callback -> {
             if (!callback.isPress()) return;
-            Player player = Bukkit.getPlayer(owner);
+            Player player = presser.get();
             if (player == null) return;
             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), line.replace("{player}", player.getName()));
         };

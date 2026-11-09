@@ -7,10 +7,14 @@ import net.tutla.craftytml.client.dom.DOMTreeElement;
 import net.tutla.craftytml.client.render.UIRegistry;
 import net.tutla.craftytml.client.render.UIRenderer;
 import net.tutla.craftytml.paper.CraftytmlPaper;
+import net.tutla.craftytml.paper.render.CTMLHologram;
+import net.tutla.craftytml.paper.render.CTMLHolograms;
 import net.tutla.craftytml.paper.render.CTMLWindow;
+import net.tutla.craftytml.paper.render.HologramRenderer;
 import net.tutla.craftytml.paper.render.WindowRenderer;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.Location;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabExecutor;
@@ -56,6 +60,12 @@ public final class CTMLCommand implements TabExecutor {
     private static final String USAGE_CLOSE = "/ctml close [player]";
     private static final String USAGE_LIST = "/ctml list [registered|running]";
     private static final String USAGE_HELP = "/ctml help [command]";
+    private static final String USAGE_HOLOGRAM = "/ctml hologram create|open|demo|move|remove|list <id> [x y z] [yaw] ...";
+    private static final String USAGE_HOLOGRAM_DEMO = "/ctml hologram demo [id] [x y z] [yaw]";
+    private static final String USAGE_HOLOGRAM_CREATE = "/ctml hologram create <id> [x y z] [yaw] [json] <ctml>";
+    private static final String USAGE_HOLOGRAM_OPEN = "/ctml hologram open <id> <ui> [x y z] [yaw]";
+    private static final String USAGE_HOLOGRAM_MOVE = "/ctml hologram move <id> [x y z] [yaw]";
+    private static final String USAGE_HOLOGRAM_REMOVE = "/ctml hologram remove <id>";
     private static final String USAGE_EXECUTE = "/ctml execute [targets] [name] [json] <ctml>";
     private static final String USAGE_VARIABLE = "/ctml variable list|put|remove [name] [variable] [value]";
     private static final String USAGE_CALLBACK = "/ctml callback list|put|remove [name] [callback] [command]";
@@ -116,6 +126,16 @@ public final class CTMLCommand implements TabExecutor {
                 "Needs intro.ctml and demo_screen.ctml in the ui folder.")));
         pages.put("close", new Help(USAGE_CLOSE, "Closes a player's window.", List.of(
                 "Leave the player out to close your own. Sneaking closes it too.")));
+        pages.put("hologram", new Help(USAGE_HOLOGRAM, "Stands a ui in the world for everyone to see.", List.of(
+                "create <id> [x y z] [yaw] [json] <ctml>: ctml written into the command, with callbacks like execute's.",
+                "open <id> <ui> [x y z] [yaw]: a registered ui.",
+                "demo [id] [x y z] [yaw]: the intro and the demo, with all their callbacks, under the id demo unless named.",
+                "move <id> [x y z] [yaw], remove <id>, and list.",
+                "Coordinates take ~ like any command; without them it goes 3 blocks in front of you.",
+                "yaw is the way its front faces; without it, it faces you.",
+                "Anyone looking at it within 6 blocks gets a cursor and can click it; hover follows the nearest of them.",
+                "variable and callback reach it by its id.",
+                "Holograms are gone after a restart.")));
         pages.put("help", new Help(USAGE_HELP, "Shows these commands, or one of them in detail.", List.of()));
         return pages;
     }
@@ -167,6 +187,7 @@ public final class CTMLCommand implements TabExecutor {
         return switch (args[0].toLowerCase()) {
             case "list" -> list(sender, args);
             case "help" -> help(sender, args);
+            case "hologram" -> hologram(sender, args);
             case "open" -> open(sender, args);
             case "run" -> run(sender, args);
             case "demo" -> demo(sender, args);
@@ -206,7 +227,11 @@ public final class CTMLCommand implements TabExecutor {
     /** Every window open right now, by the name it was opened under, with who has it open. */
     private static boolean running(CommandSender sender){
         List<CTMLWindow> open = CraftytmlPaper.windows().all();
-        if (open.isEmpty()) return fail(sender, "No uis are running: nobody has a window open.");
+        if (open.isEmpty()) {
+            fail(sender, "No windows are open.");
+            if (!CraftytmlPaper.holograms().all().isEmpty()) holograms(sender);
+            return true;
+        }
         Map<String, List<String>> byName = new java.util.TreeMap<>();
         for (CTMLWindow window : open) {
             Player owner = Bukkit.getPlayer(window.owner());
@@ -216,6 +241,7 @@ public final class CTMLCommand implements TabExecutor {
         sender.sendMessage(ChatColor.GOLD + "Running uis (" + open.size() + (open.size() == 1 ? " window" : " windows") + "):");
         byName.forEach((name, viewers) -> sender.sendMessage(ChatColor.WHITE + " " + name + ChatColor.GRAY
                 + " - " + String.join(", ", viewers)));
+        if (!CraftytmlPaper.holograms().all().isEmpty()) holograms(sender);
         return true;
     }
 
@@ -347,7 +373,7 @@ public final class CTMLCommand implements TabExecutor {
 
     /** ", in 3 open windows", or nothing where none are open to reach. */
     private static String reached(int open){
-        return open == 0 ? "" : ", in " + open + (open == 1 ? " open window" : " open windows");
+        return open == 0 ? "" : ", in " + open + (open == 1 ? " open ui" : " open uis");
     }
 
     /**
@@ -386,21 +412,10 @@ public final class CTMLCommand implements TabExecutor {
             at++;
         }
 
-        String rest = rest(args, at).strip();
-        Map<String, String> callbacks = Map.of();
-        if (rest.startsWith("{")) {
-            int end = jsonEnd(rest);
-            if (end < 0) return fail(sender, "The callback json is missing its closing }.");
-            try {
-                callbacks = new com.google.gson.Gson().fromJson(rest.substring(0, end),
-                        new com.google.gson.reflect.TypeToken<Map<String, String>>(){}.getType());
-            } catch (RuntimeException e) {
-                return fail(sender, "The callback json has to map callback names to commands, like "
-                        + "{\"buy\":\"give {player} diamond 1\"}: " + e.getMessage());
-            }
-            if (callbacks == null) callbacks = Map.of();
-            rest = rest.substring(end).strip();
-        }
+        Markup markup = markup(sender, rest(args, at));
+        if (markup == null) return true;
+        String rest = markup.ctml();
+        Map<String, String> callbacks = markup.callbacks();
         if (rest.isEmpty()) return usage(sender, "There is no ctml to show.", USAGE_EXECUTE);
         if (!rest.startsWith("<")) return fail(sender, "The ctml has to start with a tag, like <ctml>.");
 
@@ -418,6 +433,214 @@ public final class CTMLCommand implements TabExecutor {
                 + (callbacks.size() == 1 ? " callback" : " callbacks");
         return done(sender, "Showing " + name + callbacksSaid + " to "
                 + (targets.size() == 1 ? whose(sender, targets.getFirst()) : shown + " players") + ".");
+    }
+
+    /** What comes after the name in execute and hologram create: the callback json, where there is one, and the ctml. */
+    private record Markup(Map<String, String> callbacks, String ctml) {}
+
+    /** Splits the callback json off the front of the text. Null where the json is broken, which it says. */
+    private static Markup markup(CommandSender sender, String text){
+        String rest = text.strip();
+        Map<String, String> callbacks = Map.of();
+        if (rest.startsWith("{")) {
+            int end = jsonEnd(rest);
+            if (end < 0) {
+                fail(sender, "The callback json is missing its closing }.");
+                return null;
+            }
+            try {
+                callbacks = new com.google.gson.Gson().fromJson(rest.substring(0, end),
+                        new com.google.gson.reflect.TypeToken<Map<String, String>>(){}.getType());
+            } catch (RuntimeException e) {
+                fail(sender, "The callback json has to map callback names to commands, like "
+                        + "{\"buy\":\"give {player} diamond 1\"}: " + e.getMessage());
+                return null;
+            }
+            if (callbacks == null) callbacks = Map.of();
+            rest = rest.substring(end).strip();
+        }
+        return new Markup(callbacks, rest);
+    }
+
+    // ---- holograms ----
+
+    private boolean hologram(CommandSender sender, String[] args){
+        if (args.length < 2) return usage(sender, "Say what to do with a hologram.", USAGE_HOLOGRAM);
+        String action = args[1].toLowerCase();
+        if (action.equals("list")) {
+            if (args.length > 2) return usage(sender, "list takes nothing more.", "/ctml hologram list");
+            return holograms(sender);
+        }
+        if (action.equals("demo")) return hologramDemo(sender, args);
+        String form = switch (action) {
+            case "create" -> USAGE_HOLOGRAM_CREATE;
+            case "open" -> USAGE_HOLOGRAM_OPEN;
+            case "move" -> USAGE_HOLOGRAM_MOVE;
+            case "remove" -> USAGE_HOLOGRAM_REMOVE;
+            default -> null;
+        };
+        if (form == null) return usage(sender, args[1] + " is not create, open, demo, move, remove or list.", USAGE_HOLOGRAM);
+        if (args.length < 3) return usage(sender, "Give the hologram an id.", form);
+        String id = args[2];
+        CTMLHolograms holograms = CraftytmlPaper.holograms();
+
+        switch (action) {
+            case "remove" -> {
+                if (args.length > 3) return usage(sender, "remove takes only the id.", form);
+                if (!holograms.remove(id)) return fail(sender, "There is no hologram called " + id + ".");
+                return done(sender, "Removed hologram " + id + ".");
+            }
+            case "move" -> {
+                if (holograms.get(id) == null) return fail(sender, "There is no hologram called " + id + ".");
+                int[] next = { 3 };
+                Location at = place(sender, args, next);
+                if (at == null) return true;
+                if (next[0] < args.length) return usage(sender, "move takes only a place and a yaw.", form);
+                holograms.move(id, at);
+                return done(sender, "Moved hologram " + id + " to " + describe(at) + ".");
+            }
+            case "open" -> {
+                if (args.length < 4) return usage(sender, "Name the registered ui to stand there.", form);
+                DOMTreeElement tree = UIRegistry.getUIFromName(args[3]);
+                if (tree == null) return fail(sender, "No ui called " + args[3] + " is registered. /ctml list registered names the ones that are.");
+                int[] next = { 4 };
+                Location at = place(sender, args, next);
+                if (at == null) return true;
+                if (next[0] < args.length) return usage(sender, "open takes only a ui, a place and a yaw.", form);
+                return stand(sender, id, at, tree, Map.of(), holograms);
+            }
+            default -> { // create
+                int[] next = { 3 };
+                Location at = place(sender, args, next);
+                if (at == null) return true;
+                Markup markup = markup(sender, rest(args, next[0]));
+                if (markup == null) return true;
+                if (markup.ctml().isEmpty()) return usage(sender, "There is no ctml to stand there.", form);
+                if (!markup.ctml().startsWith("<")) return fail(sender, "The ctml has to start with a tag, like <ctml>.");
+                DOMTreeElement tree = CTMLAPI.buildUI(markup.ctml(), Map.of());
+                if (tree == null) return fail(sender, "That ctml built no ui. The console has its errors.");
+                return stand(sender, id, at, tree, markup.callbacks(), holograms);
+            }
+        }
+    }
+
+    /**
+     * The intro as a hologram, with the callbacks the demo brings, the way /ctml demo shows it in a window.
+     * Its button moves the same hologram on to the full demo, since everything goes up under the one id.
+     */
+    private boolean hologramDemo(CommandSender sender, String[] args){
+        int[] next = { 2 };
+        String id = "demo";
+        if (args.length > 2 && !COORDINATE.matcher(args[2]).matches()) {
+            id = args[2];
+            next[0] = 3;
+        }
+        Location at = place(sender, args, next);
+        if (at == null) return true;
+        if (next[0] < args.length) return usage(sender, "demo takes only an id, a place and a yaw.", USAGE_HOLOGRAM_DEMO);
+        boolean replacing = CraftytmlPaper.holograms().get(id) != null;
+        try {
+            if (!DemoIntro.open(new HologramRenderer(at, id))) {
+                return fail(sender, DemoIntro.INTRO_UI + " is not loaded. Put it in " + ui + " and restart.");
+            }
+        } catch (RuntimeException e) {
+            return fail(sender, "Could not put up the demo: " + e.getMessage());
+        }
+        return done(sender, (replacing ? "Replaced hologram " : "Put up the demo as hologram ") + id + " at " + describe(at) + ".");
+    }
+
+    /** Puts a tree up under an id, with whatever variables and callbacks the id has and the ones given now. */
+    private boolean stand(CommandSender sender, String id, Location at, DOMTreeElement tree,
+                          Map<String, String> callbacks, CTMLHolograms holograms){
+        boolean replacing = holograms.get(id) != null;
+        DOMContext ctx = executed.context(id, tree, () -> {
+            CTMLHologram standing = CraftytmlPaper.holograms().get(id);
+            return standing == null ? null : standing.presser();
+        }, callbacks);
+        try {
+            holograms.spawn(id, at, tree, ctx);
+        } catch (RuntimeException e) {
+            CraftytmlPaper.getPlugin(CraftytmlPaper.class).getLogger()
+                    .log(java.util.logging.Level.SEVERE, "could not put up hologram " + id, e);
+            return fail(sender, "Could not put up hologram " + id + ": " + e.getMessage());
+        }
+        return done(sender, (replacing ? "Replaced hologram " : "Put up hologram ") + id + " at " + describe(at) + ".");
+    }
+
+    private static boolean holograms(CommandSender sender){
+        List<CTMLHologram> standing = CraftytmlPaper.holograms().all();
+        if (standing.isEmpty()) return fail(sender, "No holograms are standing.");
+        sender.sendMessage(ChatColor.GOLD + "Holograms (" + standing.size() + "):");
+        for (CTMLHologram hologram : standing) {
+            sender.sendMessage(ChatColor.WHITE + " " + hologram.id() + ChatColor.GRAY + " - " + describe(hologram.location()));
+        }
+        return true;
+    }
+
+    private static String describe(Location at){
+        return (at.getWorld() == null ? "?" : at.getWorld().getName())
+                + String.format(" %.1f %.1f %.1f, facing %.0f", at.getX(), at.getY(), at.getZ(), at.getYaw());
+    }
+
+    private static final java.util.regex.Pattern COORDINATE = java.util.regex.Pattern.compile("~(-?\\d+(\\.\\d+)?)?|-?\\d+(\\.\\d+)?");
+    private static final java.util.regex.Pattern NUMBER = java.util.regex.Pattern.compile("-?\\d+(\\.\\d+)?");
+
+    /**
+     * Where a hologram goes, read from the arguments starting at next[0], which is moved past them. Three
+     * coordinates, each a number or ~ relative to the sender, then a yaw; either can be left out. With no
+     * coordinates it goes 3 blocks in front of whoever runs the command, and with no yaw it faces them.
+     * Null where there is nowhere it could go, which it says.
+     */
+    private static Location place(CommandSender sender, String[] args, int[] next){
+        Location base = switch (sender) {
+            case Player player -> player.getLocation();
+            case org.bukkit.command.BlockCommandSender block -> block.getBlock().getLocation().add(0.5, 0, 0.5);
+            case org.bukkit.entity.Entity entity -> entity.getLocation();
+            default -> null;
+        };
+        int i = next[0];
+        Location at;
+        if (args.length >= i + 3 && COORDINATE.matcher(args[i]).matches()
+                && COORDINATE.matcher(args[i + 1]).matches() && COORDINATE.matcher(args[i + 2]).matches()) {
+            boolean relative = args[i].startsWith("~") || args[i + 1].startsWith("~") || args[i + 2].startsWith("~");
+            if (relative && base == null) {
+                fail(sender, "The console has no place for ~ to be measured from: give the coordinates in full.");
+                return null;
+            }
+            org.bukkit.World world = base != null ? base.getWorld() : Bukkit.getWorlds().getFirst();
+            at = new Location(world, coordinate(args[i], base == null ? 0 : base.getX()),
+                    coordinate(args[i + 1], base == null ? 0 : base.getY()),
+                    coordinate(args[i + 2], base == null ? 0 : base.getZ()));
+            i += 3;
+        } else if (sender instanceof Player player) {
+            Location eye = player.getEyeLocation();
+            at = eye.clone().add(eye.getDirection().multiply(3));
+        } else if (base != null) {
+            at = base.clone().add(0, 1.5, 0);
+        } else {
+            usage(sender, "The console has to say where it goes: x y z.", USAGE_HOLOGRAM);
+            return null;
+        }
+
+        if (i < args.length && NUMBER.matcher(args[i]).matches()) {
+            at.setYaw(Float.parseFloat(args[i]));
+            at.setPitch(0);
+            i++;
+        } else {
+            // turned to face whoever put it there, across the ground
+            Location from = sender instanceof Player player ? player.getEyeLocation() : base;
+            org.bukkit.util.Vector towards = from == null ? null : from.toVector().subtract(at.toVector()).setY(0);
+            if (towards != null && towards.lengthSquared() > 1e-4) at.setDirection(towards);
+            else at.setYaw(0);
+            at.setPitch(0);
+        }
+        next[0] = i;
+        return at;
+    }
+
+    private static double coordinate(String written, double base){
+        if (!written.startsWith("~")) return Double.parseDouble(written);
+        return written.length() == 1 ? base : base + Double.parseDouble(written.substring(1));
     }
 
     /** Where the json object at the front of the text ends, just past its closing brace, or -1 where it never does. */
@@ -461,7 +684,7 @@ public final class CTMLCommand implements TabExecutor {
     // ---- tab completion: every argument of every command offers what can go there ----
 
     private static final List<String> SUBCOMMANDS =
-            List.of("open", "run", "execute", "variable", "callback", "demo", "close", "list", "help");
+            List.of("open", "run", "execute", "hologram", "variable", "callback", "demo", "close", "list", "help");
     private static final List<String> SELECTORS = List.of("@a", "@p", "@s", "@r");
 
     @Override
@@ -476,6 +699,7 @@ public final class CTMLCommand implements TabExecutor {
                     : at == 2 ? matching(players(), typed) : List.of();
             case "demo", "close" -> at == 1 ? matching(players(), typed) : List.of();
             case "list" -> at == 1 ? matching(List.of("registered", "running"), typed) : List.of();
+            case "hologram" -> hologramCompletions(args, typed);
             case "help" -> at == 1 ? matching(List.copyOf(HELP.keySet()), typed) : List.of();
             case "execute" -> executeCompletions(args, typed);
             case "variable" -> storeCompletions(args, typed, false);
@@ -565,7 +789,46 @@ public final class CTMLCommand implements TabExecutor {
         names.add(DEFAULT_NAME);
         executed.names().forEach(names::add);
         for (CTMLWindow window : CraftytmlPaper.windows().all()) names.add(window.name());
+        names.addAll(hologramIds());
         return List.copyOf(names);
+    }
+
+    private static List<String> hologramIds(){
+        return CraftytmlPaper.holograms().all().stream().map(CTMLHologram::id).toList();
+    }
+
+    /** hologram's arguments: the action, an id, then a place, a yaw, and for create the json and ctml. */
+    private List<String> hologramCompletions(String[] args, String typed){
+        int at = args.length - 1;
+        if (at == 1) return matching(List.of("create", "open", "demo", "move", "remove", "list"), typed);
+        String action = args[1].toLowerCase();
+        if (action.equals("demo")) {
+            List<String> options = new java.util.ArrayList<>(List.of("~", "0", "90", "180", "-90"));
+            if (at == 2) options.addAll(List.of("demo"));
+            return matching(options, typed);
+        }
+        if (at == 2) return action.equals("list") ? List.of() : matching(hologramIds(), typed);
+        if (action.equals("remove") || action.equals("list")) return List.of();
+
+        int from = 3;
+        if (action.equals("open")) {
+            if (at == 3) return matching(List.copyOf(UIRegistry.getAllNames()), typed);
+            from = 4;
+        }
+        // a place is three coordinates, then a yaw
+        int placed = 0;
+        while (from + placed < at && placed < 3 && COORDINATE.matcher(args[from + placed]).matches()) placed++;
+        List<String> options = new java.util.ArrayList<>();
+        if (placed < 3 && (placed > 0 || at == from)) options.add("~");
+        if (placed == 0 || placed == 3) {
+            boolean yawGiven = from + placed < at && NUMBER.matcher(args[from + placed]).matches();
+            if (!yawGiven) options.addAll(List.of("0", "90", "180", "-90"));
+            if (action.equals("create") && placed != 1 && placed != 2) {
+                options.add("{\"callback\":\"/command\"}");
+                options.add("<ctml");
+            }
+        }
+        return matching(options, typed);
     }
 
     /** The callback names written in the markup of the windows open under a ui name. */

@@ -28,5 +28,8 @@ The classes a mod talks to, with the javadoc the source carries.
 | [UIRenderer](/ctml/reference/java/uirenderer) | Where a tree is shown, and the one part of CraftyTML that is different on every platform. |
 | [ScreenRenderer](/ctml/reference/java/screenrenderer) | The client's UIRenderer: a tree is opened as a CTMLScreen, over the screen that was showing when it opened, and a link goes through minecraft's own confirm screen. |
 | [WindowRenderer](/ctml/reference/java/windowrenderer) | The server's UIRenderer, for one player: a tree is opened as a window in front of them, in place of any they had open, and a link is sent to their chat to click. |
+| [HologramRenderer](/ctml/reference/java/hologramrenderer) | The UIRenderer for holograms: a tree is stood in the world at a location for everyone to see, in place of whatever this renderer showed before, the way a screen replaces the one before it. |
+| [CTMLHolograms](/ctml/reference/java/ctmlholograms) | The holograms standing on a server, by id, all driven from one task that runs every tick. |
+| [CTMLHologram](/ctml/reference/java/ctmlhologram) | A ctml tree standing in the world where everyone can see it: a CTMLSurface with no one player behind it. |
 | [CraftytmlPaper](/ctml/reference/java/craftytmlpaper) | The Spigot/Paper/Bukkit entry point. |
 | [CTMLWindows](/ctml/reference/java/ctmlwindows) | The ctml windows open on a server, at most one a player, all driven from one task that runs every tick. |

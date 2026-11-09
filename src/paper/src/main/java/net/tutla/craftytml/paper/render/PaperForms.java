@@ -67,7 +67,7 @@ final class PaperForms {
         List<DOMTreeElement> controls = new ArrayList<>();
         root.walk(node -> {
             if (node instanceof DOMTreeElement element && element.getElement() instanceof FormControl control
-                    && control.isEditable() && CTMLWindow.isControl(control)) {
+                    && control.isEditable() && CTMLClicks.isControl(control)) {
                 controls.add(element);
             }
         });
@@ -198,7 +198,7 @@ final class PaperForms {
                 Integer index = index(r.text(key));
                 if (index == null || index < 0 || index >= group.size()) return List.of();
                 DOMTreeElement picked = group.get(index);
-                return CTMLWindow.tick(ctx, picked, (Input) picked.getElement()) ? List.of(picked) : List.of();
+                return CTMLClicks.tick(ctx, picked, (Input) picked.getElement()) ? List.of(picked) : List.of();
             }
         };
     }

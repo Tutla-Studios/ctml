@@ -4,7 +4,9 @@ import net.tutla.craftytml.client.ctml.ElementStyle;
 import net.tutla.craftytml.client.ctml.element.input.FormControl;
 import net.tutla.craftytml.client.ctml.element.input.Input;
 import net.tutla.craftytml.client.ctml.element.input.Select;
+import net.tutla.craftytml.client.ctml.element.markdown.Img;
 import net.tutla.craftytml.client.ctml.style.Gradient;
+import net.tutla.craftytml.client.ctml.style.Length;
 import net.tutla.craftytml.client.dom.DOMTreeElement;
 import net.tutla.craftytml.client.dom.DOMTreeNode;
 import net.tutla.craftytml.client.render.CTMLLayout;
@@ -16,6 +18,7 @@ import org.bukkit.NamespacedKey;
 import org.bukkit.World;
 import org.bukkit.entity.Display;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.ItemDisplay;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.TextDisplay;
 import org.bukkit.persistence.PersistentDataType;
@@ -50,8 +53,10 @@ import java.util.function.Consumer;
  * Background colours, borders as four flat sides, text in its colour, weight and slant, scrollbars, form
  * controls and opacity. A background gradient is drawn as bands of flat colour, finer the further it
  * travels, and a text gradient colours each glyph off the ramp. A box that clips drops the text lines that
- * do not fit wholly inside it. Rounded corners, shadows, images, focus rings and letter-spacing are not
- * drawn: a display has no way to.
+ * do not fit wholly inside it. An image is an item display of the item its texture belongs to (see
+ * {@link PaperImages}), squashed flat onto the plane, and dropped like a line of text where a clip would cut
+ * it; an item cannot be faded, so one under half opacity is left out. Rounded corners, shadows, focus rings
+ * and letter-spacing are not drawn: a display has no way to.
  */
 public final class CTMLSurface {
     /**
@@ -107,6 +112,12 @@ public final class CTMLSurface {
 
     private static final float SECONDS_PER_TICK = 0.05f;
 
+    /** Where a picture sits in its box when nothing says, and how thin its item is squashed. */
+    private static final Length CENTRED = Length.percent(50);
+    private static final float IMAGE_DEPTH = (float) (DEPTH_STEP / 4);
+    /** The turn an item display gives its item, which a picture undoes so the item's front faces out. */
+    private static final Quaternionf ITEM_FRONT = new Quaternionf().rotateY((float) Math.PI);
+
     private final Plugin plugin;
     private final NamespacedKey entityKey;
     private final DOMTreeElement tree;
@@ -117,7 +128,7 @@ public final class CTMLSurface {
     /** The roll about the facing, in radians, which a billboarded surface turns its own frame by. */
     private float roll;
 
-    private final List<TextDisplay> displays = new ArrayList<>();
+    private final List<Display> displays = new ArrayList<>();
     private final List<Paint> drawn = new ArrayList<>();
 
     private World world;
@@ -128,9 +139,18 @@ public final class CTMLSurface {
     private CTMLLayout.Box layout;
     private long revision = -1;
 
-    /** One display's worth of paint: where it sits on the plane, how it is scaled, and what it shows. */
+    /**
+     * One display's worth of paint: where it sits on the plane, how it is scaled, and what it shows. A paint
+     * with an image is an item display showing that item model, centred on (u, v) and scaled to its size in
+     * blocks; anything else is a text display.
+     */
     private record Paint(double u, double v, float scaleX, float scaleY, String text, int background,
-                         byte opacity, boolean shadow) {}
+                         byte opacity, boolean shadow, NamespacedKey image) {
+        Paint(double u, double v, float scaleX, float scaleY, String text, int background, byte opacity,
+              boolean shadow){
+            this(u, v, scaleX, scaleY, text, background, opacity, shadow, null);
+        }
+    }
 
     /**
      * A surface for a tree, owned by a plugin and marked with its key, so whatever a crash leaves behind can
@@ -395,26 +415,43 @@ public final class CTMLSurface {
 
         for (int i = 0; i < paints.size(); i++) {
             Paint paint = paints.get(i);
+            double depth = i * DEPTH_STEP;
             if (i == displays.size()) {
-                // dressed before it is added to the world, so its first frame is already where it goes
-                double depth = i * DEPTH_STEP;
-                displays.add(spawnDisplay(depth, d -> apply(d, paint, null, depth)));
+                displays.add(spawnFor(paint, depth));
                 drawn.add(paint);
                 continue;
             }
             Paint was = drawn.get(i);
             if (paint.equals(was)) continue;
-            apply(displays.get(i), paint, was, i * DEPTH_STEP);
+            if ((was.image() == null) != (paint.image() == null)) {
+                // a picture and a text are different entities, so the one there makes way for the other
+                Display old = displays.get(i);
+                if (old.isValid()) old.remove();
+                displays.set(i, spawnFor(paint, depth));
+            } else {
+                apply(displays.get(i), paint, was, depth);
+            }
             drawn.set(i, paint);
         }
         while (displays.size() > paints.size()) {
-            TextDisplay extra = displays.removeLast();
+            Display extra = displays.removeLast();
             drawn.removeLast();
             if (extra.isValid()) extra.remove();
         }
     }
 
-    private void apply(TextDisplay display, Paint paint, Paint was, double depthAt){
+    /** A new display for a paint, dressed before it is added to the world so its first frame is already right. */
+    private Display spawnFor(Paint paint, double depth){
+        if (paint.image() != null) return spawnImage(depth, d -> apply(d, paint, null, depth));
+        return spawnDisplay(depth, d -> apply(d, paint, null, depth));
+    }
+
+    private void apply(Display entity, Paint paint, Paint was, double depthAt){
+        if (entity instanceof ItemDisplay item) {
+            applyImage(item, paint, was, depthAt);
+            return;
+        }
+        TextDisplay display = (TextDisplay) entity;
         if (was == null || !was.text().equals(paint.text())) display.setText(paint.text());
         if (was == null || was.background() != paint.background()) {
             display.setBackgroundColor(Color.fromARGB(paint.background()));
@@ -435,6 +472,20 @@ public final class CTMLSurface {
         }
     }
 
+    private void applyImage(ItemDisplay display, Paint paint, Paint was, double depthAt){
+        if (was == null || !paint.image().equals(was.image())) display.setItemStack(PaperImages.stack(paint.image()));
+        if (was == null || was.u() != paint.u() || was.v() != paint.v()
+                || was.scaleX() != paint.scaleX() || was.scaleY() != paint.scaleY()) {
+            // the item is a block across, centred on the entity: scaled to the picture and squashed so thin
+            // that it stays behind whatever is painted after it
+            display.setInterpolationDelay(0);
+            display.setInterpolationDuration(0);
+            display.setTransformation(new Transformation(offset(paint.u(), paint.v(), depthAt),
+                    new Quaternionf(rotation), new Vector3f(paint.scaleX(), paint.scaleY(), IMAGE_DEPTH),
+                    new Quaternionf(ITEM_FRONT)));
+        }
+    }
+
     /** One box and everything inside it, in paint order, under the clip it is drawn through. */
     private void paint(CTMLLayout.Box box, int[] clip, float alpha, List<Paint> out){
         ElementStyle style = box.style();
@@ -449,6 +500,7 @@ public final class CTMLSurface {
 
         int[] inside = inside(box, clip);
         if (visible) {
+            picture(box, clip, alpha, out);
             text(box, inside, alpha, out);
             control(box, inside, alpha, out);
         }
@@ -573,6 +625,52 @@ public final class CTMLSurface {
             out.add(new Paint(u, v, size, size, text, 0,
                     opacity >= 255 ? (byte) -1 : (byte) opacity, shadow));
         }
+    }
+
+    /**
+     * An img as its item, fitted into the content box the way object-fit says. The picture is square, and
+     * a display cannot be cut, so cover fills the box the way fill does rather than spilling out of it, and
+     * a picture the box or the clip would cut is left out whole.
+     */
+    private void picture(CTMLLayout.Box box, int[] clip, float alpha, List<Paint> out){
+        if (!(box.element().getElement() instanceof Img element)) return;
+        if (alpha < 0.5f) return;
+        NamespacedKey model = PaperImages.model(element.source());
+        if (model == null) return;
+        int width = box.contentWidth(), height = box.contentHeight();
+        if (width <= 0 || height <= 0) return;
+
+        ElementStyle style = box.style();
+        int side = Math.min(width, height);
+        int w, h;
+        switch (style.get(ElementStyle.OBJECT_FIT, ElementStyle.ObjectFit.FILL)) {
+            case CONTAIN -> w = h = side;
+            case NONE -> w = h = PaperImages.SIZE;
+            case SCALE_DOWN -> w = h = Math.min(side, PaperImages.SIZE);
+            default -> { w = width; h = height; } // fill, and cover as near as a display can come
+        }
+        int x = box.contentX() + along(style.get(ElementStyle.OBJECT_POSITION_X, CENTRED), width - w);
+        int y = box.contentY() + along(style.get(ElementStyle.OBJECT_POSITION_Y, CENTRED), height - h);
+
+        int left = box.contentX(), top = box.contentY(), right = left + width, bottom = top + height;
+        if (clip != null) {
+            left = Math.max(left, clip[0]);
+            top = Math.max(top, clip[1]);
+            right = Math.min(right, clip[2]);
+            bottom = Math.min(bottom, clip[3]);
+        }
+        if (x < left || y < top || x + w > right || y + h > bottom) return;
+
+        double px = frame.blocksPerPixel();
+        double u = (x + w / 2.0) * px - frame.widthBlocks() / 2;
+        double v = frame.heightBlocks() / 2 - (y + h / 2.0) * px;
+        out.add(new Paint(u, v, (float) (w * px), (float) (h * px), "", 0, (byte) -1, false, model));
+    }
+
+    /** How far into the room left over an object-position puts a picture: a share of it, or a length. */
+    private int along(Length position, int free){
+        if (position.isPercent()) return Math.round(position.value() / 100f * free);
+        return position.resolve(0, frame.width(), frame.height());
     }
 
     /** The part of a control drawn over its box: the tick, the dot, the slider, the swatch and the arrow. */
@@ -741,6 +839,19 @@ public final class CTMLSurface {
         });
         viewer.showEntity(plugin, entity);
         return entity;
+    }
+
+    /** An item display for a picture, set up the way {@link #spawnDisplay} sets up a text one. */
+    private ItemDisplay spawnImage(double depth, Consumer<ItemDisplay> dress){
+        return spawn(standing(depth), ItemDisplay.class, d -> {
+            d.setBillboard(billboard());
+            d.setBrightness(new Display.Brightness(15, 15));
+            d.setShadowRadius(0f);
+            d.setShadowStrength(0f);
+            d.setViewRange(viewers == null ? 1.0f : 0.5f);
+            d.setItemDisplayTransform(ItemDisplay.ItemDisplayTransform.NONE);
+            dress.accept(d);
+        });
     }
 
     /**

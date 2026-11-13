@@ -145,7 +145,7 @@ The same file is both. Nothing in the markup says which it is, whichever class y
 - **`WindowRenderer`** shows it on a server, as a window in front of one player, who is held still until it closes. Callbacks, variables, drags, scrolling and `hover:` work the same as in a screen, and forms open a dialog on Paper.
 - **`HologramRenderer`** stands it in the world on a server, at any place, for everyone to see, fixed at a yaw, pitch and roll or turning to face each viewer. Everyone looking at it gets a cursor of their own and can click, drag and scroll it, and `hover:` follows the nearest of them. A per-player hologram gives every player near it a ui of their own instead. Holograms are gone after a restart.
 
-A window or a hologram is drawn out of display entities, so rounded corners, shadows, images and letter-spacing are left out there, and gradients are drawn in bands.
+A window or a hologram is drawn out of display entities, so rounded corners, shadows and letter-spacing are left out there, gradients are drawn in bands, and an `<img>` shows the item its texture belongs to, drawn from the player's own resources.
 
 Everything before showing a tree, building it with `CTMLAPI`, its context, its variables and callbacks, is the same code on a client and on a server. Only the renderer at the end is different.
 

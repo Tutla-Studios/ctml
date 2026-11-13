@@ -54,6 +54,12 @@ final class GlyphMetrics implements CTMLLayout.TextMetrics {
         return CTMLLayout.FONT_ASCENT;
     }
 
+    /** A picture is the item its texture belongs to, which is always a vanilla item's 16 pixels square. */
+    @Override
+    public int[] pictureSize(String source){
+        return PaperImages.model(source) != null ? new int[]{ PaperImages.SIZE, PaperImages.SIZE } : null;
+    }
+
     private static int measure(String text, boolean bold){
         int width = 0;
         for (int i = 0; i < text.length(); ) {

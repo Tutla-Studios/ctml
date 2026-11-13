@@ -1,30 +1,44 @@
 # CraftyTML
-A Minecraft mod and server plugin that lets you build Minecraft UI with HTML
----
 
-CraftyTML is a Minecraft mod for Fabric and a plugin for Paper, Spigot and Bukkit that lets you write screens and huds as markup/html instead of java. One jar is both: on a client it draws screens and huds, and on a server it shows the same ui to a player as a window floating in front of them, or stands it in the world as a hologram everyone can see and click, with nothing to install on their side. Elements are written like html, styled with tailwind-like classes, and powered by [Tusan](https://wiki.tutla.net/tusan) interpreter that powers [Tums](https://wiki.tutla.net/tums). Made for developers to avoid mixins, messy gui code and other gui issues.
+CraftyTML is a Minecraft mod for Fabric and a plugin for Paper, Spigot and Bukkit that lets you write screens and huds as markup/html instead of java.
 
 ![intro screen](https://cdn.modrinth.com/data/y5uBAABM/images/904230d2ff6219d10e03adc17ba50cb2e8a73c7d.png)
+
+It work on both client and server. Elements are written like html, styled with tailwind-like classes, and powered by [Tusan](https://wiki.tutla.net/tusan) interpreter that powers [Tums](https://modrinth.com/mod/tums). Made for developers to avoid mixins, messy gui code and other gui issues.
+
+#### UI Types
+- **Screen (Client):** A Custom Minecraft Screen, for Minecraft Clients (Fabric)
+- **HUD:** A Minecraft HUD, for Minecraft Clients
+- **Window (Server):** A 3d window embedded into the world using DisplayEntities on Spigot/Paper.
+- **Holograms:** A 3d UI view accessible to all players and interactable. Meant for server developers.
 
 📖 **Full documentation @ [Tutla Wiki](https://wiki.tutla.net/ctml)**
 
 ## How to install (for Players)
 
-1. Download the latest version from [Modrinth](https://modrinth.com/mod/ctml)
+1. Download the latest version from [Modrinth](https://modrinth.com/mod/ctml), and [Tums](https://modrinth.com/mod/tums)
 2. Drag and drop the downloaded `.jar` file into your `mods` folder
 3. Start Minecraft
 
 ## How to install (for Servers)
 
-1. Download the latest version from [Modrinth](https://modrinth.com/mod/ctml), and [Tums](https://modrinth.com/mod/tums), which it runs its scripts with
+1. Download the latest version from [Modrinth](https://modrinth.com/mod/ctml), and [Tums](https://modrinth.com/mod/tums)
 2. Drop both `.jar` files into your server's `plugins` folder (Paper, Spigot or Bukkit)
 3. Start the server, and put your `.ctml` files in `plugins/CraftyTML/ui/`
 
 To check it works, run `/ctml demo` in game for a window, or `/ctml hologram demo` for a hologram.
 
-### Server commands
+## For Servers
 
 Every command needs the `craftytml.use` permission, which ops have. Where a player is optional, it is whoever runs the command. Every one is explained in full in the [commands reference](https://wiki.tutla.net/ctml/reference/commands), and in game by `/ctml help <command>`.
+
+#### Holograms
+![Holograms](https://cdn.modrinth.com/data/y5uBAABM/images/9824f7e83670a111375a62a0ab42fde4ec832495_350.webp)
+
+Holograms are UIs that float in your world. Dedicated for Spigot/Paper using DisplayEntities.
+
+
+#### Command List
 
 | Command | What it does |
 | --- | --- |
@@ -41,9 +55,9 @@ Every command needs the `craftytml.use` permission, which ops have. Where a play
 
 A player works a window or a hologram by looking at it and clicking. The look moves a cursor, the hotbar scrolls, a draggable box or a scrollbar is picked up with one click and put down with the next, a click focuses what it lands on, and typing into a form opens one of minecraft's own dialogs on Paper. Sneaking closes a window.
 
-## For developers
+## For Developers
 
-### How to install (Fabric mod)
+### How to install (Fabric)
 
 To get started, follow these steps:
 
@@ -64,7 +78,7 @@ To get started, follow these steps:
 ├── client
 └── main
 ```
-2.. Add the mod as a dependancy in `build.gradle` under the `dependencies` section.
+2. Add the mod as a dependancy in `build.gradle` under the `dependencies` section.
 ```cpp
 dependencies {
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
@@ -77,10 +91,11 @@ dependencies {
 ```
 3. Import `CTMLAPI` and start developing!
 
-### How to install (Paper / Spigot / Bukkit plugin)
+### How to install (Paper / Spigot / Bukkit)
 
 The same jar is the plugin. Compile against it and the server's api, and load after it:
 
+`build.gradle`
 ```groovy
 dependencies {
     compileOnly "io.papermc.paper:paper-api:26.3.build.245-stable"
@@ -88,19 +103,20 @@ dependencies {
 }
 ```
 
+`plugin.yml`
 ```yaml
 # plugin.yml
 depend: [CraftyTML]
 ```
 
-There is no folder to point at: CraftyTML runs every script in `plugins/CraftyTML/ui/` into the `UIRegistry` as it starts.
+There is no folder to point at: CraftyTML runs every script in `plugins/CraftyTML/ui/` into the `UIRegistry` as it starts, you can write your own markup using the API.
 
 Read the full docs in the [CTML documentation](https://wiki.tutla.net/ctml/), starting with [Getting started](https://wiki.tutla.net/ctml/getting-started).
 
 
-### How to write a UI?
+## How to write a UI?
 
-Create a new file with a `.ctml` extension in `[YOUR MINECRAFT FOLDER]/ctml/ui/` on a client or `plugins/CraftyTML/ui/` on a server, or write it within your mod or plugin and register it directly using the `CTMLAPI`.
+Create a new file with a `.ctml` extension in `[YOUR MINECRAFT FOLDER]/ctml/ui/` on a client or `plugins/CraftyTML/ui/` on a server, *or write it within your mod or plugin and register it directly using the `CTMLAPI`.*
 
 ```html
 <ctml class="w-full h-full flex flex-col items-center justify-center gap-2 bg-slate-900 text-slate-100">
@@ -139,7 +155,7 @@ The same file is both. Nothing in the markup says which it is, whichever class y
 - **`WindowRenderer`** shows it on a server, as a window in front of one player, who is held still until it closes. Callbacks, variables, drags, scrolling and `hover:` work the same as in a screen, and forms open a dialog on Paper.
 - **`HologramRenderer`** stands it in the world on a server, at any place, for everyone to see, fixed at a yaw, pitch and roll or turning to face each viewer. Everyone looking at it gets a cursor of their own and can click, drag and scroll it, and `hover:` follows the nearest of them. A per-player hologram gives every player near it a ui of their own instead. Holograms are gone after a restart.
 
-A window or a hologram is drawn out of display entities, so rounded corners, shadows, images and letter-spacing are left out there, and gradients are drawn in bands.
+A window (server) or a hologram is drawn out of display entities, so rounded corners, shadows, images and letter-spacing are left out there, and gradients are drawn in bands.
 
 Everything before showing a tree, building it with `CTMLAPI`, its context, its variables and callbacks, is the same code on a client and on a server. Only the renderer at the end is different.
 
@@ -157,13 +173,19 @@ ctx.putCallBack("sayHi", callback -> {
 
 ### Demo
 
+1. Create the UI
 ```java
 // a tree out of the ui folder or from a written script, and the context its variables and callbacks live in
 CTMLAPI.createUI(uiPath);               // a file of your own, from anywhere
 CTMLAPI.createUI("myui.ctml", markup);  // or markup you wrote in java, under a name you pick
 DOMTreeElement tree = UIRegistry.getUIFromName("myui.ctml");
+```
+2. Create Context
+```java
 DOMContext ctx = new DOMContext(tree);
-
+```
+3. Add variables/callback (optional)
+```java
 // a variable: every ${cookies} in the markup says this, from the next frame on
 ctx.putVariable("cookies", 12);
 
@@ -172,18 +194,32 @@ ctx.putCallBack("sayHi", callback -> {
         if (!callback.isPress()) return;
         callback.getCtx().getElementById("greeting").property("text", "hi!", null);
 });
+```
+4. Render it
 
-// and then show it: on a client, as a screen or a hud
-        minecraft.setScreenAndShow(new CTMLScreen("myui", tree, parent, ctx));
-        HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("mymod", "myui"), new CTMLHud(tree, ctx));
+As a Screen (Fabric, Client-Side)
+```java
+// and then show it: on a client, as a screen
+minecraft.setScreenAndShow(new CTMLScreen("myui", tree, parent, ctx));
+```
 
+As a HUD (Fabric, Client-Side)
+```java
+HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("mymod", "myui"), new CTMLHud(tree, ctx));
+```
+
+On server
+```java
 // on a server, a tree of one player's own: built afresh, never registered, with the player in its scope
         DOMTreeElement theirs = CTMLAPI.buildUI(markup, Map.of("player", player));
 
 // or on a server, in front of one player: straight ahead, or anywhere around them
         new WindowRenderer(player).show("myui", tree, ctx);
         new WindowRenderer(player).show("myui", tree, ctx, new CTMLWindow.Position(-1.5, 0)); // off to their left
+```
 
+On server, as hologram
+```java
 // or in the world for everyone, its middle at a location and its front facing the way the location looks
         new HologramRenderer(location).show("myui", tree, ctx);
 ```
@@ -206,10 +242,9 @@ The project is an Architectury build in three modules under `src/`:
 | `fabric` | The client mod: screens, huds and painting with minecraft's gui |
 | `paper` | The server plugin: windows, holograms, dialogs and the `/ctml` command |
 
-- `./gradlew build` builds one universal jar, `build/libs/craftytml-<version>.jar`, which loads as a Fabric mod and as a Paper, Spigot or Bukkit plugin. Each platform's own jar is built next to it under `src/<module>/build/libs/`.
+- `./gradlew build` builds one universal jar, `build/libs/craftytml-<version>.jar`, which loads as a Fabric mod and as a Paper, Spigot or Bukkit plugin.
 - `./gradlew :fabric:runClient` starts a dev client with `run/ctml/ui` as its ui folder.
-- `./gradlew :paper:runServer` starts a Paper test server with Tums beside it, copying `run/ctml/ui` into its ui folder on each start.
-- Tums is read from a Tums checkout next to this one, at `../Tums/build/libs/tums-<tums_version>.jar`, so build that first.
+- `./gradlew :paper:runServer` starts a Paper test server with Tums beside it, `run/ctml/ui` is loaded on each start.
 - `./docs/generate.sh` writes the reference pages, the docs' front page from this README included, from the source. `--check` fails where they have fallen behind.
 
 Read the full developer docs in the [CraftyTML reference](https://wiki.tutla.net/ctml/reference/), including the [java API](https://wiki.tutla.net/ctml/reference/java) and the [commands](https://wiki.tutla.net/ctml/reference/commands).

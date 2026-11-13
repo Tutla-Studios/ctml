@@ -298,9 +298,15 @@ no equivalent:
 - **Drawn:** background colours, borders, text in its colour, weight and slant, scrollbars, opacity,
   gradients, and form controls with their ticks, sliders and swatches. A background gradient is drawn
   as bands of colour, and a text gradient colours each glyph.
-- **Not drawn:** rounded corners (a radio's dot is square), shadows, images, focus rings and
-  letter-spacing. A text line that a scrolling box would cut off is left out whole, since a display
-  can't be cut.
+- **Images** can't be loaded, so an `<img>` shows the item its texture belongs to, drawn flat by the
+  player's own client: `minecraft:textures/item/diamond.png` is a diamond, `minecraft:textures/block/stone.png`
+  a stone block seen face on, and an item id like `minecraft:diamond` works too. Any other namespace is
+  taken as an item model from a resource pack. Every picture is 16px square, a texture with no item of
+  its name (`block/oak_log_top`) is left out, and so is an image under half opacity, since an item
+  can't be faded. `object-cover` fills the box the way `object-fill` does.
+- **Not drawn:** rounded corners (a radio's dot is square), shadows, focus rings and letter-spacing.
+  A text line or image that a scrolling box would cut off is left out whole, since a display can't be
+  cut.
 - **No keyboard:** typing goes through the form's dialog. Tab doesn't move the focus, and enter and
   space don't press anything.
 - **No huds.** Nothing is drawn on a player's screen. A window floats in front of one player, and a
